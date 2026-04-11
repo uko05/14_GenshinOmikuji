@@ -101,9 +101,24 @@ main {
   border-color: var(--accent);
 }
 
+.fortune-btn-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.chara-deco {
+  height: 90px;
+  object-fit: contain;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
 .fortune-btn {
   display: block;
-  margin: 20px auto 0;
+  margin: 20px 0 0;
   background: var(--accent);
   border: none;
   border-radius: 50px;
@@ -115,6 +130,7 @@ main {
   letter-spacing: 0.1em;
   padding: 12px 40px;
   transition: opacity 0.2s;
+  align-self: center;
 }
 
 .fortune-btn:hover { opacity: 0.8; }

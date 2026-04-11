@@ -1,5 +1,5 @@
 // script.js
-import { tarotCards, CARD_BACK } from './tarot.js';
+import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
@@ -317,6 +317,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const fortuneBtn    = document.getElementById('fortune-btn');
   const shuffleBtn    = document.getElementById('shuffle-btn');
 
+  // キャラクター画像
+  document.getElementById('chara-left').src  = omikujiFolder + 'yaemiko01.png';
+  document.getElementById('chara-right').src = omikujiFolder + 'mona02.png';
+
   // 生年月日の max を今日に設定
   birthdayInput.max = new Date().toISOString().slice(0, 10);
 
@@ -622,7 +626,14 @@ async function captureResult() {
         </div>
       </div>
     </div>
-    <div style="text-align:center;color:#bbb;font-size:0.68rem;margin-top:6px;">uko05.github.io/14_GenshinOmikuji</div>`;
+    <div style="display:flex;align-items:flex-end;justify-content:center;gap:0;margin-top:8px;border-top:2px solid #ffcc00;padding-top:6px;">
+      <img src="${omikujiFolder}yaemiko01.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">
+      <div style="text-align:center;flex:1;padding-bottom:8px;">
+        <div style="font-size:1.0rem;font-weight:bold;letter-spacing:0.12em;color:#333;">✦ 原神おみくじ ✦</div>
+        <div style="font-size:0.65rem;color:#aaa;">uko05.github.io/14_GenshinOmikuji</div>
+      </div>
+      <img src="${omikujiFolder}mona02.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">
+    </div>`;
 
   document.body.appendChild(div);
   try {

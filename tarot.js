@@ -1,7 +1,7 @@
 // tarot.js
 // 原神アルカナ22枚（大アルカナ全て）
 
-const omikujiFolder = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+export const omikujiFolder = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
   ? '/99_SharedImage/01_Genshin/Omikuji/'
   : 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/Omikuji/';
 
