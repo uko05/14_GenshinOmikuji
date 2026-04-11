@@ -300,11 +300,11 @@ main {
 }
 
 #daily-done-overlay span {
-  color: #cc2200;
-  font-size: 1.05rem;
+  color: #ff0000;
+  font-size: 1.6rem;
   font-weight: bold;
   letter-spacing: 0.1em;
-  text-shadow: 0 0 12px rgba(255,255,255,0.9);
+  text-shadow: 0 0 14px rgba(255,255,255,1);
 }
 
 .scatter-controls {
@@ -469,13 +469,13 @@ main {
 
 .tarot-info { margin-top: 8px; }
 
-@keyframes tarot-fadein {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes tarot-flipin {
+  from { opacity: 0; transform: perspective(500px) rotateY(-80deg); }
+  to   { opacity: 1; transform: perspective(500px) rotateY(0deg); }
 }
 
-.tarot-fadein {
-  animation: tarot-fadein 0.5s ease both;
+.tarot-flipin {
+  animation: tarot-flipin 0.45s ease both;
 }
 
 .tarot-name {
@@ -587,6 +587,19 @@ footer {
   color: var(--muted);
   font-size: 0.8rem;
   border-top: 1px solid var(--border);
+}
+
+.twitter-icon {
+  width: 30px;
+  height: 30px;
+  vertical-align: middle;
+  margin-bottom: 4px;
+}
+
+.sad-label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  vertical-align: middle;
 }
 
 @media (max-width: 480px) {
