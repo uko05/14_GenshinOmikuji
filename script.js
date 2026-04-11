@@ -395,6 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== メイン占い処理 =====
 function runFortune(birthday, name, cardIndex, isReversed) {
   const [, month, day] = birthday.split('-').map(Number);
+  const playerName = nama;
   const todayStr = getFortuneDate();
   const seed     = hashCode(todayStr + birthday);
   const rng      = seededRandom(seed);
@@ -447,7 +448,7 @@ function runFortune(birthday, name, cardIndex, isReversed) {
     zodiac:          zodiacKey,
     tarot:           card.name,
     isReversed,
-    player-name,
+    playerName,
     birthday,
     fortuneLevel,
     overallComment,
