@@ -350,7 +350,7 @@ document.addEventListener('DOMContentLoaded', () => {
     showDailyDoneOverlay();
     // 結果を表示
     const name = nameInput.value.trim();
-    runFortune(savedBirthday, name, savedResult.cardIndex, savedResult.isReversed);
+    runFortune(savedBirthday, name, savedResult.cardIndex, savedResult.isReversed, true);
     document.getElementById('result').style.display = 'block';
   }
 
@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== メイン占い処理 =====
-function runFortune(birthday, name, cardIndex, isReversed) {
+function runFortune(birthday, name, cardIndex, isReversed, isRestored = false) {
   const [, month, day] = birthday.split('-').map(Number);
   const playerName = name;
   const todayStr = getFortuneDate();
@@ -418,7 +418,7 @@ function runFortune(birthday, name, cardIndex, isReversed) {
   const card = tarotCards[cardIndex];
   captureCard       = card;
   captureIsReversed = isReversed;
-  displayTarot(card, isReversed);
+  displayTarot(card, isReversed, isRestored);
 
   // 運勢レベル
   const fortuneLevel = fortuneLevels[pickWeighted(rng, fortuneWeights)];
@@ -493,42 +493,56 @@ function displayBiorhythm(bio) {
   });
 }
 
-function displayTarot(card, isReversed) {
+function displayTarot(card, isReversed, isRestored = false) {
   const cardEl = document.getElementById('tarot-card');
   cardEl.querySelector('.card-front img').src = card.filename;
   cardEl.querySelector('.card-front img').style.transform = isReversed ? 'rotate(180deg)' : '';
   cardEl.querySelector('.card-back img').src = CARD_BACK;
   cardEl.querySelector('.card-back').style.visibility = '';
-  cardEl.classList.remove('flipped');
 
   const nameEl = document.getElementById('tarot-name');
   const keyEl  = document.getElementById('tarot-keyword');
   const msgEl  = document.getElementById('tarot-message');
-  [nameEl, keyEl, msgEl].forEach(el => {
-    el.textContent = '';
-    el.classList.remove('tarot-flipin');
-  });
 
-  cardEl.onclick = () => {
-    if (cardEl.classList.contains('flipped')) return;
-    cardEl.onclick = null;
+  if (isRestored) {
+    // すでに占い済みの復元：カードを最初からフリップ表示
     cardEl.classList.add('flipped');
-
+    cardEl.onclick = null;
     const cardData = isReversed ? card.reversed : card.upright;
-    // フリップ完了後(1200ms)に名前、さらに1100ms後にキーワード+メッセージをフリップイン
-    setTimeout(() => {
-      nameEl.textContent = `${card.number} ${card.name}${isReversed ? '（逆位置）' : '（正位置）'}`;
-      void nameEl.offsetWidth; // reflow
-      nameEl.classList.add('tarot-flipin');
-    }, 1200);
-    setTimeout(() => {
-      keyEl.textContent = cardData.keyword;
-      msgEl.textContent = cardData.message;
-      void keyEl.offsetWidth;
-      keyEl.classList.add('tarot-flipin');
-      msgEl.classList.add('tarot-flipin');
-    }, 2300);
-  };
+    nameEl.textContent = `${card.number} ${card.name}${isReversed ? '（逆位置）' : '（正位置）'}`;
+    keyEl.textContent  = cardData.keyword;
+    msgEl.textContent  = cardData.message;
+    nameEl.classList.add('tarot-flipin');
+    keyEl.classList.add('tarot-flipin');
+    msgEl.classList.add('tarot-flipin');
+  } else {
+    cardEl.classList.remove('flipped');
+    [nameEl, keyEl, msgEl].forEach(el => {
+      el.textContent = '';
+      el.classList.remove('tarot-flipin');
+    });
+
+    cardEl.onclick = () => {
+      if (cardEl.classList.contains('flipped')) return;
+      cardEl.onclick = null;
+      cardEl.classList.add('flipped');
+
+      const cardData = isReversed ? card.reversed : card.upright;
+      // フリップ完了後(1200ms)に名前、さらに1100ms後にキーワード+メッセージをフリップイン
+      setTimeout(() => {
+        nameEl.textContent = `${card.number} ${card.name}${isReversed ? '（逆位置）' : '（正位置）'}`;
+        void nameEl.offsetWidth; // reflow
+        nameEl.classList.add('tarot-flipin');
+      }, 1200);
+      setTimeout(() => {
+        keyEl.textContent = cardData.keyword;
+        msgEl.textContent = cardData.message;
+        void keyEl.offsetWidth;
+        keyEl.classList.add('tarot-flipin');
+        msgEl.classList.add('tarot-flipin');
+      }, 2300);
+    };
+  }
 }
 
 // ===== 画像保存 =====
@@ -633,7 +647,7 @@ async function captureResult() {
     </div>
     <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;border-top:1px solid #ddd;padding-top:8px;">
       <img src="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/footer_icon/twitter_image.png" crossorigin="anonymous" style="width:20px;height:20px;object-fit:contain;">
-      <span style="font-size:0.78rem;color:#555;">X: @uko_dayo_</span>
+      <span style="font-size:0.78rem;color:#555;">@uko_dayo_</span>
     </div>`;
 
   document.body.appendChild(div);
