@@ -388,28 +388,32 @@ function runFortune(birthday, name, cardIndex, isReversed) {
   const rng      = seededRandom(seed);
   const pick     = (arr) => arr[Math.floor(rng() * arr.length)];
 
-  // 星座
-  const zodiacKey  = getZodiac(month, day);
-  const zodiacData = horoscope[zodiacKey];
-  displayZodiac(zodiacData, pick);
+  // 星座（先にpickして値を確定）
+  const zodiacKey     = getZodiac(month, day);
+  const zodiacData    = horoscope[zodiacKey];
+  const zodiacOverall = pick(zodiacData.overall);
+  const zodiacLove    = pick(zodiacData.love);
+  const zodiacWork    = pick(zodiacData.work);
+  const zodiacHealth  = pick(zodiacData.health);
+  displayZodiac(zodiacData, zodiacOverall, zodiacLove, zodiacWork, zodiacHealth);
 
   // バイオリズム
-  displayBiorhythm(calcBiorhythm(birthday));
+  const bio = calcBiorhythm(birthday);
+  displayBiorhythm(bio);
 
   // タロット
   const card = tarotCards[cardIndex];
   displayTarot(card, isReversed);
-  submitOmikujiStats(zodiacKey, card.name, isReversed);
 
   // 運勢レベル
   const fortuneLevel = fortuneLevels[pickWeighted(rng, fortuneWeights)];
   displayFortuneBadge(fortuneLevel);
 
   // 総合コメント
-  const bio     = calcBiorhythm(birthday);
-  const bioAvg  = (bio.physical + bio.emotional + bio.intellectual) / 3;
-  const bioTier = bioAvg > 0.2 ? 'high' : bioAvg < -0.2 ? 'low' : 'mid';
-  document.getElementById('overall-comment').textContent = pick(comments[fortuneLevel][bioTier]);
+  const bioAvg        = (bio.physical + bio.emotional + bio.intellectual) / 3;
+  const bioTier       = bioAvg > 0.2 ? 'high' : bioAvg < -0.2 ? 'low' : 'mid';
+  const overallComment = pick(comments[fortuneLevel][bioTier]);
+  document.getElementById('overall-comment').textContent = overallComment;
 
   // ラッキー
   const luckyIdx = Math.floor(rng() * 3);
@@ -423,17 +427,34 @@ function runFortune(birthday, name, cardIndex, isReversed) {
   // 挨拶
   document.getElementById('result-greeting').textContent =
     name ? `${name}さんの今日の運勢` : '今日の運勢';
+
+  // Firebase 統計送信（全データ）
+  submitOmikujiStats({
+    zodiac:          zodiacKey,
+    tarot:           card.name,
+    isReversed,
+    birthday,
+    fortuneLevel,
+    overallComment,
+    zodiacOverall,
+    zodiacLove,
+    zodiacWork,
+    zodiacHealth,
+    bioPhysical:     Math.round(bio.physical     * 1000) / 1000,
+    bioEmotional:    Math.round(bio.emotional    * 1000) / 1000,
+    bioIntellectual: Math.round(bio.intellectual * 1000) / 1000,
+  });
 }
 
 // ===== 表示関数 =====
-function displayZodiac(data, pick) {
+function displayZodiac(data, overall, love, work, health) {
   document.getElementById('zodiac-symbol').textContent  = data.symbol;
   document.getElementById('zodiac-name').textContent    = data.name;
   document.getElementById('zodiac-period').textContent  = data.period;
-  document.getElementById('zodiac-overall').textContent = pick(data.overall);
-  document.getElementById('zodiac-love').textContent    = pick(data.love);
-  document.getElementById('zodiac-work').textContent    = pick(data.work);
-  document.getElementById('zodiac-health').textContent  = pick(data.health);
+  document.getElementById('zodiac-overall').textContent = overall;
+  document.getElementById('zodiac-love').textContent    = love;
+  document.getElementById('zodiac-work').textContent    = work;
+  document.getElementById('zodiac-health').textContent  = health;
 }
 
 function displayBiorhythm(bio) {
