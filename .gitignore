@@ -1,0 +1,4 @@
+# 共有画像フォルダは 99_SharedImage を使用するため、プロジェクト内コピーは除外
+Omikuji/
+
+node_modules/

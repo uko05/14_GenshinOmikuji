@@ -115,11 +115,11 @@ function initCardScatter() {
   const container = document.getElementById('card-scatter-area');
   container.innerHTML = '';
 
-  // ドラッグ状態（コンテナ全体で共有）
-  let dragCardIndex  = null;  // 長押し中・ドラッグ中のカードインデックス
-  let dragStartX     = 0;
-  let dragStartY     = 0;
-  let longPressTimer = null;
+  // ドラッグ状態
+  let dragCardIndex = null;
+  let dragStartX    = 0;
+  let dragStartY    = 0;
+  let isDragMode    = false;
 
   tarotCards.forEach((card, i) => {
     const div = document.createElement('div');
@@ -129,35 +129,46 @@ function initCardScatter() {
     div.addEventListener('pointerdown', (e) => {
       if (!isShuffled) return;
       e.stopPropagation();
-      if (longPressTimer) clearTimeout(longPressTimer);
+      e.currentTarget.setPointerCapture(e.pointerId);
       dragCardIndex = i;
       dragStartX    = e.clientX;
       dragStartY    = e.clientY;
+      isDragMode    = false;
+      // 最前面へ
+      cardStates[i].zIndex = tarotCards.length + 10;
+      applyTransform(cardStates[i], false);
+    });
 
-      // 350ms 長押しでドラッグモードへ
-      longPressTimer = setTimeout(() => {
-        longPressTimer = null;
+    div.addEventListener('pointermove', (e) => {
+      if (dragCardIndex !== i) return;
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      // 8px 以上動いたら即ドラッグモードへ（長押し不要）
+      if (!isDragMode && Math.sqrt(dx * dx + dy * dy) > 8) {
+        isDragMode    = true;
         isDraggingAny = true;
         cardStates[i].el.classList.add('dragging');
-        cardStates[i].zIndex = 200;
+      }
+      if (isDragMode) {
+        const rect = container.getBoundingClientRect();
+        const px   = e.clientX - rect.left - rect.width  / 2;
+        const py   = e.clientY - rect.top  - rect.height / 2;
+        const maxX = rect.width  / 2 - CARD_W / 2 - 4;
+        const maxY = rect.height / 2 - CARD_H / 2 - 4;
+        cardStates[i].x = clamp(px, -maxX, maxX);
+        cardStates[i].y = clamp(py, -maxY, maxY);
         applyTransform(cardStates[i], false);
-      }, 350);
+      }
     });
 
     div.addEventListener('pointerup', () => {
       if (dragCardIndex !== i) return;
-      if (longPressTimer !== null) {
-        // タイマー発火前に離した → タップ選択
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-        selectCard(i);
-      }
+      if (!isDragMode) selectCard(i); // 動かなければタップ選択
       _endDrag(i);
     });
 
     div.addEventListener('pointercancel', () => {
       if (dragCardIndex !== i) return;
-      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
       _endDrag(i);
     });
 
@@ -171,41 +182,17 @@ function initCardScatter() {
   });
 
   function _endDrag(i) {
-    if (isDraggingAny) {
+    if (isDragMode) {
       isDraggingAny = false;
       cardStates[i].el.classList.remove('dragging');
     }
     dragCardIndex = null;
+    isDragMode    = false;
   }
 
-  // コンテナ全体でポインター移動を処理
+  // コンテナ全体でポインター移動 → ドラッグ中以外は押しのけ
   container.addEventListener('pointermove', (e) => {
-    if (!isShuffled || !(e.buttons > 0)) return;
-
-    if (isDraggingAny && dragCardIndex !== null) {
-      // 特定カードをドラッグ移動
-      const rect = container.getBoundingClientRect();
-      const px   = e.clientX - rect.left - rect.width  / 2;
-      const py   = e.clientY - rect.top  - rect.height / 2;
-      const maxX = rect.width  / 2 - CARD_W / 2 - 4;
-      const maxY = rect.height / 2 - CARD_H / 2 - 4;
-      cardStates[dragCardIndex].x = clamp(px, -maxX, maxX);
-      cardStates[dragCardIndex].y = clamp(py, -maxY, maxY);
-      applyTransform(cardStates[dragCardIndex], false);
-      return;
-    }
-
-    // 少し動いたら長押しタイマーをキャンセルしてプッシュへ移行
-    if (longPressTimer !== null) {
-      const dx = e.clientX - dragStartX;
-      const dy = e.clientY - dragStartY;
-      if (Math.sqrt(dx * dx + dy * dy) > 8) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-        dragCardIndex  = null;
-      }
-    }
-
+    if (!isShuffled || !(e.buttons > 0) || isDraggingAny) return;
     pushCards(e, container);
   });
 
@@ -264,20 +251,43 @@ function pushCards(e, container) {
   const H    = rect.height;
   const maxX = W / 2 - CARD_W / 2 - 4;
   const maxY = H / 2 - CARD_H / 2 - 4;
-  const RADIUS = 75;
-  const FORCE  = 32;
+  const RADIUS = 90;
+  const FORCE  = 45;
 
+  // 指からカードを押しのける
   cardStates.forEach(state => {
     const dx   = state.x - px;
     const dy   = state.y - py;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < RADIUS && dist > 0) {
+    const dist = Math.sqrt(dx * dx + dy * dy) || 0.1;
+    if (dist < RADIUS) {
       const power = (1 - dist / RADIUS) * FORCE;
       state.x = clamp(state.x + (dx / dist) * power, -maxX, maxX);
       state.y = clamp(state.y + (dy / dist) * power, -maxY, maxY);
-      applyTransform(state, false); // 即時反映
+      applyTransform(state, false);
     }
   });
+
+  // カード同士の重なりを解消（隣接する2枚を互いに反発）
+  const SEP_DIST  = 38; // この距離未満なら反発
+  const SEP_FORCE = 14;
+  for (let a = 0; a < cardStates.length; a++) {
+    for (let b = a + 1; b < cardStates.length; b++) {
+      const dx   = cardStates[b].x - cardStates[a].x;
+      const dy   = cardStates[b].y - cardStates[a].y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 0.1;
+      if (dist < SEP_DIST) {
+        const power = (1 - dist / SEP_DIST) * SEP_FORCE;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        cardStates[a].x = clamp(cardStates[a].x - nx * power, -maxX, maxX);
+        cardStates[a].y = clamp(cardStates[a].y - ny * power, -maxY, maxY);
+        cardStates[b].x = clamp(cardStates[b].x + nx * power, -maxX, maxX);
+        cardStates[b].y = clamp(cardStates[b].y + ny * power, -maxY, maxY);
+        applyTransform(cardStates[a], false);
+        applyTransform(cardStates[b], false);
+      }
+    }
+  }
 }
 
 // ===== カード選択 =====
