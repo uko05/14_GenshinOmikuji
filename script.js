@@ -299,15 +299,15 @@ document.addEventListener('DOMContentLoaded', () => {
   nameInput.value     = localStorage.getItem(LS_NAME)     || '';
   birthdayInput.value = localStorage.getItem(LS_BIRTHDAY) || '';
 
-  // カードスキャッタ初期化
+  // カードスキャッタ初期化 → 常に初期シャッフル
   initCardScatter();
+  shuffleCards();
 
   // 今日の結果が保存済みなら自動復元
   const savedBirthday = birthdayInput.value;
   const savedResult   = savedBirthday ? loadResult() : null;
   if (savedResult && savedResult.birthday === savedBirthday) {
-    // カードを散らした状態にして選択済みを示す
-    shuffleCards();
+    // シャッフル後にカード選択を復元
     setTimeout(() => selectCard(savedResult.cardIndex), 400);
     // 結果を表示
     const name = nameInput.value.trim();

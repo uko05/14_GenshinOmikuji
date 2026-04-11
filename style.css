@@ -267,11 +267,17 @@ main {
   object-fit: cover;
   display: block;
   pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+@keyframes pulse-selected {
+  0%, 100% { box-shadow: 0 0 6px 2px rgba(210, 30, 30, 0.8); }
+  50%       { box-shadow: 0 0 20px 10px rgba(210, 30, 30, 0.2); }
 }
 
 .scatter-card.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 10px rgba(255, 204, 0, 0.7);
+  border-color: #d41e1e;
+  animation: pulse-selected 1.4s ease-in-out infinite;
 }
 
 .scatter-card.dragging {
