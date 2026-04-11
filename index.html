@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="生年月日から今日の運勢を占う原神テーマのおみくじサイト。星座占い・バイオリズム・原神アルカナタロットで今日の運勢をチェック！">
+  <title>原神おみくじ - うーこの部屋</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Favicon -->
+  <link rel="icon" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/favicon.ico" type="image/x-icon">
+  <link rel="icon" sizes="16x16" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/favicon-16x16.png">
+  <link rel="icon" sizes="32x32" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/apple-touch-icon.png">
+  <link rel="icon" sizes="192x192" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/android-chrome-192x192.png">
+  <link rel="icon" sizes="512x512" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/android-chrome-512x512.png">
+</head>
+<body>
+
+<header>
+  <h1>✦ 原神おみくじ ✦</h1>
+  <p>星座・バイオリズム・アルカナで今日のあなたを占います</p>
+</header>
+
+<main>
+  <!-- 入力 -->
+  <section class="input-section">
+    <p class="card-select-label">アルカナをシャッフルして1枚選んでください</p>
+    <div id="card-scatter-area" class="card-scatter-area"></div>
+    <div class="scatter-controls">
+      <button id="shuffle-btn" class="shuffle-btn">🂠 シャッフル</button>
+      <p id="card-selected-name" class="card-selected-name"></p>
+    </div>
+
+    <div class="input-row">
+      <div class="input-group">
+        <label for="player-name">名前（任意）</label>
+        <input type="text" id="player-name" placeholder="あなたの名前" maxlength="20">
+      </div>
+      <div class="input-group">
+        <label for="birthday">生年月日</label>
+        <input type="date" id="birthday" max="2099-12-31">
+      </div>
+    </div>
+
+    <button class="fortune-btn" id="fortune-btn" disabled>今日の運勢を占う</button>
+  </section>
+
+  <!-- 結果（占うまで非表示） -->
+  <div id="result" style="display:none;">
+
+    <!-- 挨拶 + 運勢バッジ + 総合コメント -->
+    <section class="section">
+      <div id="result-greeting" class="result-greeting"></div>
+      <div style="text-align:center; margin: 10px 0;">
+        <div id="fortune-badge" class="fortune-badge">-</div>
+      </div>
+      <p id="overall-comment" class="overall-comment"></p>
+    </section>
+
+    <!-- 星座占い -->
+    <section class="section">
+      <div class="section-title">星座占い</div>
+      <div class="zodiac-header">
+        <div class="zodiac-symbol" id="zodiac-symbol"></div>
+        <div>
+          <div class="zodiac-info-name" id="zodiac-name"></div>
+          <div class="zodiac-info-period" id="zodiac-period"></div>
+        </div>
+      </div>
+      <div class="zodiac-rows">
+        <div class="zodiac-row">
+          <span class="zodiac-cat">総合</span>
+          <span id="zodiac-overall"></span>
+        </div>
+        <div class="zodiac-row">
+          <span class="zodiac-cat">恋愛</span>
+          <span id="zodiac-love"></span>
+        </div>
+        <div class="zodiac-row">
+          <span class="zodiac-cat">仕事</span>
+          <span id="zodiac-work"></span>
+        </div>
+        <div class="zodiac-row">
+          <span class="zodiac-cat">健康</span>
+          <span id="zodiac-health"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- バイオリズム -->
+    <section class="section">
+      <div class="section-title">バイオリズム</div>
+      <div id="biorhythm-bars"></div>
+    </section>
+
+    <!-- タロット -->
+    <section class="section">
+      <div class="section-title">アルカナからのメッセージ</div>
+      <div class="tarot-reveal">
+        <div class="card-scene">
+          <div class="tarot-card" id="tarot-card">
+            <div class="card-back"><img src="" alt="カード裏面"></div>
+            <div class="card-front"><img src="" alt="タロットカード"></div>
+          </div>
+        </div>
+        <div class="tarot-info">
+          <div class="tarot-name" id="tarot-name"></div>
+          <div class="tarot-keyword" id="tarot-keyword"></div>
+          <div class="tarot-message" id="tarot-message"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ラッキー情報 -->
+    <section class="section">
+      <div class="section-title">今日のラッキー</div>
+      <div class="lucky-grid">
+        <div class="lucky-item">
+          <div class="lucky-item-label">ラッキーカラー</div>
+          <div class="lucky-item-value" id="lucky-color"></div>
+        </div>
+        <div class="lucky-item">
+          <div class="lucky-item-label">ラッキーナンバー</div>
+          <div class="lucky-item-value" id="lucky-number"></div>
+        </div>
+        <div class="lucky-item">
+          <div class="lucky-item-label">ラッキーアイテム（星座）</div>
+          <div class="lucky-item-value" id="lucky-item-zodiac"></div>
+        </div>
+        <div class="lucky-item" id="lucky-item-tarot-row" style="display:none;">
+          <div class="lucky-item-label">ラッキーアイテム（アルカナ）</div>
+          <div class="lucky-item-value" id="lucky-item-tarot"></div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /result -->
+</main>
+
+<footer>
+  <p>© うーこの部屋</p>
+</footer>
+
+<script type="module" src="script.js"></script>
+<script src="https://uko05.github.io/TopPage00/shared/sidebar.js"></script>
+</body>
+</html>

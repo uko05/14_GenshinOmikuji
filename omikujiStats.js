@@ -1,0 +1,28 @@
+// omikujiStats.js
+import { db } from './firebaseConfig.js';
+import {
+  collection,
+  addDoc,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+const COOLDOWN_MS = 60 * 60 * 1000; // 1時間
+const LAST_SUBMIT_KEY = 'genshinOmikuji_lastSubmit';
+
+// zodiac: 星座キー, tarot: カード名, isReversed: boolean
+export async function submitOmikujiStats(zodiac, tarot, isReversed) {
+  const last = localStorage.getItem(LAST_SUBMIT_KEY);
+  if (last && Date.now() - Number(last) < COOLDOWN_MS) return;
+
+  try {
+    await addDoc(collection(db, 'omikujiStats'), {
+      zodiac,
+      tarot,
+      isReversed,
+      timestamp: serverTimestamp(),
+    });
+    localStorage.setItem(LAST_SUBMIT_KEY, Date.now());
+  } catch (e) {
+    console.error('おみくじ集計失敗', e);
+  }
+}
