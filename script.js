@@ -648,7 +648,7 @@ async function captureResult() {
   } finally {
     div.remove();
     btn.disabled = false;
-    btn.textContent = '📷 結果を画像で保存';
+    btn.textContent = 'Save Image';
   }
 }
 
