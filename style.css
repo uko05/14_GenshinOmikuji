@@ -285,6 +285,7 @@ main {
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: none;
 }
 
 .scatter-card img {

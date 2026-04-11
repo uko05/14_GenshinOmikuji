@@ -141,10 +141,12 @@ function initCardScatter() {
 
     div.addEventListener('pointermove', (e) => {
       if (dragCardIndex !== i) return;
+      // バブリングを止めてコンテナの pushCards がこのカードを押し退けないようにする
+      e.stopPropagation();
       const dx = e.clientX - dragStartX;
       const dy = e.clientY - dragStartY;
-      // 8px 以上動いたら即ドラッグモードへ（長押し不要）
-      if (!isDragMode && Math.sqrt(dx * dx + dy * dy) > 8) {
+      // 6px 以上動いたら即ドラッグモードへ
+      if (!isDragMode && Math.sqrt(dx * dx + dy * dy) > 6) {
         isDragMode    = true;
         isDraggingAny = true;
         cardStates[i].el.classList.add('dragging');
@@ -161,8 +163,9 @@ function initCardScatter() {
       }
     });
 
-    div.addEventListener('pointerup', () => {
+    div.addEventListener('pointerup', (e) => {
       if (dragCardIndex !== i) return;
+      e.stopPropagation();
       if (!isDragMode) selectCard(i); // 動かなければタップ選択
       _endDrag(i);
     });
