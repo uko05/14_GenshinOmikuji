@@ -291,7 +291,9 @@ function selectCard(index) {
 
 function updateFortuneBtn() {
   const birthday = document.getElementById('birthday').value;
-  document.getElementById('fortune-btn').disabled = !(selectedCardIndex !== null && birthday);
+  const saved     = loadResult();
+  const locked    = !!(saved && saved.birthday === birthday);
+  document.getElementById('fortune-btn').disabled = locked || !(selectedCardIndex !== null && birthday);
 }
 
 // ===== DOM読み込み完了 =====
@@ -304,6 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // localStorage 復元
   nameInput.value     = localStorage.getItem(LS_NAME)     || '';
   birthdayInput.value = localStorage.getItem(LS_BIRTHDAY) || '';
+  updateFortuneBtn();
 
   // カードスキャッタ初期化 → 常に初期シャッフル
   initCardScatter();
@@ -432,18 +435,116 @@ function displayBiorhythm(bio) {
   });
 }
 
+// ===== 塵エフェクト =====
+function dustDissolve(cardEl, onComplete) {
+  const scene = cardEl.parentElement;
+  const W = scene.offsetWidth;
+  const H = scene.offsetHeight;
+
+  const canvas = document.createElement('canvas');
+  canvas.width  = W;
+  canvas.height = H;
+  Object.assign(canvas.style, {
+    position: 'absolute', top: '0', left: '0',
+    width: W + 'px', height: H + 'px',
+    pointerEvents: 'none', zIndex: '20',
+    borderRadius: '8px',
+  });
+  scene.appendChild(canvas);
+
+  const ctx     = canvas.getContext('2d');
+  const backImg = cardEl.querySelector('.card-back img');
+
+  function startParticles() {
+    ctx.drawImage(backImg, 0, 0, W, H);
+
+    let data;
+    try {
+      data = ctx.getImageData(0, 0, W, H).data;
+    } catch (_) {
+      // CORS失敗時はそのままフリップにフォールバック
+      canvas.remove();
+      cardEl.querySelector('.card-back').style.visibility = '';
+      onComplete();
+      return;
+    }
+
+    cardEl.querySelector('.card-back').style.visibility = 'hidden';
+    ctx.clearRect(0, 0, W, H);
+
+    const N = 700;
+    const particles = Array.from({ length: N }, () => {
+      const x   = Math.floor(Math.random() * W);
+      const y   = Math.floor(Math.random() * H);
+      const idx = (y * W + x) * 4;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 2.5 + 0.5;
+      return {
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.2,
+        r: data[idx], g: data[idx + 1], b: data[idx + 2],
+        size: Math.random() * 2.5 + 1,
+      };
+    });
+
+    const DURATION = 750;
+    const start = performance.now();
+
+    (function frame(now) {
+      const t = Math.min((now - start) / DURATION, 1);
+      ctx.clearRect(0, 0, W, H);
+      const accel = 1 + t * 4;
+      particles.forEach(p => {
+        p.x += p.vx * accel;
+        p.y += p.vy * accel;
+        ctx.globalAlpha = Math.pow(1 - t, 1.5);
+        ctx.fillStyle   = `rgb(${p.r},${p.g},${p.b})`;
+        ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      });
+      ctx.globalAlpha = 1;
+      if (t < 1) { requestAnimationFrame(frame); return; }
+      canvas.remove();
+      onComplete();
+    })(start);
+  }
+
+  if (backImg.complete && backImg.naturalWidth > 0) {
+    startParticles();
+  } else {
+    backImg.onload = startParticles;
+  }
+}
+
 function displayTarot(card, isReversed) {
-  const cardData = isReversed ? card.reversed : card.upright;
-  const cardEl   = document.getElementById('tarot-card');
+  const cardEl  = document.getElementById('tarot-card');
+  const backImg = cardEl.querySelector('.card-back img');
+
+  // crossOrigin はフリップ前にセット（canvas描画のため）
+  backImg.crossOrigin = 'anonymous';
+  backImg.src = CARD_BACK;
   cardEl.querySelector('.card-front img').src = card.filename;
   cardEl.querySelector('.card-front img').style.transform = isReversed ? 'rotate(180deg)' : '';
-  cardEl.querySelector('.card-back img').src  = CARD_BACK;
+  cardEl.querySelector('.card-back').style.visibility = '';
   cardEl.classList.remove('flipped');
-  cardEl.onclick = () => cardEl.classList.add('flipped');
 
-  document.getElementById('tarot-name').textContent    = `${card.number} ${card.name}${isReversed ? '（逆位置）' : '（正位置）'}`;
-  document.getElementById('tarot-keyword').textContent = cardData.keyword;
-  document.getElementById('tarot-message').textContent = cardData.message;
+  // 裏面中はカード情報を非表示
+  document.getElementById('tarot-name').textContent    = '';
+  document.getElementById('tarot-keyword').textContent = '';
+  document.getElementById('tarot-message').textContent = '';
+
+  cardEl.onclick = () => {
+    if (cardEl.classList.contains('flipped')) return;
+    cardEl.onclick = null;
+    dustDissolve(cardEl, () => {
+      cardEl.classList.add('flipped');
+      // フリップ後に情報を表示
+      const cardData = isReversed ? card.reversed : card.upright;
+      document.getElementById('tarot-name').textContent    = `${card.number} ${card.name}${isReversed ? '（逆位置）' : '（正位置）'}`;
+      document.getElementById('tarot-keyword').textContent = cardData.keyword;
+      document.getElementById('tarot-message').textContent = cardData.message;
+    });
+  };
 }
 
 function displayFortuneBadge(level) {
