@@ -285,7 +285,7 @@ function selectCard(index) {
     state.zIndex = sel ? 100 : state.zIndex;
     applyTransform(state, true);
   });
-  document.getElementById('card-selected-name').textContent = 'カードを選びました ✓';
+  document.getElementById('card-selected-name').textContent = '';
   updateFortuneBtn();
 }
 
@@ -377,6 +377,8 @@ document.addEventListener('DOMContentLoaded', () => {
     runFortune(birthday, name, selectedCardIndex, isReversed);
     document.getElementById('result').style.display = 'block';
     document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+    showDailyDoneOverlay();
+    updateFortuneBtn();
   });
 });
 
