@@ -289,6 +289,16 @@ function selectCard(index) {
   updateFortuneBtn();
 }
 
+// ===== 占い済みオーバーレイ =====
+function showDailyDoneOverlay() {
+  const area = document.getElementById('card-scatter-area');
+  if (document.getElementById('daily-done-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'daily-done-overlay';
+  overlay.innerHTML = '<span>本日デイリー占い済み</span>';
+  area.appendChild(overlay);
+}
+
 function updateFortuneBtn() {
   const birthday = document.getElementById('birthday').value;
   const saved     = loadResult();
@@ -303,9 +313,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const fortuneBtn    = document.getElementById('fortune-btn');
   const shuffleBtn    = document.getElementById('shuffle-btn');
 
-  // localStorage 復元
-  nameInput.value     = localStorage.getItem(LS_NAME)     || '';
-  birthdayInput.value = localStorage.getItem(LS_BIRTHDAY) || '';
+  // 生年月日の max を今日に設定
+  birthdayInput.max = new Date().toISOString().slice(0, 10);
+
+  // localStorage 復元（生年月日の初期値は20年前）
+  nameInput.value = localStorage.getItem(LS_NAME) || '';
+  const storedBirthday = localStorage.getItem(LS_BIRTHDAY);
+  if (storedBirthday) {
+    birthdayInput.value = storedBirthday;
+  } else {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 20);
+    birthdayInput.value = d.toISOString().slice(0, 10);
+  }
   updateFortuneBtn();
 
   // カードスキャッタ初期化 → 常に初期シャッフル
@@ -318,6 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (savedResult && savedResult.birthday === savedBirthday) {
     // シャッフル後にカード選択を復元
     setTimeout(() => selectCard(savedResult.cardIndex), 400);
+    // 占い済みオーバーレイを表示してカード操作をブロック
+    showDailyDoneOverlay();
     // 結果を表示
     const name = nameInput.value.trim();
     runFortune(savedBirthday, name, savedResult.cardIndex, savedResult.isReversed);

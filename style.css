@@ -286,6 +286,27 @@ main {
   opacity: 0.9;
 }
 
+/* 占い済みオーバーレイ */
+#daily-done-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  border-radius: 10px;
+  pointer-events: all;
+}
+
+#daily-done-overlay span {
+  color: #cc2200;
+  font-size: 1.05rem;
+  font-weight: bold;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 12px rgba(255,255,255,0.9);
+}
+
 .scatter-controls {
   display: flex;
   align-items: center;
@@ -447,6 +468,15 @@ main {
 }
 
 .tarot-info { margin-top: 8px; }
+
+@keyframes tarot-fadein {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tarot-fadein {
+  animation: tarot-fadein 0.5s ease both;
+}
 
 .tarot-name {
   font-size: 1.05rem;
