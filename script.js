@@ -115,64 +115,31 @@ function initCardScatter() {
   const container = document.getElementById('card-scatter-area');
   container.innerHTML = '';
 
-  // ドラッグ状態
   let dragCardIndex = null;
   let dragStartX    = 0;
   let dragStartY    = 0;
-  let isDragMode    = false;
 
   tarotCards.forEach((card, i) => {
     const div = document.createElement('div');
     div.className = 'scatter-card';
     div.innerHTML = `<img src="${CARD_BACK}" alt="${card.name}" draggable="false">`;
 
+    // pointerdown: どのカードを押したか記録するだけ
     div.addEventListener('pointerdown', (e) => {
       if (!isShuffled) return;
-      e.stopPropagation();
-      e.currentTarget.setPointerCapture(e.pointerId);
       dragCardIndex = i;
       dragStartX    = e.clientX;
       dragStartY    = e.clientY;
-      isDragMode    = false;
-      // 最前面へ
+      isDraggingAny = false;
       cardStates[i].zIndex = tarotCards.length + 10;
       applyTransform(cardStates[i], false);
     });
 
-    div.addEventListener('pointermove', (e) => {
+    // pointerup: ほぼ動いていなければタップ選択
+    div.addEventListener('pointerup', () => {
       if (dragCardIndex !== i) return;
-      // バブリングを止めてコンテナの pushCards がこのカードを押し退けないようにする
-      e.stopPropagation();
-      const dx = e.clientX - dragStartX;
-      const dy = e.clientY - dragStartY;
-      // 6px 以上動いたら即ドラッグモードへ
-      if (!isDragMode && Math.sqrt(dx * dx + dy * dy) > 6) {
-        isDragMode    = true;
-        isDraggingAny = true;
-        cardStates[i].el.classList.add('dragging');
-      }
-      if (isDragMode) {
-        const rect = container.getBoundingClientRect();
-        const px   = e.clientX - rect.left - rect.width  / 2;
-        const py   = e.clientY - rect.top  - rect.height / 2;
-        const maxX = rect.width  / 2 - CARD_W / 2 - 4;
-        const maxY = rect.height / 2 - CARD_H / 2 - 4;
-        cardStates[i].x = clamp(px, -maxX, maxX);
-        cardStates[i].y = clamp(py, -maxY, maxY);
-        applyTransform(cardStates[i], false);
-      }
-    });
-
-    div.addEventListener('pointerup', (e) => {
-      if (dragCardIndex !== i) return;
-      e.stopPropagation();
-      if (!isDragMode) selectCard(i); // 動かなければタップ選択
-      _endDrag(i);
-    });
-
-    div.addEventListener('pointercancel', () => {
-      if (dragCardIndex !== i) return;
-      _endDrag(i);
+      if (!isDraggingAny) selectCard(i);
+      _endDrag();
     });
 
     cardStates[i].el     = div;
@@ -184,20 +151,48 @@ function initCardScatter() {
     container.appendChild(div);
   });
 
-  function _endDrag(i) {
-    if (isDragMode) {
-      isDraggingAny = false;
-      cardStates[i].el.classList.remove('dragging');
+  function _endDrag() {
+    if (isDraggingAny && dragCardIndex !== null) {
+      cardStates[dragCardIndex].el.classList.remove('dragging');
     }
+    isDraggingAny = false;
     dragCardIndex = null;
-    isDragMode    = false;
   }
 
-  // コンテナ全体でポインター移動 → ドラッグ中以外は押しのけ
+  // ===== 移動処理はすべてコンテナ側で一元管理 =====
   container.addEventListener('pointermove', (e) => {
-    if (!isShuffled || !(e.buttons > 0) || isDraggingAny) return;
+    if (!isShuffled || !(e.buttons > 0)) return;
+
+    // カードを押さえている場合: 6px 超えたらドラッグ開始
+    if (dragCardIndex !== null && !isDraggingAny) {
+      const dx = e.clientX - dragStartX;
+      const dy = e.clientY - dragStartY;
+      if (Math.sqrt(dx * dx + dy * dy) > 6) {
+        isDraggingAny = true;
+        cardStates[dragCardIndex].el.classList.add('dragging');
+      }
+    }
+
+    if (isDraggingAny && dragCardIndex !== null) {
+      // ドラッグ中: 掴んだカードをマウスに追従させる
+      const rect = container.getBoundingClientRect();
+      const px   = e.clientX - rect.left - rect.width  / 2;
+      const py   = e.clientY - rect.top  - rect.height / 2;
+      const maxX = rect.width  / 2 - CARD_W / 2 - 4;
+      const maxY = rect.height / 2 - CARD_H / 2 - 4;
+      cardStates[dragCardIndex].x = clamp(px, -maxX, maxX);
+      cardStates[dragCardIndex].y = clamp(py, -maxY, maxY);
+      applyTransform(cardStates[dragCardIndex], false);
+      return;
+    }
+
+    // ドラッグ中でなければ押しのけ
     pushCards(e, container);
   });
+
+  // カード外・コンテナ外でリリースされた場合もドラッグ終了
+  container.addEventListener('pointerup', _endDrag);
+  container.addEventListener('pointerleave', () => { if (isDraggingAny) _endDrag(); });
 
   // タッチで混ぜる（ドラッグ中はスキップ）
   container.addEventListener('touchmove', (e) => {
