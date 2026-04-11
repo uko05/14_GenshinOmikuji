@@ -324,14 +324,15 @@ main {
 /* タロット結果 */
 .tarot-reveal {
   display: flex;
-  gap: 20px;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
 .card-scene {
-  width: 100px;
-  height: 150px;
-  perspective: 600px;
+  width: 200px;
+  height: 300px;
+  perspective: 800px;
   flex-shrink: 0;
   cursor: pointer;
 }
@@ -352,8 +353,7 @@ main {
   backface-visibility: hidden;
   border-radius: 8px;
   overflow: hidden;
-  border: 2px solid var(--border);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 .card-front { transform: rotateY(180deg); }
@@ -364,7 +364,21 @@ main {
   object-fit: cover;
 }
 
-.tarot-info { flex: 1; }
+.tap-hint {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 8px;
+  background: rgba(0, 0, 0, 0.52);
+  color: #ffffff;
+  font-size: 0.82rem;
+  text-align: center;
+  letter-spacing: 0.05em;
+  pointer-events: none;
+}
+
+.tarot-info { width: 100%; }
 
 /* タロット */
 .tarot-hint {
@@ -439,12 +453,14 @@ main {
   color: var(--text);
   font-weight: bold;
   margin-bottom: 4px;
+  text-align: center;
 }
 
 .tarot-keyword {
   font-size: 0.8rem;
   color: var(--muted);
   margin-bottom: 12px;
+  text-align: center;
 }
 
 .tarot-message {
@@ -548,5 +564,4 @@ footer {
   .zodiac-row { grid-template-columns: 48px 1fr; }
   .card-scatter-area { height: 510px; }
   .input-row { flex-direction: column; gap: 8px; }
-  .tarot-reveal { flex-direction: column; align-items: center; }
 }
