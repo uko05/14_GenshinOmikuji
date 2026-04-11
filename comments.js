@@ -1,13 +1,14 @@
 // comments.js
 // 総合コメント：運勢レベル × バイオリズム平均の組み合わせ
 
-export const fortuneLevels = ['大吉', '中吉', '小吉', '末吉', '凶'];
+export const fortuneLevels    = ['大吉', '中吉', '小吉', '末吉', '凶'];
+export const fortuneLevels_en = ['Great Fortune', 'Good Fortune', 'Minor Fortune', 'Slight Fortune', 'Misfortune'];
 
 // 運勢レベルに応じた重み（インデックスに対応）
 // 大吉:15%, 中吉:30%, 小吉:30%, 末吉:17%, 凶:8%
 export const fortuneWeights = [0.15, 0.30, 0.30, 0.17, 0.08];
 
-// バイオリズム平均 > 0.2 → 'high', -0.2〜0.2 → 'mid', < -0.2 → 'low'
+// ===== 日本語コメント =====
 export const comments = {
   大吉: {
     high: [
@@ -77,6 +78,80 @@ export const comments = {
     low: [
       '今日はとにかく休もう。無理して動くより、明日への英気を養うことが最善。',
       '運もコンディションも低い日は、静かに過ごすことで運気のリセットができる。明日に期待しよう。',
+    ],
+  },
+};
+
+// ===== 英語コメント =====
+export const comments_en = {
+  大吉: {
+    high: [
+      "Truly the best day possible! Your body, mind, and spirit are all aligned, and everything you do is bound to go well. Move forward with full confidence.",
+      "A lucky day when energy and fortune converge. When opportunity comes, seize it without hesitation. Your actions will make the future shine.",
+    ],
+    mid: [
+      "A day of great good fortune. You may feel a slight dip in your condition, but the tailwinds of fortune more than make up for it.",
+      "Nothing wrong with today's fortune at all. Even if you're not at your best, the timing is in your favor — you'll be just fine.",
+    ],
+    low: [
+      "Your fortune is at its peak, but your body or emotions feel a little sluggish. Move at a gentle pace and fortune will still be firmly on your side.",
+      "The best of luck, yet your body feels heavy today. Think of it as a 'waiting' Great Fortune — good things will roll your way simply by staying still.",
+    ],
+  },
+  中吉: {
+    high: [
+      "Both your physical and mental energy are brimming, and fortune has your back. A day when your hard work pays off with solid results.",
+      "A day to push forward with steady good fortune behind you. Something you've been chipping away at will finally come to fruition.",
+    ],
+    mid: [
+      "Neither great nor bad — a day where it all comes down to you. Just a little extra intention in your actions can produce results beyond Good Fortune.",
+      "Your fortune is stable. No big waves, but you're steadily moving in a good direction. There's no need to hurry.",
+    ],
+    low: [
+      "Your condition is on the low side, but good fortune is there to support you. Today, trust the flow rather than pushing too hard.",
+      "Your body and emotions may feel heavy, but a positive current is coming. Get ready to receive it without overdoing it.",
+    ],
+  },
+  小吉: {
+    high: [
+      "Your physical energy is high, but fortune is modest. Today is a day to break through with your own ability. Trust yourself and keep moving steadily.",
+      "Your condition is excellent. Even with fortune being a little reserved, your drive can more than cover it today.",
+    ],
+    mid: [
+      "A peaceful day. Nothing special may happen, but that itself is a small kind of happiness. Treasure the everyday.",
+      "Today, taking it easy and going slowly is the right call. Finding small joys along the way raises your fortune.",
+    ],
+    low: [
+      "Today is a perfectly good day for a little rest mode. Rather than pushing forward, recharging now stores up strength for tomorrow.",
+      "Both fortune and condition are on the quieter side today. On days like these, focus quietly on settling and restoring yourself.",
+    ],
+  },
+  末吉: {
+    high: [
+      "You have the energy but the flow feels a bit stiff today. Moving carefully, without rushing, can still turn Slight Fortune into something better.",
+      "Your condition is good, but fortune isn't quite catching up. Think of today as a practice day for building your strength.",
+    ],
+    mid: [
+      "Caution is everything today. Spending time double-checking and preparing, rather than making bold moves, is the right call.",
+      "The flow is hard to read today. Rather than forcing your way through, watching and waiting is the wiser choice.",
+    ],
+    low: [
+      "The best fortune today comes from not pushing yourself. Prioritize rest and conserve your energy.",
+      "Your body, spirit, and fortune are all on the quieter side today. On days like these, doing nothing may be the wisest choice of all.",
+    ],
+  },
+  凶: {
+    high: [
+      "You have the energy, but it's a difficult day for fortune. Precisely because you can move, the wise choice is to deliberately pump the brakes.",
+      "Your mood is positive, but today is prone to spinning your wheels. Step back and dedicate the day to preparation.",
+    ],
+    mid: [
+      "Treading carefully is the right path today. Hold back on new ventures and focus on finishing existing things with care.",
+      "Even with Misfortune, passing the day with mindfulness keeps trouble to a minimum. Move forward with a calm heart.",
+    ],
+    low: [
+      "Above all else, rest today. Rather than pushing through, nurturing your spirit for tomorrow is the best course of action.",
+      "When both fortune and condition are low, spending the day quietly allows fortune to reset. Look forward to tomorrow.",
     ],
   },
 };
