@@ -447,6 +447,7 @@ function runFortune(birthday, name, cardIndex, isReversed) {
     zodiac:          zodiacKey,
     tarot:           card.name,
     isReversed,
+    player-name,
     birthday,
     fortuneLevel,
     overallComment,
