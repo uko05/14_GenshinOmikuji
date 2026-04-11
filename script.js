@@ -78,18 +78,24 @@ function bioClass(v) {
   return 'bio-low';
 }
 
+// ===== 占い日付（朝5時区切り） =====
+function getFortuneDate() {
+  const now = new Date();
+  if (now.getHours() < 5) now.setDate(now.getDate() - 1);
+  return now.toISOString().slice(0, 10);
+}
+
 // ===== 結果の保存・読み込み =====
 function saveResult(birthday, cardIndex, isReversed) {
   localStorage.setItem(LS_RESULT, JSON.stringify({
-    date: new Date().toISOString().slice(0, 10),
+    date: getFortuneDate(),
     birthday, cardIndex, isReversed,
   }));
 }
 
 function loadResult() {
   const saved = JSON.parse(localStorage.getItem(LS_RESULT) || 'null');
-  const today = new Date().toISOString().slice(0, 10);
-  return (saved && saved.date === today) ? saved : null;
+  return (saved && saved.date === getFortuneDate()) ? saved : null;
 }
 
 // ===== カード変換適用 =====
@@ -328,8 +334,17 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(LS_NAME, name);
     localStorage.setItem(LS_BIRTHDAY, birthday);
 
-    // isReversed をシードで決定（同じ日・同じ誕生日・同じカードなら常に同じ）
-    const todayStr   = new Date().toISOString().slice(0, 10);
+    // 朝5時まで同じ結果を使い回す
+    const existingResult = loadResult();
+    if (existingResult && existingResult.birthday === birthday) {
+      runFortune(birthday, name, existingResult.cardIndex, existingResult.isReversed);
+      document.getElementById('result').style.display = 'block';
+      document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    // 新規: isReversed をシードで決定
+    const todayStr   = getFortuneDate();
     const seed       = hashCode(todayStr + birthday + selectedCardIndex);
     const isReversed = seededRandom(seed)() < 0.5;
 
@@ -343,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ===== メイン占い処理 =====
 function runFortune(birthday, name, cardIndex, isReversed) {
   const [, month, day] = birthday.split('-').map(Number);
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = getFortuneDate();
   const seed     = hashCode(todayStr + birthday);
   const rng      = seededRandom(seed);
   const pick     = (arr) => arr[Math.floor(rng() * arr.length)];
@@ -424,7 +439,7 @@ function displayTarot(card, isReversed) {
   cardEl.querySelector('.card-front img').style.transform = isReversed ? 'rotate(180deg)' : '';
   cardEl.querySelector('.card-back img').src  = CARD_BACK;
   cardEl.classList.remove('flipped');
-  cardEl.onclick = () => cardEl.classList.toggle('flipped');
+  cardEl.onclick = () => cardEl.classList.add('flipped');
 
   document.getElementById('tarot-name').textContent    = `${card.number} ${card.name}${isReversed ? '（逆位置）' : '（正位置）'}`;
   document.getElementById('tarot-keyword').textContent = cardData.keyword;
