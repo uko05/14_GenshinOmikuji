@@ -604,6 +604,22 @@ main {
   font-weight: bold;
 }
 
+/* 画像保存ボタン */
+.save-img-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.95rem;
+  padding: 10px 32px;
+  transition: background 0.2s;
+}
+
+.save-img-btn:hover { background: var(--surface2); }
+.save-img-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 /* フッター */
 footer {
   text-align: center;

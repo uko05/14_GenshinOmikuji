@@ -13,6 +13,10 @@ const LS_RESULT   = 'genshinOmikuji_result';
 let selectedCardIndex = null;
 let isShuffled        = false;
 let isDraggingAny     = false;
+
+// ===== 画像保存用キャッシュ =====
+let captureCard       = null;
+let captureIsReversed = false;
 const CARD_W = 60;
 const CARD_H = 90;
 
@@ -348,6 +352,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   shuffleBtn.addEventListener('click', shuffleCards);
 
+  document.getElementById('save-img-btn').addEventListener('click', captureResult);
+
   birthdayInput.addEventListener('change', updateFortuneBtn);
 
   fortuneBtn.addEventListener('click', () => {
@@ -405,6 +411,8 @@ function runFortune(birthday, name, cardIndex, isReversed) {
 
   // タロット
   const card = tarotCards[cardIndex];
+  captureCard       = card;
+  captureIsReversed = isReversed;
   displayTarot(card, isReversed);
 
   // 運勢レベル
@@ -516,6 +524,98 @@ function displayTarot(card, isReversed) {
       msgEl.classList.add('tarot-flipin');
     }, 2300);
   };
+}
+
+// ===== 画像保存 =====
+async function captureResult() {
+  if (!captureCard) return;
+
+  const btn = document.getElementById('save-img-btn');
+  btn.disabled = true;
+  btn.textContent = '生成中…';
+
+  // バッジスタイルマップ
+  const badgeStyles = {
+    '大吉': 'color:#cc2200;background:rgba(204,34,0,0.08);border:1px solid rgba(204,34,0,0.3)',
+    '中吉': 'color:#cc6600;background:rgba(204,102,0,0.08);border:1px solid rgba(204,102,0,0.3)',
+    '小吉': 'color:#aa8800;background:rgba(255,204,0,0.15);border:1px solid rgba(255,204,0,0.5)',
+    '末吉': 'color:#448844;background:rgba(68,136,68,0.08);border:1px solid rgba(68,136,68,0.3)',
+    '凶':   'color:#888888;background:#eeeeee;border:1px solid #dddddd',
+  };
+  const S = 'background:#fff;border:1px solid #ddd;border-radius:12px;padding:16px 14px;margin-bottom:12px;';
+  const T = 'color:#aa8800;font-size:0.72rem;letter-spacing:0.15em;text-align:center;border-bottom:1px solid #ddd;padding-bottom:8px;margin-bottom:12px;';
+  const R = 'background:#eee;border-radius:8px;padding:8px 12px;display:flex;gap:10px;margin-bottom:6px;align-items:flex-start;';
+  const C = 'color:#aa8800;font-size:0.75rem;min-width:44px;flex-shrink:0;';
+
+  const fortune        = document.getElementById('fortune-badge').textContent;
+  const overallComment = document.getElementById('overall-comment').textContent;
+  const zodiacSymbol   = document.getElementById('zodiac-symbol').textContent;
+  const zodiacName     = document.getElementById('zodiac-name').textContent;
+  const zodiacPeriod   = document.getElementById('zodiac-period').textContent;
+  const bioHTML        = document.getElementById('biorhythm-bars').innerHTML;
+  const cardData       = captureIsReversed ? captureCard.reversed : captureCard.upright;
+  const imgRotate      = captureIsReversed ? 'transform:rotate(180deg);' : '';
+  const today          = getFortuneDate().replace(/-/g, '/');
+
+  const rows = ['overall','love','work','health'];
+  const rowLabels = ['総合','恋愛','仕事','健康'];
+  const zodiacRows = rows.map((r, i) =>
+    `<div style="${R}"><span style="${C}">${rowLabels[i]}</span><span style="font-size:0.82rem;">${document.getElementById('zodiac-'+r).textContent}</span></div>`
+  ).join('');
+
+  const div = document.createElement('div');
+  div.style.cssText = 'position:absolute;left:-9999px;top:0;width:400px;background:#f4f4f9;padding:22px 18px;box-sizing:border-box;font-family:"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;color:#333;line-height:1.7;';
+
+  div.innerHTML = `
+    <div style="text-align:center;border-bottom:2px solid #ffcc00;padding-bottom:12px;margin-bottom:14px;">
+      <div style="font-size:1.05rem;font-weight:bold;letter-spacing:0.1em;">✦ 原神おみくじ ✦</div>
+      <div style="font-size:0.75rem;color:#888;">${today}</div>
+    </div>
+    <div style="${S}">
+      <div style="${T}">今日の運勢</div>
+      <div style="text-align:center;margin-bottom:10px;">
+        <span style="display:inline-block;font-size:1.7rem;font-weight:bold;padding:4px 20px;border-radius:8px;${badgeStyles[fortune]||''}">${fortune}</span>
+      </div>
+      <p style="font-size:0.85rem;">${overallComment}</p>
+    </div>
+    <div style="${S}">
+      <div style="${T}">星座占い</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <span style="font-size:2rem;">${zodiacSymbol}</span>
+        <div><div style="font-weight:bold;">${zodiacName}</div><div style="font-size:0.72rem;color:#888;">${zodiacPeriod}</div></div>
+      </div>
+      ${zodiacRows}
+    </div>
+    <div style="${S}">
+      <div style="${T}">バイオリズム</div>
+      ${bioHTML}
+    </div>
+    <div style="${S}">
+      <div style="${T}">アルカナからのメッセージ</div>
+      <div style="text-align:center;margin-bottom:10px;">
+        <img src="${captureCard.filename}" crossorigin="anonymous" style="width:86px;height:129px;object-fit:cover;border-radius:6px;${imgRotate}">
+      </div>
+      <div style="font-size:1.1rem;font-weight:bold;text-align:center;margin-bottom:4px;">${captureCard.number} ${captureCard.name}${captureIsReversed?'（逆位置）':'（正位置）'}</div>
+      <div style="font-size:0.85rem;color:#888;text-align:center;margin-bottom:10px;">${cardData.keyword}</div>
+      <div style="font-size:0.85rem;background:#eee;border-radius:8px;padding:10px 12px;">${cardData.message}</div>
+    </div>
+    <div style="text-align:center;color:#bbb;font-size:0.68rem;margin-top:6px;">uko05.github.io/14_GenshinOmikuji</div>`;
+
+  document.body.appendChild(div);
+  try {
+    const canvas = await html2canvas(div, { useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false });
+    const a = document.createElement('a');
+    a.download = `genshin-omikuji-${getFortuneDate()}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  } catch (e) {
+    alert('画像の保存に失敗しました');
+    console.error(e);
+  } finally {
+    div.remove();
+    btn.disabled = false;
+    btn.textContent = '📷 結果を画像で保存';
+  }
 }
 
 function displayFortuneBadge(level) {
