@@ -295,7 +295,7 @@ function showDailyDoneOverlay() {
   if (document.getElementById('daily-done-overlay')) return;
   const overlay = document.createElement('div');
   overlay.id = 'daily-done-overlay';
-  overlay.innerHTML = '<span>本日デイリー占い済み</span>';
+  overlay.innerHTML = '<div class="daily-done-text"><span>本日デイリー占い済み</span><small>AM5:00 デイリー更新</small></div>';
   area.appendChild(overlay);
 }
 
@@ -479,19 +479,19 @@ function displayTarot(card, isReversed) {
     cardEl.classList.add('flipped');
 
     const cardData = isReversed ? card.reversed : card.upright;
-    // フリップ完了後(600ms)に名前、さらに500ms後にキーワード+メッセージをフリップイン
+    // フリップ完了後(1200ms)に名前、さらに1100ms後にキーワード+メッセージをフリップイン
     setTimeout(() => {
       nameEl.textContent = `${card.number} ${card.name}${isReversed ? '（逆位置）' : '（正位置）'}`;
       void nameEl.offsetWidth; // reflow
       nameEl.classList.add('tarot-flipin');
-    }, 600);
+    }, 1200);
     setTimeout(() => {
       keyEl.textContent = cardData.keyword;
       msgEl.textContent = cardData.message;
       void keyEl.offsetWidth;
       keyEl.classList.add('tarot-flipin');
       msgEl.classList.add('tarot-flipin');
-    }, 1150);
+    }, 2300);
   };
 }
 

@@ -299,12 +299,25 @@ main {
   pointer-events: all;
 }
 
-#daily-done-overlay span {
+.daily-done-text {
+  text-align: center;
+  line-height: 1.6;
+}
+
+.daily-done-text span {
+  display: block;
   color: #ff0000;
   font-size: 1.6rem;
   font-weight: bold;
   letter-spacing: 0.1em;
   text-shadow: 0 0 14px rgba(255,255,255,1);
+}
+
+.daily-done-text small {
+  display: block;
+  color: #888888;
+  font-size: 0.78rem;
+  letter-spacing: 0.05em;
 }
 
 .scatter-controls {
@@ -364,7 +377,7 @@ main {
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  transition: transform 0.55s ease;
+  transition: transform 1.1s ease;
 }
 
 .tarot-card.flipped { transform: rotateY(180deg); }
@@ -475,19 +488,19 @@ main {
 }
 
 .tarot-flipin {
-  animation: tarot-flipin 0.45s ease both;
+  animation: tarot-flipin 0.9s ease both;
 }
 
 .tarot-name {
-  font-size: 1.05rem;
+  font-size: 1.25rem;
   color: var(--text);
   font-weight: bold;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   text-align: center;
 }
 
 .tarot-keyword {
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   color: var(--muted);
   margin-bottom: 12px;
   text-align: center;
