@@ -622,18 +622,23 @@ main {
 
 /* 画像保存ボタン */
 .save-img-btn {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 50px;
-  color: var(--text);
+  background-color: #007bff;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  color: #fff;
   cursor: pointer;
   font-family: var(--font);
-  font-size: 0.95rem;
-  padding: 10px 32px;
-  transition: background 0.2s;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 10px 60px;
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
-.save-img-btn:hover { background: var(--surface2); }
+.save-img-btn:hover {
+  background-color: #fff;
+  color: #007bff;
+  border-color: #007bff;
+}
 .save-img-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* フッター */

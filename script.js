@@ -576,12 +576,16 @@ async function captureResult() {
   ).join('');
 
   const div = document.createElement('div');
-  div.style.cssText = 'position:absolute;left:-9999px;top:0;width:700px;background:#f4f4f9;padding:20px 18px;box-sizing:border-box;font-family:"Hiragino Kaku Gothic ProN","Meiryo",sans-serif;color:#333;line-height:1.7;';
+  div.style.cssText = "position:absolute;left:-9999px;top:0;width:700px;background:#f4f4f9;padding:20px 18px;box-sizing:border-box;font-family:'MihoyoZenZero','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;color:#333;line-height:1.7;";
 
   div.innerHTML = `
-    <div style="text-align:center;border-bottom:2px solid #ffcc00;padding-bottom:10px;margin-bottom:14px;">
-      <div style="font-size:1.05rem;font-weight:bold;letter-spacing:0.1em;">✦ 原神おみくじ ✦</div>
-      <div style="font-size:0.75rem;color:#888;">${today}</div>
+    <div style="display:flex;align-items:flex-end;justify-content:center;gap:0;border-bottom:2px solid #ffcc00;padding-bottom:6px;margin-bottom:14px;">
+      <img src="${omikujiFolder}yaemiko01.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">
+      <div style="text-align:center;flex:1;padding-bottom:4px;">
+        <div style="font-size:1.05rem;font-weight:bold;letter-spacing:0.1em;">✦ 原神おみくじ ✦</div>
+        <div style="font-size:0.75rem;color:#888;">${today}</div>
+      </div>
+      <img src="${omikujiFolder}mona02.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">
     </div>
     <div style="display:flex;gap:12px;align-items:flex-start;">
       <!-- 左列: 運勢・星座・バイオリズム -->
@@ -626,13 +630,9 @@ async function captureResult() {
         </div>
       </div>
     </div>
-    <div style="display:flex;align-items:flex-end;justify-content:center;gap:0;margin-top:8px;border-top:2px solid #ffcc00;padding-top:6px;">
-      <img src="${omikujiFolder}yaemiko01.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">
-      <div style="text-align:center;flex:1;padding-bottom:8px;">
-        <div style="font-size:1.0rem;font-weight:bold;letter-spacing:0.12em;color:#333;">✦ 原神おみくじ ✦</div>
-        <div style="font-size:0.65rem;color:#aaa;">uko05.github.io/14_GenshinOmikuji</div>
-      </div>
-      <img src="${omikujiFolder}mona02.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;border-top:1px solid #ddd;padding-top:8px;">
+      <img src="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/footer_icon/twitter_image.png" crossorigin="anonymous" style="width:20px;height:20px;object-fit:contain;">
+      <span style="font-size:0.78rem;color:#555;">X: @uko_dayo_</span>
     </div>`;
 
   document.body.appendChild(div);
