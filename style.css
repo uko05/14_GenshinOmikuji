@@ -696,20 +696,33 @@ main {
   transform: rotateY(180deg);
 }
 
-/* ③ シャドバ風ズームめくり演出 */
-@keyframes col-reveal-flip {
-  0%   { transform: rotateY(0deg)   scale(1); }
-  25%  { transform: rotateY(45deg)  scale(5); }
-  50%  { transform: rotateY(90deg)  scale(8); }
-  75%  { transform: rotateY(135deg) scale(5); }
-  100% { transform: rotateY(180deg) scale(1); }
+/* ③ シャドバ風ズームめくり演出（スケールと回転を分離してなめらかに） */
+
+/* スケール：ease-in-out で自然なベル曲線 */
+@keyframes col-zoom-reveal {
+  0%,  100% { transform: scale(1); }
+  50%        { transform: scale(4); }
+}
+
+/* 回転：linear で一定速度 */
+@keyframes col-rotate-reveal {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(180deg); }
+}
+
+.col-card-zoom {
+  transform-style: preserve-3d;
+}
+
+.col-card-zoom.col-reveal {
+  animation: col-zoom-reveal 1.5s ease-in-out forwards;
+  position: relative;
+  z-index: 10;
 }
 
 .col-card-inner.col-reveal {
-  animation: col-reveal-flip 2.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: col-rotate-reveal 1.5s linear forwards;
   transition: none;
-  position: relative;
-  z-index: 10;
 }
 
 /* 裏面：通常フローで親の高さを確定させる */
@@ -768,7 +781,7 @@ main {
   100% { box-shadow: none; }
 }
 
-[data-new="true"].col-flipped .col-card-front {
+[data-new="true"] .col-card-inner.col-flipped .col-card-front {
   animation: col-glow 1.4s ease 0.1s both;
 }
 
@@ -794,7 +807,7 @@ main {
   border-radius: var(--radius);
   padding: 28px 20px 22px;
   width: min(88vw, 560px);
-  max-height: 92vh;
+  max-height: 97vh;
   overflow-y: auto;
   text-align: center;
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);

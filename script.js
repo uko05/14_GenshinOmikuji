@@ -200,10 +200,14 @@ function renderCollection(newKey = null) {
       const scene = document.createElement('div');
       scene.className = 'col-scene';
 
+      // スケール担当ラッパー
+      const zoom = document.createElement('div');
+      zoom.className = 'col-card-zoom';
+      if (isNew) zoom.dataset.new = 'true';
+
       const inner = document.createElement('div');
       // 収録済みかつ新規でない → 最初からフリップ（表を表示）
       inner.className = 'col-card-inner' + (collected && !isNew ? ' col-flipped' : '');
-      if (isNew) inner.dataset.new = 'true';
 
       // 裏面
       const backFace = document.createElement('div');
@@ -224,7 +228,8 @@ function renderCollection(newKey = null) {
 
       inner.appendChild(backFace);
       inner.appendChild(frontFace);
-      scene.appendChild(inner);
+      zoom.appendChild(inner);
+      scene.appendChild(zoom);
 
       // ④ 収録済みカードをクリックでモーダル表示
       if (collected) {
@@ -254,13 +259,17 @@ function renderCollection(newKey = null) {
     const observer = new IntersectionObserver((entries, obs) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          const inner = entry.target;
+          const zoom  = entry.target;                          // スケール担当
+          const inner = zoom.querySelector('.col-card-inner'); // 回転担当
+          zoom.classList.add('col-reveal');
           inner.classList.add('col-reveal');
+          // 回転アニメーション終了後に確定状態へ差し替え
           inner.addEventListener('animationend', () => {
+            zoom.classList.remove('col-reveal');
             inner.classList.remove('col-reveal');
             inner.classList.add('col-flipped');
           }, { once: true });
-          obs.unobserve(inner);
+          obs.unobserve(zoom);
         }
       });
     }, { threshold: 0.4 });
