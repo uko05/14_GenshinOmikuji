@@ -595,6 +595,7 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, s
       zodiac:          zodiacKey,
       tarot:           card.name,
       isReversed,
+      playerName:      name,
       birthday,
       fortuneLevel,
       overallComment,
