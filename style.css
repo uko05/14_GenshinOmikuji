@@ -47,6 +47,15 @@ header {
   position: relative;
 }
 
+/* 連続ログインストリーク */
+.streak-display {
+  font-size: 0.85rem;
+  color: var(--gold);
+  font-weight: bold;
+  margin: 4px 0 2px;
+  letter-spacing: 0.05em;
+}
+
 /* 言語切り替え */
 .lang-switch {
   position: absolute;

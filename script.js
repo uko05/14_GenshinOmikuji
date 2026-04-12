@@ -5,11 +5,13 @@ import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en 
 import { submitOmikujiStats } from './omikujiStats.js';
 
 // ===== ローカルストレージキー =====
-const LS_NAME     = 'genshinOmikuji_name';
-const LS_BIRTHDAY = 'genshinOmikuji_birthday';
+const LS_NAME       = 'genshinOmikuji_name';
+const LS_BIRTHDAY   = 'genshinOmikuji_birthday';
 const LS_RESULT     = 'genshinOmikuji_result';
 const LS_LANG       = 'genshinOmikuji_lang';
 const LS_COLLECTION = 'genshinOmikuji_collection';
+const LS_STREAK     = 'genshinOmikuji_streak';
+const LS_LAST_VISIT = 'genshinOmikuji_lastVisit';
 
 // ===== 状態 =====
 let selectedCardIndex = null;
@@ -77,7 +79,8 @@ const i18n = {
     alertBirthday:    '生年月日を入力してください',
     alertCard:        'アルカナを選んでください',
     doneTitle:        '本日デイリー占い済み',
-    doneSubtitle:     'AM5:00 デイリー更新',
+    doneSubtitle:     '毎日0:00 デイリー更新',
+    streakMsg:        (n) => `🔥 ${n}日連続おみくじ中！`,
     saveBtn:          'Save Image',
     saving:           '生成中…',
     saveFail:           '画像の保存に失敗しました',
@@ -123,7 +126,8 @@ const i18n = {
     alertBirthday:    'Please enter your birthday.',
     alertCard:        'Please choose an Arcana card.',
     doneTitle:        "Today's reading is done",
-    doneSubtitle:     'Resets at 5:00 AM',
+    doneSubtitle:     'Resets daily at midnight',
+    streakMsg:        (n) => `🔥 ${n}-day streak!`,
     saveBtn:          'Save Image',
     saving:           'Generating…',
     saveFail:           'Failed to save image',
@@ -136,6 +140,32 @@ const i18n = {
 };
 
 function t(key) { return i18n[currentLang][key]; }
+
+// ===== 連続ログインストリーク =====
+function updateStreak() {
+  const today = getFortuneDate();
+  const saved = JSON.parse(localStorage.getItem(LS_STREAK) || 'null');
+  let count = 1;
+  if (saved) {
+    if (saved.lastDate === today)          count = saved.count;           // 今日すでにカウント済み
+    else if (saved.lastDate === getYesterday()) count = saved.count + 1;  // 昨日引いた → 連続
+    // それ以外は途切れ → 1 にリセット
+  }
+  localStorage.setItem(LS_STREAK, JSON.stringify({ count, lastDate: today }));
+  return count;
+}
+
+function renderStreak() {
+  const el = document.getElementById('streak-display');
+  if (!el) return;
+  const saved = JSON.parse(localStorage.getItem(LS_STREAK) || 'null');
+  if (!saved || saved.count < 2) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = '';
+  el.textContent = i18n[currentLang].streakMsg(saved.count);
+}
 
 // ===== 言語切り替え =====
 function applyLang(lang) {
@@ -153,6 +183,7 @@ function applyLang(lang) {
                lastFortuneIsReversed, lastFortuneCardFlipped, true);
   }
   renderCollection();
+  renderStreak();
 }
 
 // ===== アルカナ図鑑 =====
@@ -362,11 +393,16 @@ function bioClass(v) {
   return 'bio-low';
 }
 
-// ===== 占い日付（朝5時区切り） =====
+// ===== 占い日付（0時区切り） =====
 function getFortuneDate() {
   const now = new Date();
-  if (now.getHours() < 5) now.setDate(now.getDate() - 1);
-  return now.toISOString().slice(0, 10);
+  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+}
+
+function getYesterday() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 // ===== 結果の保存・読み込み =====
@@ -633,6 +669,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   renderCollection();
+  renderStreak();
+
+  // タブ復帰時に日付が変わっていたら自動リロード
+  localStorage.setItem(LS_LAST_VISIT, getFortuneDate());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      if (localStorage.getItem(LS_LAST_VISIT) !== getFortuneDate()) {
+        location.reload();
+      }
+    }
+  });
 
   document.querySelector('.col-modal-backdrop').addEventListener('click', () => {
     document.getElementById('col-modal').style.display = 'none';
@@ -673,6 +720,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const isReversed = seededRandom(seed)() < 0.5;
 
     saveResult(birthday, selectedCardIndex, isReversed);
+    if (!debug) updateStreak();
+    renderStreak();
     runFortune(birthday, name, selectedCardIndex, isReversed);
     document.getElementById('result').style.display = 'block';
     document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
