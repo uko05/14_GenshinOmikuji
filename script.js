@@ -431,10 +431,14 @@ function showDailyDoneOverlay() {
   area.appendChild(overlay);
 }
 
+function isDebugMode() {
+  return document.getElementById('player-name').value.trim() === 'uko@debug';
+}
+
 function updateFortuneBtn() {
   const birthday = document.getElementById('birthday').value;
   const saved     = loadResult();
-  const locked    = !!(saved && saved.birthday === birthday);
+  const locked    = !isDebugMode() && !!(saved && saved.birthday === birthday);
   document.getElementById('fortune-btn').disabled = locked || !(selectedCardIndex !== null && birthday);
 }
 
@@ -484,6 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
   shuffleBtn.addEventListener('click', shuffleCards);
   document.getElementById('save-img-btn').addEventListener('click', captureResult);
   birthdayInput.addEventListener('change', updateFortuneBtn);
+  nameInput.addEventListener('input', updateFortuneBtn);
 
   document.getElementById('fortune-btn').addEventListener('click', () => {
     const birthday = birthdayInput.value;
@@ -494,12 +499,17 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem(LS_NAME, name);
     localStorage.setItem(LS_BIRTHDAY, birthday);
 
-    const existingResult = loadResult();
-    if (existingResult && existingResult.birthday === birthday) {
-      runFortune(birthday, name, existingResult.cardIndex, existingResult.isReversed);
-      document.getElementById('result').style.display = 'block';
-      document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
-      return;
+    const debug = isDebugMode();
+
+    // 通常モード: 当日結果があれば再表示して終了
+    if (!debug) {
+      const existingResult = loadResult();
+      if (existingResult && existingResult.birthday === birthday) {
+        runFortune(birthday, name, existingResult.cardIndex, existingResult.isReversed);
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
     }
 
     const todayStr   = getFortuneDate();
@@ -510,8 +520,10 @@ document.addEventListener('DOMContentLoaded', () => {
     runFortune(birthday, name, selectedCardIndex, isReversed);
     document.getElementById('result').style.display = 'block';
     document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
-    showDailyDoneOverlay();
-    updateFortuneBtn();
+    if (!debug) {
+      showDailyDoneOverlay();
+      updateFortuneBtn();
+    }
   });
 });
 
