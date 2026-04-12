@@ -94,6 +94,9 @@ const i18n = {
     colPosReversed:      '逆',
     sectionAchievement:  'アチーブメント',
     achievementProgress: (n, t) => `${n} / ${t} 解放`,
+    saveCollection:      '図鑑を画像保存',
+    saveAchievement:     '実績を画像保存',
+    achUnlocked:         '✦ アチーブメント解放！',
   },
   en: {
     headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
@@ -143,6 +146,9 @@ const i18n = {
     colPosReversed:      'R',
     sectionAchievement:  'Achievements',
     achievementProgress: (n, t) => `${n} / ${t} unlocked`,
+    saveCollection:      'Save Collection',
+    saveAchievement:     'Save Achievements',
+    achUnlocked:         '✦ Achievement Unlocked!',
   },
 };
 
@@ -248,18 +254,97 @@ function loadUnlocked() {
   return new Set(JSON.parse(localStorage.getItem(LS_ACHIEVEMENTS) || '[]'));
 }
 
-function checkAndUnlockAchievements() {
+function checkAndUnlockAchievements(silent = false) {
   const unlocked = loadUnlocked();
   const stats    = loadAchStats();
   const col      = loadCollection();
-  const prev     = unlocked.size;
+  const newIds   = [];
 
   for (const ach of ALL_ACHIEVEMENTS) {
-    if (!unlocked.has(ach.id) && ach.check(stats, col)) unlocked.add(ach.id);
+    if (!unlocked.has(ach.id) && ach.check(stats, col)) {
+      unlocked.add(ach.id);
+      newIds.push(ach.id);
+    }
   }
 
-  if (unlocked.size !== prev) {
+  if (newIds.length > 0) {
     localStorage.setItem(LS_ACHIEVEMENTS, JSON.stringify([...unlocked]));
+    if (!silent) newIds.forEach(id => showAchToast(id));
+  }
+}
+
+// ===== アチーブメントトースト =====
+let achToastQueue = [];
+let achToastBusy  = false;
+
+function showAchToast(achId) {
+  achToastQueue.push(achId);
+  if (!achToastBusy) processToastQueue();
+}
+
+function processToastQueue() {
+  if (achToastQueue.length === 0) { achToastBusy = false; return; }
+  achToastBusy = true;
+
+  const achId = achToastQueue.shift();
+  const ach   = ALL_ACHIEVEMENTS.find(a => a.id === achId);
+  if (!ach) { processToastQueue(); return; }
+
+  const isEn   = currentLang === 'en';
+  const toast  = document.getElementById('ach-toast');
+  if (!toast) { achToastBusy = false; return; }
+
+  document.getElementById('ach-toast-label').textContent = t('achUnlocked');
+  document.getElementById('ach-toast-name').textContent  = isEn ? ach.nameEn : ach.name;
+
+  toast.style.display = 'block';
+  void toast.offsetWidth; // reflow
+  toast.classList.remove('ach-toast-hide');
+  toast.classList.add('ach-toast-show');
+
+  setTimeout(() => {
+    toast.classList.remove('ach-toast-show');
+    toast.classList.add('ach-toast-hide');
+    setTimeout(() => {
+      toast.style.display = 'none';
+      toast.classList.remove('ach-toast-hide');
+      processToastQueue();
+    }, 500);
+  }, 3200);
+}
+
+// ===== 図鑑・実績 画像保存 =====
+async function captureSection(sectionId, btnId) {
+  const btn     = document.getElementById(btnId);
+  const section = document.getElementById(sectionId);
+  if (!btn || !section) return;
+
+  btn.disabled    = true;
+  btn.textContent = t('saving');
+
+  // achievement の場合は全グループを一時的に開く
+  let openedDetails = [];
+  if (sectionId === 'achievement-section') {
+    section.querySelectorAll('details:not([open])').forEach(d => {
+      d.setAttribute('open', '');
+      openedDetails.push(d);
+    });
+  }
+
+  try {
+    const canvas = await html2canvas(section, {
+      useCORS: true, backgroundColor: null, scale: 2, logging: false,
+    });
+    const a = document.createElement('a');
+    a.download = `genshin-${sectionId === 'collection-section' ? 'collection' : 'achievements'}-${getFortuneDate()}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  } catch {
+    alert(t('saveFail'));
+  } finally {
+    openedDetails.forEach(d => d.removeAttribute('open'));
+    btn.disabled    = false;
+    btn.textContent = sectionId === 'collection-section' ? t('saveCollection') : t('saveAchievement');
   }
 }
 
@@ -830,7 +915,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderCollection();
   renderStreak();
+  checkAndUnlockAchievements(true); // 既存データから遡及解放（トーストなし）
   renderAchievements();
+
+  document.getElementById('save-col-btn').addEventListener('click', () => captureSection('collection-section', 'save-col-btn'));
+  document.getElementById('save-ach-btn').addEventListener('click', () => captureSection('achievement-section', 'save-ach-btn'));
 
   // タブ復帰時に日付が変わっていたら自動リロード
   localStorage.setItem(LS_LAST_VISIT, getFortuneDate());

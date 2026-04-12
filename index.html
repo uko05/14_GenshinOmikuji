@@ -159,6 +159,9 @@
     <div class="section-title" data-i18n="sectionCollection">アルカナ図鑑</div>
     <div id="collection-count" class="collection-count"></div>
     <div id="collection-grid" class="collection-grid"></div>
+    <div style="text-align:center; margin-top:12px;">
+      <button id="save-col-btn" class="save-img-btn" data-i18n="saveCollection">図鑑を画像保存</button>
+    </div>
   </section>
 
   <!-- アチーブメント -->
@@ -166,6 +169,9 @@
     <div class="section-title" data-i18n="sectionAchievement">アチーブメント</div>
     <div id="achievement-count" class="achievement-count"></div>
     <div id="achievement-list" class="achievement-list"></div>
+    <div style="text-align:center; margin-top:12px;">
+      <button id="save-ach-btn" class="save-img-btn" data-i18n="saveAchievement">実績を画像保存</button>
+    </div>
   </section>
 
 </main>
@@ -186,6 +192,12 @@
     <div id="col-modal-name" class="col-modal-name"></div>
     <div id="col-modal-keyword" class="col-modal-keyword"></div>
   </div>
+</div>
+
+<!-- アチーブメントトースト -->
+<div id="ach-toast" class="ach-toast" style="display:none;">
+  <div class="ach-toast-label" id="ach-toast-label">✦ アチーブメント解放！</div>
+  <div class="ach-toast-name"  id="ach-toast-name"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
