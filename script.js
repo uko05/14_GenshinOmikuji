@@ -225,18 +225,23 @@ function renderCollection(newKey = null) {
       inner.appendChild(backFace);
       inner.appendChild(frontFace);
       scene.appendChild(inner);
+
+      // ④ 収録済みカードをクリックでモーダル表示
+      if (collected) {
+        scene.addEventListener('click', () => openCollectionModal(card, isReversed));
+      }
+
       item.appendChild(scene);
 
-      // ラベル（カード番号 + 正/逆）
-      const label = document.createElement('div');
-      label.className = 'col-label' + (isNew ? ' col-label-new' : '');
+      // ⑥ 収録済みのみラベル表示（未収録は何も出さない）
       if (collected) {
+        const label = document.createElement('div');
+        label.className = 'col-label' + (isNew ? ' col-label-new' : '');
         const posStr = isReversed ? i18n[currentLang].colPosReversed : i18n[currentLang].colPosUpright;
         label.textContent = `${card.number} ${posStr}`;
-      } else {
-        label.textContent = '?';
+        item.appendChild(label);
       }
-      item.appendChild(label);
+
       grid.appendChild(item);
     });
   });
@@ -254,6 +259,21 @@ function renderCollection(newKey = null) {
     }, { threshold: 0.4 });
     newEls.forEach(el => observer.observe(el));
   }
+}
+
+function openCollectionModal(card, isReversed) {
+  const isEn     = currentLang === 'en';
+  const cardData  = isReversed
+    ? (isEn ? card.reversed_en : card.reversed)
+    : (isEn ? card.upright_en  : card.upright);
+  const cardName  = isEn ? card.nameEn : card.name;
+  const posLabel  = isReversed ? t('posReversed') : t('posUpright');
+  const imgEl     = document.getElementById('col-modal-img');
+  imgEl.src       = card.filename;
+  imgEl.style.transform = isReversed ? 'rotate(180deg)' : '';
+  document.getElementById('col-modal-name').textContent    = `${card.number} ${cardName} ${posLabel}`;
+  document.getElementById('col-modal-keyword').textContent = cardData.keyword;
+  document.getElementById('col-modal').style.display       = 'flex';
 }
 
 function initLangSwitch() {
@@ -597,6 +617,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   renderCollection();
+
+  document.querySelector('.col-modal-backdrop').addEventListener('click', () => {
+    document.getElementById('col-modal').style.display = 'none';
+  });
+  document.querySelector('.col-modal-close').addEventListener('click', () => {
+    document.getElementById('col-modal').style.display = 'none';
+  });
 
   shuffleBtn.addEventListener('click', shuffleCards);
   document.getElementById('save-img-btn').addEventListener('click', captureResult);
