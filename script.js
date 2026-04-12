@@ -233,27 +233,34 @@ function renderCollection(newKey = null) {
 
       item.appendChild(scene);
 
-      // ⑥ 収録済みのみラベル表示（未収録は何も出さない）
+      // ⑥ 収録済みのみラベル表示（未収録はスペース確保のみ）
+      const label = document.createElement('div');
+      label.className = 'col-label' + (isNew ? ' col-label-new' : '');
       if (collected) {
-        const label = document.createElement('div');
-        label.className = 'col-label' + (isNew ? ' col-label-new' : '');
         const posStr = isReversed ? i18n[currentLang].colPosReversed : i18n[currentLang].colPosUpright;
         label.textContent = `${card.number} ${posStr}`;
-        item.appendChild(label);
+      } else {
+        label.style.visibility = 'hidden';
       }
+      item.appendChild(label);
 
       grid.appendChild(item);
     });
   });
 
-  // 新規カード：ビューポートに入ったらフリップ
+  // 新規カード：ビューポートに入ったらズームめくり演出
   if (newKey) {
     const newEls = grid.querySelectorAll('[data-new="true"]');
     const observer = new IntersectionObserver((entries, obs) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          entry.target.classList.add('col-flipped');
-          obs.unobserve(entry.target);
+          const inner = entry.target;
+          inner.classList.add('col-reveal');
+          inner.addEventListener('animationend', () => {
+            inner.classList.remove('col-reveal');
+            inner.classList.add('col-flipped');
+          }, { once: true });
+          obs.unobserve(inner);
         }
       });
     }, { threshold: 0.4 });

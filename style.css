@@ -682,7 +682,7 @@ main {
 /* ① 高さを固定せず back.png の縦横比に任せる */
 .col-scene {
   width: 72px;
-  perspective: 400px;
+  perspective: 600px;
 }
 
 .col-card-inner {
@@ -693,6 +693,19 @@ main {
 
 .col-card-inner.col-flipped {
   transform: rotateY(180deg);
+}
+
+/* ③ シャドバ風ズームめくり演出 */
+@keyframes col-reveal-flip {
+  0%   { transform: rotateY(0deg)   scale(1);   }
+  40%  { transform: rotateY(90deg)  scale(1.65); }
+  62%  { transform: rotateY(90deg)  scale(1.65); }
+  100% { transform: rotateY(180deg) scale(1);   }
+}
+
+.col-card-inner.col-reveal {
+  animation: col-reveal-flip 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  transition: none;
 }
 
 /* 裏面：通常フローで親の高さを確定させる */
@@ -736,6 +749,7 @@ main {
   color: var(--muted);
   text-align: center;
   line-height: 1;
+  min-height: 0.75rem; /* ② 未収録でも同じ高さを確保 */
 }
 
 .col-label-new {
@@ -751,7 +765,7 @@ main {
 }
 
 [data-new="true"].col-flipped .col-card-front {
-  animation: col-glow 1.4s ease 0.7s both;
+  animation: col-glow 1.4s ease 0.1s both;
 }
 
 /* ===== ④ コレクションモーダル ===== */
@@ -774,8 +788,8 @@ main {
   position: relative;
   background: var(--surface);
   border-radius: var(--radius);
-  padding: 24px 16px 18px;
-  width: 200px;
+  padding: 28px 20px 22px;
+  width: min(88vw, 560px);
   text-align: center;
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
@@ -796,22 +810,22 @@ main {
 .col-modal-close:hover { color: var(--text); }
 
 .col-modal-img {
-  width: 150px;
+  width: min(220px, 50%);
   height: auto;
   border-radius: 6px;
   display: block;
-  margin: 0 auto 12px;
+  margin: 0 auto 16px;
 }
 
 .col-modal-name {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: bold;
   color: var(--text);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .col-modal-keyword {
-  font-size: 0.78rem;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 
