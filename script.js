@@ -7,8 +7,9 @@ import { submitOmikujiStats } from './omikujiStats.js';
 // ===== ローカルストレージキー =====
 const LS_NAME     = 'genshinOmikuji_name';
 const LS_BIRTHDAY = 'genshinOmikuji_birthday';
-const LS_RESULT   = 'genshinOmikuji_result';
-const LS_LANG     = 'genshinOmikuji_lang';
+const LS_RESULT     = 'genshinOmikuji_result';
+const LS_LANG       = 'genshinOmikuji_lang';
+const LS_COLLECTION = 'genshinOmikuji_collection';
 
 // ===== 状態 =====
 let selectedCardIndex = null;
@@ -79,8 +80,12 @@ const i18n = {
     doneSubtitle:     'AM5:00 デイリー更新',
     saveBtn:          'Save Image',
     saving:           '生成中…',
-    saveFail:         '画像の保存に失敗しました',
-    captureTitle:     '✦ 原神おみくじ ✦',
+    saveFail:           '画像の保存に失敗しました',
+    captureTitle:       '✦ 原神おみくじ ✦',
+    sectionCollection:  'アルカナ図鑑',
+    collectionProgress: (n) => `${n} / 44 収録`,
+    colPosUpright:      '正',
+    colPosReversed:     '逆',
   },
   en: {
     headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
@@ -121,8 +126,12 @@ const i18n = {
     doneSubtitle:     'Resets at 5:00 AM',
     saveBtn:          'Save Image',
     saving:           'Generating…',
-    saveFail:         'Failed to save image',
-    captureTitle:     '✦ Genshin Omikuji ✦',
+    saveFail:           'Failed to save image',
+    captureTitle:       '✦ Genshin Omikuji ✦',
+    sectionCollection:  'Arcana Collection',
+    collectionProgress: (n) => `${n} / 44 collected`,
+    colPosUpright:      'U',
+    colPosReversed:     'R',
   },
 };
 
@@ -142,6 +151,108 @@ function applyLang(lang) {
   if (lastFortuneBirthday && document.getElementById('result').style.display !== 'none') {
     runFortune(lastFortuneBirthday, lastFortuneName, lastFortuneCardIndex,
                lastFortuneIsReversed, lastFortuneCardFlipped, true);
+  }
+  renderCollection();
+}
+
+// ===== アルカナ図鑑 =====
+function loadCollection() {
+  return new Set(JSON.parse(localStorage.getItem(LS_COLLECTION) || '[]'));
+}
+
+function saveCollection(col) {
+  localStorage.setItem(LS_COLLECTION, JSON.stringify([...col]));
+}
+
+// 新規追加ならキーを返す、既収録なら null
+function addToCollection(cardId, isReversed) {
+  const col = loadCollection();
+  const key = `${cardId}_${isReversed ? 'reversed' : 'upright'}`;
+  if (col.has(key)) return null;
+  col.add(key);
+  saveCollection(col);
+  return key;
+}
+
+function renderCollection(newKey = null) {
+  const grid    = document.getElementById('collection-grid');
+  const countEl = document.getElementById('collection-count');
+  if (!grid) return;
+
+  const col = loadCollection();
+  if (countEl) {
+    countEl.textContent = i18n[currentLang].collectionProgress(col.size);
+  }
+
+  grid.innerHTML = '';
+
+  tarotCards.forEach(card => {
+    ['upright', 'reversed'].forEach(pos => {
+      const isReversed = pos === 'reversed';
+      const key        = `${card.id}_${pos}`;
+      const collected  = col.has(key);
+      const isNew      = key === newKey;
+
+      const item = document.createElement('div');
+      item.className = 'col-item' + (collected ? '' : ' col-item-unknown');
+
+      // カードシーン（perspective）
+      const scene = document.createElement('div');
+      scene.className = 'col-scene';
+
+      const inner = document.createElement('div');
+      // 収録済みかつ新規でない → 最初からフリップ（表を表示）
+      inner.className = 'col-card-inner' + (collected && !isNew ? ' col-flipped' : '');
+      if (isNew) inner.dataset.new = 'true';
+
+      // 裏面
+      const backFace = document.createElement('div');
+      backFace.className = 'col-card-back';
+      const backImg = document.createElement('img');
+      backImg.src = CARD_BACK;
+      backImg.alt = '';
+      backFace.appendChild(backImg);
+
+      // 表面
+      const frontFace = document.createElement('div');
+      frontFace.className = 'col-card-front';
+      const frontImg = document.createElement('img');
+      frontImg.src = card.filename;
+      frontImg.alt = collected ? card.name : '';
+      if (isReversed) frontImg.style.transform = 'rotate(180deg)';
+      frontFace.appendChild(frontImg);
+
+      inner.appendChild(backFace);
+      inner.appendChild(frontFace);
+      scene.appendChild(inner);
+      item.appendChild(scene);
+
+      // ラベル（カード番号 + 正/逆）
+      const label = document.createElement('div');
+      label.className = 'col-label' + (isNew ? ' col-label-new' : '');
+      if (collected) {
+        const posStr = isReversed ? i18n[currentLang].colPosReversed : i18n[currentLang].colPosUpright;
+        label.textContent = `${card.number} ${posStr}`;
+      } else {
+        label.textContent = '?';
+      }
+      item.appendChild(label);
+      grid.appendChild(item);
+    });
+  });
+
+  // 新規カード：ビューポートに入ったらフリップ
+  if (newKey) {
+    const newEls = grid.querySelectorAll('[data-new="true"]');
+    const observer = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('col-flipped');
+          obs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.4 });
+    newEls.forEach(el => observer.observe(el));
   }
 }
 
@@ -479,11 +590,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedResult   = savedBirthday ? loadResult() : null;
   if (savedResult && savedResult.birthday === savedBirthday) {
     setTimeout(() => selectCard(savedResult.cardIndex), 400);
-    showDailyDoneOverlay();
+    if (!isDebugMode()) showDailyDoneOverlay();
     const name = nameInput.value.trim();
     runFortune(savedBirthday, name, savedResult.cardIndex, savedResult.isReversed, true);
     document.getElementById('result').style.display = 'block';
   }
+
+  renderCollection();
 
   shuffleBtn.addEventListener('click', shuffleCards);
   document.getElementById('save-img-btn').addEventListener('click', captureResult);
@@ -686,6 +799,10 @@ function displayTarot(card, isReversed, isRestored = false) {
       cardEl.onclick = null;
       cardEl.classList.add('flipped');
       lastFortuneCardFlipped = true;
+
+      // コレクションに追加し、新規なら図鑑を再描画（スクロール演出付き）
+      const newKey = addToCollection(card.id, isReversed);
+      renderCollection(newKey);
 
       tarotRevealT1 = setTimeout(() => {
         tarotRevealT1 = null;
