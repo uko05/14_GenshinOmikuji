@@ -247,7 +247,7 @@ main {
 /* バイオリズム */
 .bio-row {
   display: grid;
-  grid-template-columns: 40px 1fr 60px;
+  grid-template-columns: 40px 1fr 60px 58px;
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
@@ -276,6 +276,11 @@ main {
 .bio-status.bio-high  { color: #3388ee; }
 .bio-status.bio-mid   { color: #558833; }
 .bio-status.bio-low   { color: #cc7733; }
+
+.bio-diff         { font-size: 0.72rem; text-align: right; }
+.bio-diff-up      { color: #4caf50; }
+.bio-diff-down    { color: #ef5350; }
+.bio-diff-neutral { color: var(--muted); }
 
 /* カードスキャッタエリア */
 .card-select-label {
@@ -665,6 +670,93 @@ main {
   border-color: #007bff;
 }
 .save-img-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ===== アチーブメント ===== */
+.achievement-count {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.achievement-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ach-group {
+  border-bottom: 1px solid var(--border);
+}
+.ach-group:last-child { border-bottom: none; }
+
+.ach-group-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 2px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.ach-group-header::-webkit-details-marker { display: none; }
+.ach-group-header::after {
+  content: '▶';
+  font-size: 0.65rem;
+  color: var(--muted);
+  margin-left: 6px;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+details[open] > .ach-group-header::after { transform: rotate(90deg); }
+
+.ach-group-name {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--text);
+  flex: 1;
+}
+
+.ach-progress {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-right: 6px;
+}
+.ach-progress-complete { color: var(--gold); }
+
+.ach-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 10px;
+}
+
+.ach-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 6px;
+  border-radius: 6px;
+}
+.ach-unlocked { background: rgba(212,175,55,0.07); }
+.ach-locked   { opacity: 0.55; }
+
+.ach-icon {
+  font-size: 0.9rem;
+  width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--muted);
+}
+.ach-unlocked .ach-icon { color: var(--gold); }
+
+.ach-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ach-name      { font-size: 0.82rem; font-weight: bold; color: var(--text); }
+.ach-locked .ach-name { color: var(--muted); }
+.ach-condition { font-size: 0.72rem; color: var(--muted); }
 
 /* ===== アルカナ図鑑 ===== */
 .collection-count {

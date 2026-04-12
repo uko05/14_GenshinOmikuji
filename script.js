@@ -3,6 +3,7 @@ import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
+import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
 
 // ===== ローカルストレージキー =====
 const LS_NAME       = 'genshinOmikuji_name';
@@ -10,8 +11,10 @@ const LS_BIRTHDAY   = 'genshinOmikuji_birthday';
 const LS_RESULT     = 'genshinOmikuji_result';
 const LS_LANG       = 'genshinOmikuji_lang';
 const LS_COLLECTION = 'genshinOmikuji_collection';
-const LS_STREAK     = 'genshinOmikuji_streak';
-const LS_LAST_VISIT = 'genshinOmikuji_lastVisit';
+const LS_STREAK      = 'genshinOmikuji_streak';
+const LS_LAST_VISIT  = 'genshinOmikuji_lastVisit';
+const LS_ACH_STATS   = 'genshinOmikuji_achStats';
+const LS_ACHIEVEMENTS= 'genshinOmikuji_achievements';
 
 // ===== 状態 =====
 let selectedCardIndex = null;
@@ -85,10 +88,12 @@ const i18n = {
     saving:           '生成中…',
     saveFail:           '画像の保存に失敗しました',
     captureTitle:       '✦ 原神おみくじ ✦',
-    sectionCollection:  'アルカナ図鑑',
-    collectionProgress: (n) => `${n} / 44 収録`,
-    colPosUpright:      '正',
-    colPosReversed:     '逆',
+    sectionCollection:   'アルカナ図鑑',
+    collectionProgress:  (n) => `${n} / 44 収録`,
+    colPosUpright:       '正',
+    colPosReversed:      '逆',
+    sectionAchievement:  'アチーブメント',
+    achievementProgress: (n, t) => `${n} / ${t} 解放`,
   },
   en: {
     headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
@@ -132,10 +137,12 @@ const i18n = {
     saving:           'Generating…',
     saveFail:           'Failed to save image',
     captureTitle:       '✦ Genshin Omikuji ✦',
-    sectionCollection:  'Arcana Collection',
-    collectionProgress: (n) => `${n} / 44 collected`,
-    colPosUpright:      'U',
-    colPosReversed:     'R',
+    sectionCollection:   'Arcana Collection',
+    collectionProgress:  (n) => `${n} / 44 collected`,
+    colPosUpright:       'U',
+    colPosReversed:      'R',
+    sectionAchievement:  'Achievements',
+    achievementProgress: (n, t) => `${n} / ${t} unlocked`,
   },
 };
 
@@ -145,14 +152,15 @@ function t(key) { return i18n[currentLang][key]; }
 function updateStreak() {
   const today = getFortuneDate();
   const saved = JSON.parse(localStorage.getItem(LS_STREAK) || 'null');
-  let count = 1;
+  let count    = 1;
+  let isReturn = false;
   if (saved) {
-    if (saved.lastDate === today)          count = saved.count;           // 今日すでにカウント済み
-    else if (saved.lastDate === getYesterday()) count = saved.count + 1;  // 昨日引いた → 連続
-    // それ以外は途切れ → 1 にリセット
+    if (saved.lastDate === today)               count = saved.count;       // 今日すでにカウント済み
+    else if (saved.lastDate === getYesterday()) count = saved.count + 1;   // 昨日引いた → 連続
+    else if (saved.count > 0)                  isReturn = true;            // 途切れて復帰
   }
   localStorage.setItem(LS_STREAK, JSON.stringify({ count, lastDate: today }));
-  return count;
+  return { count, isReturn };
 }
 
 function renderStreak() {
@@ -165,6 +173,147 @@ function renderStreak() {
   }
   el.style.display = '';
   el.textContent = i18n[currentLang].streakMsg(saved.count);
+}
+
+// ===== アチーブメント =====
+const ACH_STATS_DEFAULTS = {
+  totalCount: 0, maxStreak: 0, hadReturn: false,
+  fortuneLevelCounts: {}, zodiacsSeen: [],
+  hadBioPeak: false, hadBioLow: false, hadBioCritical: false,
+  hadNoName: false, hadName: false, hadDebug: false,
+  hadMidnight: false, hadEarlyMorning: false,
+  hadOmisoka: false, hadNewYear: false, hadBirthday: false,
+};
+
+function loadAchStats() {
+  return Object.assign({}, ACH_STATS_DEFAULTS, JSON.parse(localStorage.getItem(LS_ACH_STATS) || 'null') || {});
+}
+
+function updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, isDebug, streakCount }) {
+  const stats = loadAchStats();
+
+  if (isDebug) {
+    stats.hadDebug = true;
+    localStorage.setItem(LS_ACH_STATS, JSON.stringify(stats));
+    return;
+  }
+
+  stats.totalCount++;
+  if (streakCount > stats.maxStreak) stats.maxStreak = streakCount;
+
+  // ストリーク途切れ復帰フラグ（呼び出し元で渡せないので再計算）
+  const streakSaved = JSON.parse(localStorage.getItem(LS_STREAK) || 'null');
+  if (streakSaved && streakSaved.count === 1 && stats.totalCount > 1) stats.hadReturn = true;
+
+  // 運勢レベル
+  if (fortuneLevel) {
+    stats.fortuneLevelCounts[fortuneLevel] = (stats.fortuneLevelCounts[fortuneLevel] || 0) + 1;
+  }
+
+  // 星座
+  if (zodiacKey && !stats.zodiacsSeen.includes(zodiacKey)) stats.zodiacsSeen.push(zodiacKey);
+
+  // バイオリズム
+  if (bio) {
+    if (bio.physical >= 0.5 && bio.emotional >= 0.5 && bio.intellectual >= 0.5)   stats.hadBioPeak     = true;
+    if (bio.physical <= -0.5 && bio.emotional <= -0.5 && bio.intellectual <= -0.5) stats.hadBioLow      = true;
+    if (Math.abs(bio.physical) < 0.1 || Math.abs(bio.emotional) < 0.1 || Math.abs(bio.intellectual) < 0.1) stats.hadBioCritical = true;
+  }
+
+  // 名前
+  if (name) stats.hadName = true; else stats.hadNoName = true;
+
+  // 時刻
+  const hour = new Date().getHours();
+  if (hour < 2)              stats.hadMidnight    = true;
+  if (hour >= 5 && hour < 7) stats.hadEarlyMorning = true;
+
+  // 日付
+  const now   = new Date();
+  const mon   = now.getMonth() + 1;
+  const day   = now.getDate();
+  if (mon === 12 && day === 31) stats.hadOmisoka = true;
+  if (mon === 1  && day === 1)  stats.hadNewYear  = true;
+
+  // 誕生日
+  if (birthday) {
+    const [, bm, bd] = birthday.split('-').map(Number);
+    if (bm === mon && bd === day) stats.hadBirthday = true;
+  }
+
+  localStorage.setItem(LS_ACH_STATS, JSON.stringify(stats));
+}
+
+function loadUnlocked() {
+  return new Set(JSON.parse(localStorage.getItem(LS_ACHIEVEMENTS) || '[]'));
+}
+
+function checkAndUnlockAchievements() {
+  const unlocked = loadUnlocked();
+  const stats    = loadAchStats();
+  const col      = loadCollection();
+  const prev     = unlocked.size;
+
+  for (const ach of ALL_ACHIEVEMENTS) {
+    if (!unlocked.has(ach.id) && ach.check(stats, col)) unlocked.add(ach.id);
+  }
+
+  if (unlocked.size !== prev) {
+    localStorage.setItem(LS_ACHIEVEMENTS, JSON.stringify([...unlocked]));
+  }
+}
+
+function renderAchievements() {
+  const container = document.getElementById('achievement-list');
+  const countEl   = document.getElementById('achievement-count');
+  if (!container) return;
+
+  const unlocked = loadUnlocked();
+  const isEn     = currentLang === 'en';
+
+  if (countEl) {
+    countEl.textContent = i18n[currentLang].achievementProgress(unlocked.size, ALL_ACHIEVEMENTS.length);
+  }
+
+  container.innerHTML = '';
+
+  ACHIEVEMENT_GROUPS.forEach(group => {
+    const groupUnlocked = group.items.filter(a => unlocked.has(a.id)).length;
+    const total         = group.items.length;
+    const allDone       = groupUnlocked === total;
+
+    const details = document.createElement('details');
+    details.className = 'ach-group';
+
+    const summary = document.createElement('summary');
+    summary.className = 'ach-group-header';
+    summary.innerHTML =
+      `<span class="ach-group-name">${isEn ? group.nameEn : group.name}</span>` +
+      `<span class="ach-progress${allDone ? ' ach-progress-complete' : ''}">${groupUnlocked}/${total}</span>`;
+    details.appendChild(summary);
+
+    const itemsDiv = document.createElement('div');
+    itemsDiv.className = 'ach-items';
+
+    group.items.forEach(ach => {
+      const isUnlocked = unlocked.has(ach.id);
+      const name       = isEn ? ach.nameEn      : ach.name;
+      const condition  = isEn ? ach.conditionEn : ach.condition;
+
+      const item = document.createElement('div');
+      item.className = `ach-item ${isUnlocked ? 'ach-unlocked' : 'ach-locked'}`;
+      item.innerHTML =
+        `<span class="ach-icon">${isUnlocked ? '✦' : '？'}</span>` +
+        `<div class="ach-text">` +
+          `<span class="ach-name">${isUnlocked ? name : '？？？'}</span>` +
+          `<span class="ach-condition">${condition}</span>` +
+        `</div>`;
+      itemsDiv.appendChild(item);
+    });
+
+    details.appendChild(itemsDiv);
+    container.appendChild(details);
+  });
 }
 
 // ===== 言語切り替え =====
@@ -184,6 +333,7 @@ function applyLang(lang) {
   }
   renderCollection();
   renderStreak();
+  renderAchievements();
 }
 
 // ===== アルカナ図鑑 =====
@@ -372,10 +522,20 @@ function calcBiorhythm(birthDateStr) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const days = Math.floor((today - birth) / (1000 * 60 * 60 * 24));
+  const calc = (d) => ({
+    physical:     Math.sin(2 * Math.PI * d / 23),
+    emotional:    Math.sin(2 * Math.PI * d / 28),
+    intellectual: Math.sin(2 * Math.PI * d / 33),
+  });
+  const cur  = calc(days);
+  const prev = calc(days - 1);
   return {
-    physical:     Math.sin(2 * Math.PI * days / 23),
-    emotional:    Math.sin(2 * Math.PI * days / 28),
-    intellectual: Math.sin(2 * Math.PI * days / 33),
+    ...cur,
+    diff: {
+      physical:     cur.physical     - prev.physical,
+      emotional:    cur.emotional    - prev.emotional,
+      intellectual: cur.intellectual - prev.intellectual,
+    },
   };
 }
 
@@ -670,6 +830,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderCollection();
   renderStreak();
+  renderAchievements();
 
   // タブ復帰時に日付が変わっていたら自動リロード
   localStorage.setItem(LS_LAST_VISIT, getFortuneDate());
@@ -720,7 +881,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const isReversed = seededRandom(seed)() < 0.5;
 
     saveResult(birthday, selectedCardIndex, isReversed);
-    if (!debug) updateStreak();
+    const streakResult = !debug ? updateStreak() : { count: 0, isReturn: false };
     renderStreak();
     runFortune(birthday, name, selectedCardIndex, isReversed);
     document.getElementById('result').style.display = 'block';
@@ -794,6 +955,15 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, s
   // 挨拶
   document.getElementById('result-greeting').textContent = i18n[currentLang].greeting(name);
 
+  // 実績統計更新・チェック（新規占いのみ）
+  if (!skipStats) {
+    const isDebug = name === 'uko@debug';
+    const streakSaved = JSON.parse(localStorage.getItem(LS_STREAK) || 'null');
+    updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, isDebug, streakCount: streakSaved ? streakSaved.count : 1 });
+    checkAndUnlockAchievements();
+    renderAchievements();
+  }
+
   // Firebase 統計送信（新規占いのみ）
   if (!skipStats) {
     submitOmikujiStats({
@@ -828,14 +998,16 @@ function displayZodiac(data, overall, love, work, health) {
 
 function displayBiorhythm(bio) {
   const items = [
-    { label: t('bioPhysical'),     value: bio.physical },
-    { label: t('bioEmotional'),    value: bio.emotional },
-    { label: t('bioIntellectual'), value: bio.intellectual },
+    { label: t('bioPhysical'),     value: bio.physical,     diff: bio.diff.physical },
+    { label: t('bioEmotional'),    value: bio.emotional,    diff: bio.diff.emotional },
+    { label: t('bioIntellectual'), value: bio.intellectual, diff: bio.diff.intellectual },
   ];
   const container = document.getElementById('biorhythm-bars');
   container.innerHTML = '';
-  items.forEach(({ label, value }) => {
-    const pct = Math.round((value + 1) / 2 * 100);
+  items.forEach(({ label, value, diff }) => {
+    const pct      = Math.round((value + 1) / 2 * 100);
+    const diffStr  = (diff >= 0 ? '+' : '') + diff.toFixed(2);
+    const diffCls  = Math.abs(diff) < 0.05 ? 'bio-diff-neutral' : diff > 0 ? 'bio-diff-up' : 'bio-diff-down';
     container.innerHTML += `
       <div class="bio-row">
         <span class="bio-label">${label}</span>
@@ -843,6 +1015,7 @@ function displayBiorhythm(bio) {
           <div class="bio-bar ${bioClass(value)}" style="width:${pct}%"></div>
         </div>
         <span class="bio-status ${bioClass(value)}">${bioLabel(value)}</span>
+        <span class="bio-diff ${diffCls}">(${diffStr})</span>
       </div>`;
   });
 }
@@ -895,6 +1068,8 @@ function displayTarot(card, isReversed, isRestored = false) {
       // コレクションに追加し、新規なら図鑑を再描画（スクロール演出付き）
       const newKey = addToCollection(card.id, isReversed);
       renderCollection(newKey);
+      checkAndUnlockAchievements();
+      renderAchievements();
 
       tarotRevealT1 = setTimeout(() => {
         tarotRevealT1 = null;
