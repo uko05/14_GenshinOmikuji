@@ -44,6 +44,22 @@ header {
   border-bottom: 2px solid var(--accent);
   text-align: center;
   padding: 16px 20px;
+  position: relative;
+}
+
+/* 言語切り替え */
+.lang-switch {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 13px;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.lang-switch label {
+  cursor: pointer;
+  margin-left: 6px;
 }
 
 header h1 {

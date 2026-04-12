@@ -1,18 +1,20 @@
 // script.js
 import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
 import { horoscope, getZodiac } from './horoscope.js';
-import { comments, fortuneLevels, fortuneWeights } from './comments.js';
+import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
 
 // ===== ローカルストレージキー =====
 const LS_NAME     = 'genshinOmikuji_name';
 const LS_BIRTHDAY = 'genshinOmikuji_birthday';
 const LS_RESULT   = 'genshinOmikuji_result';
+const LS_LANG     = 'genshinOmikuji_lang';
 
 // ===== 状態 =====
 let selectedCardIndex = null;
 let isShuffled        = false;
 let isDraggingAny     = false;
+let currentLang       = 'ja';
 
 // ===== 画像保存用キャッシュ =====
 let captureCard       = null;
@@ -20,10 +22,141 @@ let captureIsReversed = false;
 const CARD_W = 60;
 const CARD_H = 90;
 
+// ===== 言語再描画用キャッシュ =====
+let lastFortuneBirthday    = null;
+let lastFortuneName        = '';
+let lastFortuneCardIndex   = null;
+let lastFortuneIsReversed  = false;
+let lastFortuneCardFlipped = false;
+
+// タロット演出タイマー（言語切り替え時にキャンセル）
+let tarotRevealT1 = null;
+let tarotRevealT2 = null;
+
 // 各カードの位置・角度状態
 const cardStates = tarotCards.map((_, i) => ({
   x: 0, y: 0, rotate: 0, zIndex: i, el: null,
 }));
+
+// ===== i18n 辞書 =====
+const i18n = {
+  ja: {
+    headerSub:        '星座・バイオリズム・アルカナで今日のあなたを占います',
+    cardSelectLabel:  'アルカナをシャッフルして1枚選んでください',
+    shuffleBtn:       '🂠 シャッフル',
+    labelName:        '名前（任意）',
+    labelBirthday:    '生年月日',
+    namePlaceholder:  'あなたの名前',
+    fortuneBtn:       '今日の運勢を占う',
+    sectionFortune:   '今日の運勢',
+    sectionZodiac:    '星座占い',
+    sectionBio:       'バイオリズム',
+    sectionTarot:     'アルカナからのメッセージ',
+    sectionLucky:     '今日のラッキー',
+    zodiacCatOverall: '総合',
+    zodiacCatLove:    '恋愛',
+    zodiacCatWork:    '仕事',
+    zodiacCatHealth:  '健康',
+    tapHint:          'カードをタップしてください',
+    luckyColor:       'ラッキーカラー',
+    luckyNumber:      'ラッキーナンバー',
+    luckyItemZodiac:  'ラッキーアイテム（星座）',
+    luckyItemTarot:   'ラッキーアイテム（アルカナ）',
+    bioPhysical:      '身体',
+    bioEmotional:     '感情',
+    bioIntellectual:  '知性',
+    bioVeryHigh:      '絶好調',
+    bioHigh:          '好調',
+    bioMid:           '普通',
+    bioLow:           'やや不調',
+    bioVeryLow:       '要注意',
+    posUpright:       '（正位置）',
+    posReversed:      '（逆位置）',
+    greeting:         (name) => name ? `${name}さんの今日の運勢` : '今日の運勢',
+    alertBirthday:    '生年月日を入力してください',
+    alertCard:        'アルカナを選んでください',
+    doneTitle:        '本日デイリー占い済み',
+    doneSubtitle:     'AM5:00 デイリー更新',
+    saveBtn:          'Save Image',
+    saving:           '生成中…',
+    saveFail:         '画像の保存に失敗しました',
+    captureTitle:     '✦ 原神おみくじ ✦',
+  },
+  en: {
+    headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
+    cardSelectLabel:  'Shuffle the Arcana and choose one card',
+    shuffleBtn:       '🂠 Shuffle',
+    labelName:        'Name (optional)',
+    labelBirthday:    'Birthday',
+    namePlaceholder:  'Your name',
+    fortuneBtn:       'Tell My Fortune',
+    sectionFortune:   "Today's Fortune",
+    sectionZodiac:    'Zodiac Reading',
+    sectionBio:       'Biorhythm',
+    sectionTarot:     'Message from the Arcana',
+    sectionLucky:     "Today's Lucky",
+    zodiacCatOverall: 'Overall',
+    zodiacCatLove:    'Love',
+    zodiacCatWork:    'Work',
+    zodiacCatHealth:  'Health',
+    tapHint:          'Tap the card',
+    luckyColor:       'Lucky Color',
+    luckyNumber:      'Lucky Number',
+    luckyItemZodiac:  'Lucky Item (Zodiac)',
+    luckyItemTarot:   'Lucky Item (Arcana)',
+    bioPhysical:      'Physical',
+    bioEmotional:     'Emotional',
+    bioIntellectual:  'Intellectual',
+    bioVeryHigh:      'Excellent',
+    bioHigh:          'Good',
+    bioMid:           'Average',
+    bioLow:           'Below Avg',
+    bioVeryLow:       'Caution',
+    posUpright:       ' (Upright)',
+    posReversed:      ' (Reversed)',
+    greeting:         (name) => name ? `${name}'s Fortune Today` : "Today's Fortune",
+    alertBirthday:    'Please enter your birthday.',
+    alertCard:        'Please choose an Arcana card.',
+    doneTitle:        "Today's reading is done",
+    doneSubtitle:     'Resets at 5:00 AM',
+    saveBtn:          'Save Image',
+    saving:           'Generating…',
+    saveFail:         'Failed to save image',
+    captureTitle:     '✦ Genshin Omikuji ✦',
+  },
+};
+
+function t(key) { return i18n[currentLang][key]; }
+
+// ===== 言語切り替え =====
+function applyLang(lang) {
+  currentLang = lang;
+  document.documentElement.lang = lang === 'en' ? 'en' : 'ja';
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (i18n[lang][key] !== undefined) el.textContent = i18n[lang][key];
+  });
+  const nameInput = document.getElementById('player-name');
+  if (nameInput) nameInput.placeholder = t('namePlaceholder');
+
+  if (lastFortuneBirthday && document.getElementById('result').style.display !== 'none') {
+    runFortune(lastFortuneBirthday, lastFortuneName, lastFortuneCardIndex,
+               lastFortuneIsReversed, lastFortuneCardFlipped, true);
+  }
+}
+
+function initLangSwitch() {
+  currentLang = localStorage.getItem(LS_LANG) || 'ja';
+  document.querySelectorAll('input[name="lang"]').forEach(r => {
+    r.checked = r.value === currentLang;
+    r.addEventListener('change', () => {
+      currentLang = r.value;
+      localStorage.setItem(LS_LANG, currentLang);
+      applyLang(currentLang);
+    });
+  });
+  applyLang(currentLang);
+}
 
 // ===== シード付き乱数 =====
 function hashCode(str) {
@@ -69,11 +202,11 @@ function calcBiorhythm(birthDateStr) {
 }
 
 function bioLabel(v) {
-  if (v > 0.5)  return '絶好調';
-  if (v > 0.1)  return '好調';
-  if (v > -0.1) return '普通';
-  if (v > -0.5) return 'やや不調';
-  return '要注意';
+  if (v > 0.5)  return t('bioVeryHigh');
+  if (v > 0.1)  return t('bioHigh');
+  if (v > -0.1) return t('bioMid');
+  if (v > -0.5) return t('bioLow');
+  return t('bioVeryLow');
 }
 
 function bioClass(v) {
@@ -124,7 +257,6 @@ function initCardScatter() {
     div.className = 'scatter-card';
     div.innerHTML = `<img src="${CARD_BACK}" alt="${card.name}" draggable="false">`;
 
-    // pointerdown: どのカードを押したか記録するだけ
     div.addEventListener('pointerdown', (e) => {
       if (!isShuffled) return;
       dragCardIndex = i;
@@ -135,7 +267,6 @@ function initCardScatter() {
       applyTransform(cardStates[i], false);
     });
 
-    // pointerup: ほぼ動いていなければタップ選択
     div.addEventListener('pointerup', () => {
       if (dragCardIndex !== i) return;
       if (!isDraggingAny) selectCard(i);
@@ -159,11 +290,9 @@ function initCardScatter() {
     dragCardIndex = null;
   }
 
-  // ===== 移動処理はすべてコンテナ側で一元管理 =====
   container.addEventListener('pointermove', (e) => {
     if (!isShuffled || !(e.buttons > 0)) return;
 
-    // カードを押さえている場合: 6px 超えたらドラッグ開始
     if (dragCardIndex !== null && !isDraggingAny) {
       const dx = e.clientX - dragStartX;
       const dy = e.clientY - dragStartY;
@@ -174,7 +303,6 @@ function initCardScatter() {
     }
 
     if (isDraggingAny && dragCardIndex !== null) {
-      // ドラッグ中: 掴んだカードをマウスに追従させる
       const rect = container.getBoundingClientRect();
       const px   = e.clientX - rect.left - rect.width  / 2;
       const py   = e.clientY - rect.top  - rect.height / 2;
@@ -186,15 +314,12 @@ function initCardScatter() {
       return;
     }
 
-    // ドラッグ中でなければ押しのけ
     pushCards(e, container);
   });
 
-  // カード外・コンテナ外でリリースされた場合もドラッグ終了
   container.addEventListener('pointerup', _endDrag);
   container.addEventListener('pointerleave', () => { if (isDraggingAny) _endDrag(); });
 
-  // タッチで混ぜる（ドラッグ中はスキップ）
   container.addEventListener('touchmove', (e) => {
     if (!isShuffled || isDraggingAny) return;
     e.preventDefault();
@@ -212,7 +337,6 @@ function shuffleCards() {
   const maxX = W / 2 - CARD_W / 2 - 4;
   const maxY = H / 2 - CARD_H / 2 - 4;
 
-  // いったん中央に集める（アニメなし）
   cardStates.forEach((state, i) => {
     state.x      = (Math.random() - 0.5) * 10;
     state.y      = (Math.random() - 0.5) * 10;
@@ -222,7 +346,6 @@ function shuffleCards() {
     applyTransform(state, false);
   });
 
-  // ランダムに飛び散らせる
   setTimeout(() => {
     cardStates.forEach((state) => {
       state.x      = (Math.random() * 2 - 1) * maxX;
@@ -233,7 +356,6 @@ function shuffleCards() {
     });
     isShuffled = true;
 
-    // 選択リセット
     selectedCardIndex = null;
     document.getElementById('card-selected-name').textContent = '';
     updateFortuneBtn();
@@ -252,7 +374,6 @@ function pushCards(e, container) {
   const RADIUS = 90;
   const FORCE  = 45;
 
-  // 指からカードを押しのける
   cardStates.forEach(state => {
     const dx   = state.x - px;
     const dy   = state.y - py;
@@ -265,8 +386,7 @@ function pushCards(e, container) {
     }
   });
 
-  // カード同士の重なりを解消（隣接する2枚を互いに反発）
-  const SEP_DIST  = 38; // この距離未満なら反発
+  const SEP_DIST  = 38;
   const SEP_FORCE = 14;
   for (let a = 0; a < cardStates.length; a++) {
     for (let b = a + 1; b < cardStates.length; b++) {
@@ -307,7 +427,7 @@ function showDailyDoneOverlay() {
   if (document.getElementById('daily-done-overlay')) return;
   const overlay = document.createElement('div');
   overlay.id = 'daily-done-overlay';
-  overlay.innerHTML = '<div class="daily-done-text"><span>本日デイリー占い済み</span><small>AM5:00 デイリー更新</small></div>';
+  overlay.innerHTML = `<div class="daily-done-text"><span data-i18n="doneTitle">${t('doneTitle')}</span><small data-i18n="doneSubtitle">${t('doneSubtitle')}</small></div>`;
   area.appendChild(overlay);
 }
 
@@ -322,8 +442,10 @@ function updateFortuneBtn() {
 document.addEventListener('DOMContentLoaded', () => {
   const nameInput     = document.getElementById('player-name');
   const birthdayInput = document.getElementById('birthday');
-  const fortuneBtn    = document.getElementById('fortune-btn');
   const shuffleBtn    = document.getElementById('shuffle-btn');
+
+  // 言語切り替え初期化
+  initLangSwitch();
 
   // キャラクター画像
   document.getElementById('chara-left').src  = omikujiFolder + 'yaemiko01.png';
@@ -352,32 +474,26 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedBirthday = birthdayInput.value;
   const savedResult   = savedBirthday ? loadResult() : null;
   if (savedResult && savedResult.birthday === savedBirthday) {
-    // シャッフル後にカード選択を復元
     setTimeout(() => selectCard(savedResult.cardIndex), 400);
-    // 占い済みオーバーレイを表示してカード操作をブロック
     showDailyDoneOverlay();
-    // 結果を表示
     const name = nameInput.value.trim();
     runFortune(savedBirthday, name, savedResult.cardIndex, savedResult.isReversed, true);
     document.getElementById('result').style.display = 'block';
   }
 
   shuffleBtn.addEventListener('click', shuffleCards);
-
   document.getElementById('save-img-btn').addEventListener('click', captureResult);
-
   birthdayInput.addEventListener('change', updateFortuneBtn);
 
-  fortuneBtn.addEventListener('click', () => {
+  document.getElementById('fortune-btn').addEventListener('click', () => {
     const birthday = birthdayInput.value;
     const name     = nameInput.value.trim();
-    if (!birthday)                  { alert('生年月日を入力してください'); return; }
-    if (selectedCardIndex === null) { alert('アルカナを選んでください'); return; }
+    if (!birthday)                  { alert(t('alertBirthday')); return; }
+    if (selectedCardIndex === null) { alert(t('alertCard')); return; }
 
     localStorage.setItem(LS_NAME, name);
     localStorage.setItem(LS_BIRTHDAY, birthday);
 
-    // 朝5時まで同じ結果を使い回す
     const existingResult = loadResult();
     if (existingResult && existingResult.birthday === birthday) {
       runFortune(birthday, name, existingResult.cardIndex, existingResult.isReversed);
@@ -386,7 +502,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 新規: isReversed をシードで決定
     const todayStr   = getFortuneDate();
     const seed       = hashCode(todayStr + birthday + selectedCardIndex);
     const isReversed = seededRandom(seed)() < 0.5;
@@ -401,21 +516,30 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ===== メイン占い処理 =====
-function runFortune(birthday, name, cardIndex, isReversed, isRestored = false) {
+// skipStats=true のとき Firebase 送信・状態更新をスキップ（言語再描画用）
+function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, skipStats = false) {
+  if (!skipStats) {
+    lastFortuneBirthday    = birthday;
+    lastFortuneName        = name;
+    lastFortuneCardIndex   = cardIndex;
+    lastFortuneIsReversed  = isReversed;
+    lastFortuneCardFlipped = isRestored;
+  }
+
   const [, month, day] = birthday.split('-').map(Number);
-  const playerName = name;
   const todayStr = getFortuneDate();
   const seed     = hashCode(todayStr + birthday);
   const rng      = seededRandom(seed);
   const pick     = (arr) => arr[Math.floor(rng() * arr.length)];
+  const isEn     = currentLang === 'en';
 
-  // 星座（先にpickして値を確定）
-  const zodiacKey     = getZodiac(month, day);
-  const zodiacData    = horoscope[zodiacKey];
-  const zodiacOverall = pick(zodiacData.overall);
-  const zodiacLove    = pick(zodiacData.love);
-  const zodiacWork    = pick(zodiacData.work);
-  const zodiacHealth  = pick(zodiacData.health);
+  // 星座（日英で同数の RNG 消費 → fortune level が同じになる）
+  const zodiacKey  = getZodiac(month, day);
+  const zodiacData = horoscope[zodiacKey];
+  const zodiacOverall = pick(isEn ? zodiacData.overall_en : zodiacData.overall);
+  const zodiacLove    = pick(isEn ? zodiacData.love_en    : zodiacData.love);
+  const zodiacWork    = pick(isEn ? zodiacData.work_en    : zodiacData.work);
+  const zodiacHealth  = pick(isEn ? zodiacData.health_en  : zodiacData.health);
   displayZodiac(zodiacData, zodiacOverall, zodiacLove, zodiacWork, zodiacHealth);
 
   // バイオリズム
@@ -428,52 +552,56 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false) {
   captureIsReversed = isReversed;
   displayTarot(card, isReversed, isRestored);
 
-  // 運勢レベル
+  // 運勢レベル（日英ともに同じ RNG 位置で決定）
   const fortuneLevel = fortuneLevels[pickWeighted(rng, fortuneWeights)];
   displayFortuneBadge(fortuneLevel);
 
   // 総合コメント
-  const bioAvg        = (bio.physical + bio.emotional + bio.intellectual) / 3;
-  const bioTier       = bioAvg > 0.2 ? 'high' : bioAvg < -0.2 ? 'low' : 'mid';
-  const overallComment = pick(comments[fortuneLevel][bioTier]);
+  const bioAvg     = (bio.physical + bio.emotional + bio.intellectual) / 3;
+  const bioTier    = bioAvg > 0.2 ? 'high' : bioAvg < -0.2 ? 'low' : 'mid';
+  const commentPool = isEn ? comments_en : comments;
+  const overallComment = pick(commentPool[fortuneLevel][bioTier]);
   document.getElementById('overall-comment').textContent = overallComment;
 
   // ラッキー
   const luckyIdx = Math.floor(rng() * 3);
-  const cardData = isReversed ? card.reversed : card.upright;
-  document.getElementById('lucky-color').textContent       = zodiacData.luckyColor[luckyIdx];
-  document.getElementById('lucky-item-zodiac').textContent = zodiacData.luckyItem[luckyIdx];
+  const cardData = isReversed
+    ? (isEn ? card.reversed_en : card.reversed)
+    : (isEn ? card.upright_en  : card.upright);
+  document.getElementById('lucky-color').textContent       = (isEn ? zodiacData.luckyColor_en : zodiacData.luckyColor)[luckyIdx];
+  document.getElementById('lucky-item-zodiac').textContent = (isEn ? zodiacData.luckyItem_en  : zodiacData.luckyItem)[luckyIdx];
   document.getElementById('lucky-number').textContent      = zodiacData.luckyNumber[luckyIdx];
   document.getElementById('lucky-item-tarot').textContent  = cardData.lucky;
   document.getElementById('lucky-item-tarot-row').style.display = 'block';
 
   // 挨拶
-  document.getElementById('result-greeting').textContent =
-    name ? `${name}さんの今日の運勢` : '今日の運勢';
+  document.getElementById('result-greeting').textContent = i18n[currentLang].greeting(name);
 
-  // Firebase 統計送信（全データ）
-  submitOmikujiStats({
-    zodiac:          zodiacKey,
-    tarot:           card.name,
-    isReversed,
-    birthday,
-    fortuneLevel,
-    overallComment,
-    zodiacOverall,
-    zodiacLove,
-    zodiacWork,
-    zodiacHealth,
-    bioPhysical:     Math.round(bio.physical     * 1000) / 1000,
-    bioEmotional:    Math.round(bio.emotional    * 1000) / 1000,
-    bioIntellectual: Math.round(bio.intellectual * 1000) / 1000,
-  });
+  // Firebase 統計送信（新規占いのみ）
+  if (!skipStats) {
+    submitOmikujiStats({
+      zodiac:          zodiacKey,
+      tarot:           card.name,
+      isReversed,
+      birthday,
+      fortuneLevel,
+      overallComment,
+      zodiacOverall,
+      zodiacLove,
+      zodiacWork,
+      zodiacHealth,
+      bioPhysical:     Math.round(bio.physical     * 1000) / 1000,
+      bioEmotional:    Math.round(bio.emotional    * 1000) / 1000,
+      bioIntellectual: Math.round(bio.intellectual * 1000) / 1000,
+    });
+  }
 }
 
 // ===== 表示関数 =====
 function displayZodiac(data, overall, love, work, health) {
   document.getElementById('zodiac-symbol').textContent  = data.symbol;
-  document.getElementById('zodiac-name').textContent    = data.name;
-  document.getElementById('zodiac-period').textContent  = data.period;
+  document.getElementById('zodiac-name').textContent    = currentLang === 'en' ? data.nameEn   : data.name;
+  document.getElementById('zodiac-period').textContent  = currentLang === 'en' ? data.periodEn : data.period;
   document.getElementById('zodiac-overall').textContent = overall;
   document.getElementById('zodiac-love').textContent    = love;
   document.getElementById('zodiac-work').textContent    = work;
@@ -482,9 +610,9 @@ function displayZodiac(data, overall, love, work, health) {
 
 function displayBiorhythm(bio) {
   const items = [
-    { label: '身体', value: bio.physical },
-    { label: '感情', value: bio.emotional },
-    { label: '知性', value: bio.intellectual },
+    { label: t('bioPhysical'),     value: bio.physical },
+    { label: t('bioEmotional'),    value: bio.emotional },
+    { label: t('bioIntellectual'), value: bio.intellectual },
   ];
   const container = document.getElementById('biorhythm-bars');
   container.innerHTML = '';
@@ -502,6 +630,10 @@ function displayBiorhythm(bio) {
 }
 
 function displayTarot(card, isReversed, isRestored = false) {
+  // 保留中の演出タイマーをキャンセル（言語切り替え時の二重更新防止）
+  if (tarotRevealT1) { clearTimeout(tarotRevealT1); tarotRevealT1 = null; }
+  if (tarotRevealT2) { clearTimeout(tarotRevealT2); tarotRevealT2 = null; }
+
   const cardEl = document.getElementById('tarot-card');
   cardEl.querySelector('.card-front img').src = card.filename;
   cardEl.querySelector('.card-front img').style.transform = isReversed ? 'rotate(180deg)' : '';
@@ -512,12 +644,18 @@ function displayTarot(card, isReversed, isRestored = false) {
   const keyEl  = document.getElementById('tarot-keyword');
   const msgEl  = document.getElementById('tarot-message');
 
+  const isEn      = currentLang === 'en';
+  const cardData  = isReversed
+    ? (isEn ? card.reversed_en : card.reversed)
+    : (isEn ? card.upright_en  : card.upright);
+  const cardName    = isEn ? card.nameEn : card.name;
+  const posLabel    = isReversed ? t('posReversed') : t('posUpright');
+  const displayName = `${card.number} ${cardName}${posLabel}`;
+
   if (isRestored) {
-    // すでに占い済みの復元：カードを最初からフリップ表示
     cardEl.classList.add('flipped');
     cardEl.onclick = null;
-    const cardData = isReversed ? card.reversed : card.upright;
-    nameEl.textContent = `${card.number} ${card.name}${isReversed ? '（逆位置）' : '（正位置）'}`;
+    nameEl.textContent = displayName;
     keyEl.textContent  = cardData.keyword;
     msgEl.textContent  = cardData.message;
     nameEl.classList.add('tarot-flipin');
@@ -534,15 +672,16 @@ function displayTarot(card, isReversed, isRestored = false) {
       if (cardEl.classList.contains('flipped')) return;
       cardEl.onclick = null;
       cardEl.classList.add('flipped');
+      lastFortuneCardFlipped = true;
 
-      const cardData = isReversed ? card.reversed : card.upright;
-      // フリップ完了後(1200ms)に名前、さらに1100ms後にキーワード+メッセージをフリップイン
-      setTimeout(() => {
-        nameEl.textContent = `${card.number} ${card.name}${isReversed ? '（逆位置）' : '（正位置）'}`;
-        void nameEl.offsetWidth; // reflow
+      tarotRevealT1 = setTimeout(() => {
+        tarotRevealT1 = null;
+        nameEl.textContent = displayName;
+        void nameEl.offsetWidth;
         nameEl.classList.add('tarot-flipin');
       }, 1200);
-      setTimeout(() => {
+      tarotRevealT2 = setTimeout(() => {
+        tarotRevealT2 = null;
         keyEl.textContent = cardData.keyword;
         msgEl.textContent = cardData.message;
         void keyEl.offsetWidth;
@@ -559,9 +698,8 @@ async function captureResult() {
 
   const btn = document.getElementById('save-img-btn');
   btn.disabled = true;
-  btn.textContent = '生成中…';
+  btn.textContent = t('saving');
 
-  // バッジスタイルマップ
   const badgeStyles = {
     '大吉': 'color:#cc2200;background:rgba(204,34,0,0.08);border:1px solid rgba(204,34,0,0.3)',
     '中吉': 'color:#cc6600;background:rgba(204,102,0,0.08);border:1px solid rgba(204,102,0,0.3)',
@@ -577,25 +715,31 @@ async function captureResult() {
   const LL = 'color:#aa8800;font-size:0.68rem;margin-bottom:2px;';
   const LV = 'font-size:0.85rem;font-weight:bold;';
 
-  const fortune        = document.getElementById('fortune-badge').textContent;
-  const overallComment = document.getElementById('overall-comment').textContent;
-  const zodiacSymbol   = document.getElementById('zodiac-symbol').textContent;
-  const zodiacName     = document.getElementById('zodiac-name').textContent;
-  const zodiacPeriod   = document.getElementById('zodiac-period').textContent;
-  const bioHTML        = document.getElementById('biorhythm-bars').innerHTML;
-  const cardData       = captureIsReversed ? captureCard.reversed : captureCard.upright;
-  const imgRotate      = captureIsReversed ? 'transform:rotate(180deg);' : '';
-  const today          = getFortuneDate().replace(/-/g, '/');
+  const badgeEl      = document.getElementById('fortune-badge');
+  const fortune      = badgeEl.textContent;
+  const fortuneLevel = badgeEl.dataset.level;
+  const isEn         = currentLang === 'en';
+  const cardData     = captureIsReversed
+    ? (isEn ? captureCard.reversed_en : captureCard.reversed)
+    : (isEn ? captureCard.upright_en  : captureCard.upright);
+  const imgRotate    = captureIsReversed ? 'transform:rotate(180deg);' : '';
+  const today        = getFortuneDate().replace(/-/g, '/');
+  const tarotDisplayName = `${captureCard.number} ${isEn ? captureCard.nameEn : captureCard.name}${captureIsReversed ? t('posReversed') : t('posUpright')}`;
 
+  const overallComment  = document.getElementById('overall-comment').textContent;
+  const zodiacSymbol    = document.getElementById('zodiac-symbol').textContent;
+  const zodiacName      = document.getElementById('zodiac-name').textContent;
+  const zodiacPeriod    = document.getElementById('zodiac-period').textContent;
+  const bioHTML         = document.getElementById('biorhythm-bars').innerHTML;
   const luckyColor      = document.getElementById('lucky-color').textContent;
   const luckyNumber     = document.getElementById('lucky-number').textContent;
   const luckyItemZodiac = document.getElementById('lucky-item-zodiac').textContent;
   const luckyItemTarot  = cardData.lucky || '';
 
-  const rows = ['overall','love','work','health'];
-  const rowLabels = ['総合','恋愛','仕事','健康'];
+  const rows      = ['overall', 'love', 'work', 'health'];
+  const rowLabels = [t('zodiacCatOverall'), t('zodiacCatLove'), t('zodiacCatWork'), t('zodiacCatHealth')];
   const zodiacRows = rows.map((r, i) =>
-    `<div style="${R}"><span style="${C}">${rowLabels[i]}</span><span style="font-size:0.80rem;">${document.getElementById('zodiac-'+r).textContent}</span></div>`
+    `<div style="${R}"><span style="${C}">${rowLabels[i]}</span><span style="font-size:0.80rem;">${document.getElementById('zodiac-' + r).textContent}</span></div>`
   ).join('');
 
   const div = document.createElement('div');
@@ -605,23 +749,22 @@ async function captureResult() {
     <div style="display:flex;align-items:flex-end;justify-content:center;gap:0;border-bottom:2px solid #ffcc00;padding-bottom:6px;margin-bottom:14px;">
       <img src="${omikujiFolder}yaemiko01.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">
       <div style="text-align:center;flex:1;padding-bottom:4px;">
-        <div style="font-size:1.05rem;font-weight:bold;letter-spacing:0.1em;">✦ 原神おみくじ ✦</div>
+        <div style="font-size:1.05rem;font-weight:bold;letter-spacing:0.1em;">${t('captureTitle')}</div>
         <div style="font-size:0.75rem;color:#888;">${today}</div>
       </div>
       <img src="${omikujiFolder}mona02.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">
     </div>
     <div style="display:flex;gap:12px;align-items:flex-start;">
-      <!-- 左列: 運勢・星座・バイオリズム -->
       <div style="flex:1;min-width:0;">
         <div style="${S}">
-          <div style="${T}">今日の運勢</div>
+          <div style="${T}">${t('sectionFortune')}</div>
           <div style="text-align:center;margin-bottom:8px;">
-            <span style="display:inline-block;font-size:1.6rem;font-weight:bold;padding:4px 18px;border-radius:8px;${badgeStyles[fortune]||''}">${fortune}</span>
+            <span style="display:inline-block;font-size:1.6rem;font-weight:bold;padding:4px 18px;border-radius:8px;${badgeStyles[fortuneLevel] || ''}">${fortune}</span>
           </div>
           <p style="font-size:0.82rem;margin:0;">${overallComment}</p>
         </div>
         <div style="${S}">
-          <div style="${T}">星座占い</div>
+          <div style="${T}">${t('sectionZodiac')}</div>
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
             <span style="font-size:1.8rem;">${zodiacSymbol}</span>
             <div><div style="font-weight:bold;font-size:0.9rem;">${zodiacName}</div><div style="font-size:0.70rem;color:#888;">${zodiacPeriod}</div></div>
@@ -629,27 +772,26 @@ async function captureResult() {
           ${zodiacRows}
         </div>
         <div style="${S}">
-          <div style="${T}">バイオリズム</div>
+          <div style="${T}">${t('sectionBio')}</div>
           ${bioHTML}
         </div>
       </div>
-      <!-- 右列: アルカナ・ラッキー -->
       <div style="width:250px;flex-shrink:0;">
         <div style="${S}">
-          <div style="${T}">アルカナからのメッセージ</div>
+          <div style="${T}">${t('sectionTarot')}</div>
           <div style="text-align:center;margin-bottom:8px;">
             <img src="${captureCard.filename}" crossorigin="anonymous" style="width:90px;height:135px;object-fit:cover;border-radius:6px;${imgRotate}">
           </div>
-          <div style="font-size:1.0rem;font-weight:bold;text-align:center;margin-bottom:3px;">${captureCard.number} ${captureCard.name}${captureIsReversed?'（逆位置）':'（正位置）'}</div>
+          <div style="font-size:1.0rem;font-weight:bold;text-align:center;margin-bottom:3px;">${tarotDisplayName}</div>
           <div style="font-size:0.80rem;color:#888;text-align:center;margin-bottom:8px;">${cardData.keyword}</div>
           <div style="font-size:0.80rem;background:#eee;border-radius:8px;padding:9px 10px;">${cardData.message}</div>
         </div>
         <div style="${S}">
-          <div style="${T}">今日のラッキー</div>
-          <div style="${LI}"><div style="${LL}">ラッキーカラー</div><div style="${LV}">${luckyColor}</div></div>
-          <div style="${LI}"><div style="${LL}">ラッキーナンバー</div><div style="${LV}">${luckyNumber}</div></div>
-          <div style="${LI}"><div style="${LL}">ラッキーアイテム（星座）</div><div style="${LV}">${luckyItemZodiac}</div></div>
-          ${luckyItemTarot ? `<div style="${LI}"><div style="${LL}">ラッキーアイテム（アルカナ）</div><div style="${LV}">${luckyItemTarot}</div></div>` : ''}
+          <div style="${T}">${t('sectionLucky')}</div>
+          <div style="${LI}"><div style="${LL}">${t('luckyColor')}</div><div style="${LV}">${luckyColor}</div></div>
+          <div style="${LI}"><div style="${LL}">${t('luckyNumber')}</div><div style="${LV}">${luckyNumber}</div></div>
+          <div style="${LI}"><div style="${LL}">${t('luckyItemZodiac')}</div><div style="${LV}">${luckyItemZodiac}</div></div>
+          ${luckyItemTarot ? `<div style="${LI}"><div style="${LL}">${t('luckyItemTarot')}</div><div style="${LV}">${luckyItemTarot}</div></div>` : ''}
         </div>
       </div>
     </div>
@@ -666,17 +808,18 @@ async function captureResult() {
     a.href = canvas.toDataURL('image/png');
     a.click();
   } catch (e) {
-    alert('画像の保存に失敗しました');
+    alert(t('saveFail'));
     console.error(e);
   } finally {
     div.remove();
     btn.disabled = false;
-    btn.textContent = 'Save Image';
+    btn.textContent = t('saveBtn');
   }
 }
 
 function displayFortuneBadge(level) {
   const badge = document.getElementById('fortune-badge');
-  badge.textContent = level;
-  badge.className   = `fortune-badge fortune-${level}`;
+  badge.textContent   = currentLang === 'en' ? fortuneLevels_en[fortuneLevels.indexOf(level)] : level;
+  badge.dataset.level = level;
+  badge.className     = `fortune-badge fortune-${level}`;
 }

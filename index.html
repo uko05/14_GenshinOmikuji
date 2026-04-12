@@ -19,33 +19,37 @@
 
 <header>
   <h1>✦ 原神おみくじ ✦</h1>
-  <p>星座・バイオリズム・アルカナで今日のあなたを占います</p>
+  <p data-i18n="headerSub">星座・バイオリズム・アルカナで今日のあなたを占います</p>
+  <div class="lang-switch">
+    <label><input type="radio" name="lang" value="ja" checked> 日本語</label>
+    <label><input type="radio" name="lang" value="en"> English</label>
+  </div>
 </header>
 
 <main>
   <!-- 入力 -->
   <section class="input-section">
-    <p class="card-select-label">アルカナをシャッフルして1枚選んでください</p>
+    <p class="card-select-label" data-i18n="cardSelectLabel">アルカナをシャッフルして1枚選んでください</p>
     <div id="card-scatter-area" class="card-scatter-area"></div>
     <div class="scatter-controls">
-      <button id="shuffle-btn" class="shuffle-btn">🂠 シャッフル</button>
+      <button id="shuffle-btn" class="shuffle-btn" data-i18n="shuffleBtn">🂠 シャッフル</button>
       <p id="card-selected-name" class="card-selected-name"></p>
     </div>
 
     <div class="input-row">
       <div class="input-group">
-        <label for="player-name">名前（任意）</label>
+        <label for="player-name" data-i18n="labelName">名前（任意）</label>
         <input type="text" id="player-name" placeholder="あなたの名前" maxlength="20">
       </div>
       <div class="input-group">
-        <label for="birthday">生年月日</label>
+        <label for="birthday" data-i18n="labelBirthday">生年月日</label>
         <input type="date" id="birthday">
       </div>
     </div>
 
     <div class="fortune-btn-row">
       <img id="chara-left" src="" alt="" class="chara-deco chara-left">
-      <button class="fortune-btn" id="fortune-btn" disabled>今日の運勢を占う</button>
+      <button class="fortune-btn" id="fortune-btn" disabled data-i18n="fortuneBtn">今日の運勢を占う</button>
       <img id="chara-right" src="" alt="" class="chara-deco chara-right">
     </div>
   </section>
@@ -64,7 +68,7 @@
 
     <!-- 星座占い -->
     <section class="section">
-      <div class="section-title">星座占い</div>
+      <div class="section-title" data-i18n="sectionZodiac">星座占い</div>
       <div class="zodiac-header">
         <div class="zodiac-symbol" id="zodiac-symbol"></div>
         <div>
@@ -74,19 +78,19 @@
       </div>
       <div class="zodiac-rows">
         <div class="zodiac-row">
-          <span class="zodiac-cat">総合</span>
+          <span class="zodiac-cat" data-i18n="zodiacCatOverall">総合</span>
           <span id="zodiac-overall"></span>
         </div>
         <div class="zodiac-row">
-          <span class="zodiac-cat">恋愛</span>
+          <span class="zodiac-cat" data-i18n="zodiacCatLove">恋愛</span>
           <span id="zodiac-love"></span>
         </div>
         <div class="zodiac-row">
-          <span class="zodiac-cat">仕事</span>
+          <span class="zodiac-cat" data-i18n="zodiacCatWork">仕事</span>
           <span id="zodiac-work"></span>
         </div>
         <div class="zodiac-row">
-          <span class="zodiac-cat">健康</span>
+          <span class="zodiac-cat" data-i18n="zodiacCatHealth">健康</span>
           <span id="zodiac-health"></span>
         </div>
       </div>
@@ -94,19 +98,19 @@
 
     <!-- バイオリズム -->
     <section class="section">
-      <div class="section-title">バイオリズム</div>
+      <div class="section-title" data-i18n="sectionBio">バイオリズム</div>
       <div id="biorhythm-bars"></div>
     </section>
 
     <!-- タロット -->
     <section class="section">
-      <div class="section-title">アルカナからのメッセージ</div>
+      <div class="section-title" data-i18n="sectionTarot">アルカナからのメッセージ</div>
       <div class="tarot-reveal">
         <div class="card-scene">
           <div class="tarot-card" id="tarot-card">
             <div class="card-back">
               <img src="" alt="カード裏面" crossorigin="anonymous">
-              <div class="tap-hint">カードをタップしてください</div>
+              <div class="tap-hint" data-i18n="tapHint">カードをタップしてください</div>
             </div>
             <div class="card-front"><img src="" alt="タロットカード"></div>
           </div>
@@ -121,22 +125,22 @@
 
     <!-- ラッキー情報 -->
     <section class="section">
-      <div class="section-title">今日のラッキー</div>
+      <div class="section-title" data-i18n="sectionLucky">今日のラッキー</div>
       <div class="lucky-grid">
         <div class="lucky-item">
-          <div class="lucky-item-label">ラッキーカラー</div>
+          <div class="lucky-item-label" data-i18n="luckyColor">ラッキーカラー</div>
           <div class="lucky-item-value" id="lucky-color"></div>
         </div>
         <div class="lucky-item">
-          <div class="lucky-item-label">ラッキーナンバー</div>
+          <div class="lucky-item-label" data-i18n="luckyNumber">ラッキーナンバー</div>
           <div class="lucky-item-value" id="lucky-number"></div>
         </div>
         <div class="lucky-item">
-          <div class="lucky-item-label">ラッキーアイテム（星座）</div>
+          <div class="lucky-item-label" data-i18n="luckyItemZodiac">ラッキーアイテム（星座）</div>
           <div class="lucky-item-value" id="lucky-item-zodiac"></div>
         </div>
         <div class="lucky-item" id="lucky-item-tarot-row" style="display:none;">
-          <div class="lucky-item-label">ラッキーアイテム（アルカナ）</div>
+          <div class="lucky-item-label" data-i18n="luckyItemTarot">ラッキーアイテム（アルカナ）</div>
           <div class="lucky-item-value" id="lucky-item-tarot"></div>
         </div>
       </div>
