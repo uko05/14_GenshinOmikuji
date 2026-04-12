@@ -307,7 +307,7 @@ main {
 .scatter-card img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: fill;
   display: block;
   pointer-events: none;
   mix-blend-mode: multiply;
@@ -438,7 +438,7 @@ main {
 .card-front img, .card-back img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: fill;
 }
 
 .tap-hint {
