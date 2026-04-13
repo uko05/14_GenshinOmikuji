@@ -860,22 +860,16 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   display: block;
 }
 
-/* 最終フリップ状態：3D 不要・シンプルに表示切り替え（実機・html2canvas 対応） */
+/* 最終フリップ状態：3D 不要・シンプルに表示切り替え（実機・html2canvas 対応）
+   裏面は visibility:hidden でレイアウト維持（高さの基準として残す）
+   表面は absolute のまま・回転なし・可視化 */
 .col-card-inner.col-flipped .col-card-back {
-  display: none;
+  visibility: hidden;
 }
 
 .col-card-inner.col-flipped .col-card-front {
-  position: relative;
-  inset: auto;
   transform: none;
   visibility: visible;
-}
-
-.col-card-inner.col-flipped .col-card-front img {
-  width: 72px;
-  height: auto;
-  object-fit: fill;
 }
 
 /* ⑤ 未収録も元の色のまま（フィルターなし） */
