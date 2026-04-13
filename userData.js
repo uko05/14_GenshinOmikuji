@@ -6,7 +6,7 @@
 //   - それ以外のデータは Firestore を正源泉とし、インメモリストアで保持
 //   - ページ起動時に Firestore → store へロード
 //   - データ変更時は store を更新し、デバウンスで Firestore へ同期
-//   - 旧 localStorage データがある場合は初回のみマイグレーション
+//   - Firestore 書き込み成功が確認できるまで旧 localStorage データは消さない
 
 import { db } from './firebaseConfig.js';
 import {
@@ -17,7 +17,7 @@ import {
 const LS_USER_ID    = 'genshinOmikuji_userId';
 const LS_LAST_VISIT = 'genshinOmikuji_lastVisit';
 
-// ===== 旧 localStorage キー（マイグレーション用） =====
+// ===== 旧 localStorage キー（マイグレーション用・フォールバック用） =====
 const OLD_LS = {
   name:         'genshinOmikuji_name',
   birthday:     'genshinOmikuji_birthday',
@@ -46,21 +46,18 @@ export function getLastVisit()  { return localStorage.getItem(LS_LAST_VISIT) || 
 export function setLastVisit(v) { localStorage.setItem(LS_LAST_VISIT, v); }
 
 // ===== インメモリストア =====
-// Firestore から読み込んだデータをここに保持し、コード全体から参照する
 export const store = {
   name:         '',
   birthday:     '',
   lang:         'ja',
-  streak:       null,   // { count: number, lastDate: string }
-  result:       null,   // { date, birthday, cardIndex, isReversed }
-  collection:   new Set(),   // Set<string>  例: "fool_upright"
-  achievements: new Set(),   // Set<string>  例: "streak_1"
-  achStats:     null,        // アチーブメント統計オブジェクト
+  streak:       null,
+  result:       null,
+  collection:   new Set(),
+  achievements: new Set(),
+  achStats:     null,
 };
 
 // ===== Firestore からロード =====
-// 戻り値: true = Firestore ドキュメント存在・ロード成功
-//        false = 新規ユーザー or エラー（旧 localStorage からのマイグレーション済み）
 export async function loadUserDataFromFirestore() {
   try {
     const userId = getUserId();
@@ -77,19 +74,29 @@ export async function loadUserDataFromFirestore() {
       if (d.collection   != null) store.collection   = new Set(d.collection);
       if (d.achievements != null) store.achievements = new Set(d.achievements);
       if (d.achStats     != null) store.achStats = d.achStats;
+      console.log('[userData] Loaded from Firestore:', userId);
       return true;
     }
 
-    // Firestore にドキュメントなし → 旧 localStorage データをマイグレーション
+    // Firestore にドキュメントなし → 旧 localStorage からマイグレーション
+    console.log('[userData] No Firestore doc, migrating from localStorage...');
     _migrateFromLocalStorage();
-    // すぐに Firestore に書き込んで以降はFirestore を使う
-    await syncUserDataToFirestore();
-    // 旧 localStorage データを削除（userId・lastVisit は残す）
-    _clearOldLocalStorage();
+
+    // Firestore への書き込みを試みる
+    const synced = await syncUserDataToFirestore();
+
+    // 書き込み成功が確認できた場合のみ旧 localStorage を削除
+    if (synced) {
+      _clearOldLocalStorage();
+      console.log('[userData] Migration complete, old localStorage cleared.');
+    } else {
+      console.warn('[userData] Firestore write failed. Keeping old localStorage as fallback.');
+    }
     return false;
 
   } catch (e) {
-    console.warn('[userData] Firestore load failed, using legacy localStorage:', e);
+    // 読み込みエラー → 旧 localStorage をフォールバックとして使用
+    console.warn('[userData] Firestore load error, falling back to localStorage:', e);
     _migrateFromLocalStorage();
     return false;
   }
@@ -97,27 +104,28 @@ export async function loadUserDataFromFirestore() {
 
 // 旧 localStorage → store へのマイグレーション
 function _migrateFromLocalStorage() {
-  const g = (key, fallback = null) => {
+  const parse = (key) => {
     try { return JSON.parse(localStorage.getItem(key)); } catch { return localStorage.getItem(key); }
   };
   store.name     = localStorage.getItem(OLD_LS.name)     || '';
   store.birthday = localStorage.getItem(OLD_LS.birthday) || '';
   store.lang     = localStorage.getItem(OLD_LS.lang)     || 'ja';
-  store.streak   = g(OLD_LS.streak);
-  store.result   = g(OLD_LS.result);
-  const col  = g(OLD_LS.collection);
-  const achs = g(OLD_LS.achievements);
+  store.streak   = parse(OLD_LS.streak);
+  store.result   = parse(OLD_LS.result);
+  const col  = parse(OLD_LS.collection);
+  const achs = parse(OLD_LS.achievements);
   if (Array.isArray(col))  store.collection   = new Set(col);
   if (Array.isArray(achs)) store.achievements = new Set(achs);
-  store.achStats = g(OLD_LS.achStats);
+  store.achStats = parse(OLD_LS.achStats);
 }
 
-// 旧 localStorage データを削除（移行完了後）
+// 旧 localStorage データを削除（Firestore 書き込み成功確認後のみ呼ぶ）
 function _clearOldLocalStorage() {
   Object.values(OLD_LS).forEach(key => localStorage.removeItem(key));
 }
 
 // ===== Firestore へ同期 =====
+// 戻り値: true = 成功、false = 失敗
 export async function syncUserDataToFirestore() {
   try {
     const userId  = getUserId();
@@ -133,13 +141,14 @@ export async function syncUserDataToFirestore() {
       updatedAt:    serverTimestamp(),
     };
     await setDoc(doc(db, 'users', userId), payload, { merge: true });
+    return true;
   } catch (e) {
-    console.warn('[userData] Firestore sync failed:', e);
+    console.error('[userData] Firestore sync failed:', e);
+    return false;
   }
 }
 
 // ===== デバウンス付きスケジュール同期 =====
-// 複数の書き込みが短時間に続いても 1 回の Firestore 書き込みにまとめる
 let _syncTimer = null;
 export function scheduleSync() {
   if (_syncTimer) clearTimeout(_syncTimer);

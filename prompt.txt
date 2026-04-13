@@ -65,6 +65,11 @@ service cloud.firestore {
       allow update, delete:   if false;
     }
 
+    // GenshinOmikuji ユーザーデータ（端末変更対応）
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
     // その他すべて拒否
     match /{document=**} {
       allow read, write: if false;
