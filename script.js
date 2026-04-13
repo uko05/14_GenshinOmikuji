@@ -4,6 +4,7 @@ import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
+import { getUserId, loadUserDataFromFirestore, scheduleSync } from './userData.js';
 
 // ===== ローカルストレージキー =====
 const LS_NAME       = 'genshinOmikuji_name';
@@ -248,6 +249,7 @@ function updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, 
   }
 
   localStorage.setItem(LS_ACH_STATS, JSON.stringify(stats));
+  scheduleSync(); // achStats を Firestore へ同期
 }
 
 function loadUnlocked() {
@@ -269,6 +271,7 @@ function checkAndUnlockAchievements(silent = false) {
 
   if (newIds.length > 0) {
     localStorage.setItem(LS_ACHIEVEMENTS, JSON.stringify([...unlocked]));
+    scheduleSync(); // achievements を Firestore へ同期
     if (!silent) newIds.forEach(id => showAchToast(id));
   }
 }
@@ -661,6 +664,7 @@ function initLangSwitch() {
     r.addEventListener('change', () => {
       currentLang = r.value;
       localStorage.setItem(LS_LANG, currentLang);
+      scheduleSync(); // lang を Firestore へ同期
       applyLang(currentLang);
     });
   });
@@ -969,10 +973,14 @@ function updateFortuneBtn() {
 }
 
 // ===== DOM読み込み完了 =====
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const nameInput     = document.getElementById('player-name');
   const birthdayInput = document.getElementById('birthday');
   const shuffleBtn    = document.getElementById('shuffle-btn');
+
+  // Firestore からデータをロード（端末変更対応）
+  // localStorage を Firestore の内容で上書きしてから UI を初期化する
+  await loadUserDataFromFirestore();
 
   // 言語切り替え初期化
   initLangSwitch();
@@ -1021,6 +1029,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // タブ復帰時に日付が変わっていたら自動リロード
   localStorage.setItem(LS_LAST_VISIT, getFortuneDate());
+  scheduleSync();
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       if (localStorage.getItem(LS_LAST_VISIT) !== getFortuneDate()) {
@@ -1069,6 +1078,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     saveResult(birthday, selectedCardIndex, isReversed);
     const streakResult = !debug ? updateStreak() : { count: 0, isReturn: false };
+    scheduleSync(); // name, birthday, result, streak を Firestore へ同期
     renderStreak();
     runFortune(birthday, name, selectedCardIndex, isReversed);
     document.getElementById('result').style.display = 'block';
@@ -1267,6 +1277,7 @@ function displayTarot(card, isReversed, isRestored = false) {
       // コレクションに追加し、新規なら図鑑を再描画（スクロール演出付き）
       const newKey = addToCollection(card.id, isReversed);
       if (newKey && newBadgeEl) newBadgeEl.style.display = 'block';
+      scheduleSync(); // collection を Firestore へ同期
       renderCollection(newKey);
       checkAndUnlockAchievements();
       renderAchievements();
