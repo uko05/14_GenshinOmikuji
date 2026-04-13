@@ -4,18 +4,10 @@ import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
-import { getUserId, loadUserDataFromFirestore, scheduleSync } from './userData.js';
+import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit } from './userData.js';
 
-// ===== ローカルストレージキー =====
-const LS_NAME       = 'genshinOmikuji_name';
-const LS_BIRTHDAY   = 'genshinOmikuji_birthday';
-const LS_RESULT     = 'genshinOmikuji_result';
-const LS_LANG       = 'genshinOmikuji_lang';
-const LS_COLLECTION = 'genshinOmikuji_collection';
-const LS_STREAK      = 'genshinOmikuji_streak';
-const LS_LAST_VISIT  = 'genshinOmikuji_lastVisit';
-const LS_ACH_STATS   = 'genshinOmikuji_achStats';
-const LS_ACHIEVEMENTS= 'genshinOmikuji_achievements';
+// ===== ローカルストレージキー（lastVisit のみ残す） =====
+// 他のデータはすべて Firestore（store 経由）で管理する
 
 // ===== 状態 =====
 let selectedCardIndex = null;
@@ -158,7 +150,7 @@ function t(key) { return i18n[currentLang][key]; }
 // ===== 連続ログインストリーク =====
 function updateStreak() {
   const today = getFortuneDate();
-  const saved = JSON.parse(localStorage.getItem(LS_STREAK) || 'null');
+  const saved = store.streak;
   let count    = 1;
   let isReturn = false;
   if (saved) {
@@ -166,14 +158,14 @@ function updateStreak() {
     else if (saved.lastDate === getYesterday()) count = saved.count + 1;   // 昨日引いた → 連続
     else if (saved.count > 0)                  isReturn = true;            // 途切れて復帰
   }
-  localStorage.setItem(LS_STREAK, JSON.stringify({ count, lastDate: today }));
+  store.streak = { count, lastDate: today };
   return { count, isReturn };
 }
 
 function renderStreak() {
   const el = document.getElementById('streak-display');
   if (!el) return;
-  const saved = JSON.parse(localStorage.getItem(LS_STREAK) || 'null');
+  const saved = store.streak;
   if (!saved || saved.count < 2) {
     el.style.display = 'none';
     return;
@@ -193,7 +185,7 @@ const ACH_STATS_DEFAULTS = {
 };
 
 function loadAchStats() {
-  return Object.assign({}, ACH_STATS_DEFAULTS, JSON.parse(localStorage.getItem(LS_ACH_STATS) || 'null') || {});
+  return Object.assign({}, ACH_STATS_DEFAULTS, store.achStats || {});
 }
 
 function updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, isDebug, streakCount }) {
@@ -201,7 +193,8 @@ function updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, 
 
   if (isDebug) {
     stats.hadDebug = true;
-    localStorage.setItem(LS_ACH_STATS, JSON.stringify(stats));
+    store.achStats = stats;
+    scheduleSync();
     return;
   }
 
@@ -209,7 +202,7 @@ function updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, 
   if (streakCount > stats.maxStreak) stats.maxStreak = streakCount;
 
   // ストリーク途切れ復帰フラグ（呼び出し元で渡せないので再計算）
-  const streakSaved = JSON.parse(localStorage.getItem(LS_STREAK) || 'null');
+  const streakSaved = store.streak;
   if (streakSaved && streakSaved.count === 1 && stats.totalCount > 1) stats.hadReturn = true;
 
   // 運勢レベル
@@ -248,12 +241,12 @@ function updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, 
     if (bm === mon && bd === day) stats.hadBirthday = true;
   }
 
-  localStorage.setItem(LS_ACH_STATS, JSON.stringify(stats));
-  scheduleSync(); // achStats を Firestore へ同期
+  store.achStats = stats;
+  scheduleSync();
 }
 
 function loadUnlocked() {
-  return new Set(JSON.parse(localStorage.getItem(LS_ACHIEVEMENTS) || '[]'));
+  return store.achievements; // store の Set を直接返す（変更は store に即反映）
 }
 
 function checkAndUnlockAchievements(silent = false) {
@@ -270,8 +263,8 @@ function checkAndUnlockAchievements(silent = false) {
   }
 
   if (newIds.length > 0) {
-    localStorage.setItem(LS_ACHIEVEMENTS, JSON.stringify([...unlocked]));
-    scheduleSync(); // achievements を Firestore へ同期
+    // store.achievements は loadUnlocked() が返した同一参照なので既に更新済み
+    scheduleSync();
     if (!silent) newIds.forEach(id => showAchToast(id));
   }
 }
@@ -315,7 +308,7 @@ function processToastQueue() {
       toast.classList.remove('ach-toast-hide');
       processToastQueue();
     }, 450);
-  }, 6400); // 表示時間 6.4秒（2倍）
+  }, 4800); // 表示時間 4.8秒（元の1.5倍）
 }
 
 // ===== 共通：保存用ヘッダー HTML =====
@@ -517,11 +510,12 @@ function applyLang(lang) {
 
 // ===== アルカナ図鑑 =====
 function loadCollection() {
-  return new Set(JSON.parse(localStorage.getItem(LS_COLLECTION) || '[]'));
+  return store.collection; // store の Set を直接返す（変更は store に即反映）
 }
 
-function saveCollection(col) {
-  localStorage.setItem(LS_COLLECTION, JSON.stringify([...col]));
+function saveCollection(_col) {
+  // store.collection は参照渡しなので変更は既に反映済み
+  scheduleSync();
 }
 
 // 新規追加ならキーを返す、既収録なら null
@@ -658,13 +652,13 @@ function openCollectionModal(card, isReversed) {
 }
 
 function initLangSwitch() {
-  currentLang = localStorage.getItem(LS_LANG) || 'ja';
+  currentLang = store.lang || 'ja';
   document.querySelectorAll('input[name="lang"]').forEach(r => {
     r.checked = r.value === currentLang;
     r.addEventListener('change', () => {
       currentLang = r.value;
-      localStorage.setItem(LS_LANG, currentLang);
-      scheduleSync(); // lang を Firestore へ同期
+      store.lang  = currentLang;
+      scheduleSync();
       applyLang(currentLang);
     });
   });
@@ -752,14 +746,11 @@ function getYesterday() {
 
 // ===== 結果の保存・読み込み =====
 function saveResult(birthday, cardIndex, isReversed) {
-  localStorage.setItem(LS_RESULT, JSON.stringify({
-    date: getFortuneDate(),
-    birthday, cardIndex, isReversed,
-  }));
+  store.result = { date: getFortuneDate(), birthday, cardIndex, isReversed };
 }
 
 function loadResult() {
-  const saved = JSON.parse(localStorage.getItem(LS_RESULT) || 'null');
+  const saved = store.result;
   return (saved && saved.date === getFortuneDate()) ? saved : null;
 }
 
@@ -992,9 +983,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 生年月日の max を今日に設定
   birthdayInput.max = new Date().toISOString().slice(0, 10);
 
-  // localStorage 復元（生年月日の初期値は20年前）
-  nameInput.value = localStorage.getItem(LS_NAME) || '';
-  const storedBirthday = localStorage.getItem(LS_BIRTHDAY);
+  // store からデータ復元（Firestore ロード済みのインメモリストアから取得）
+  nameInput.value = store.name || '';
+  const storedBirthday = store.birthday;
   if (storedBirthday) {
     birthdayInput.value = storedBirthday;
   } else {
@@ -1027,12 +1018,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('save-col-btn').addEventListener('click', () => captureSection('collection-section', 'save-col-btn'));
   document.getElementById('save-ach-btn').addEventListener('click', () => captureAchievements('save-ach-btn'));
 
-  // タブ復帰時に日付が変わっていたら自動リロード
-  localStorage.setItem(LS_LAST_VISIT, getFortuneDate());
-  scheduleSync();
+  // タブ復帰時に日付が変わっていたら自動リロード（lastVisit はローカルに保持）
+  setLastVisit(getFortuneDate());
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
-      if (localStorage.getItem(LS_LAST_VISIT) !== getFortuneDate()) {
+      if (getLastVisit() !== getFortuneDate()) {
         location.reload();
       }
     }
@@ -1056,8 +1046,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!birthday)                  { alert(t('alertBirthday')); return; }
     if (selectedCardIndex === null) { alert(t('alertCard')); return; }
 
-    localStorage.setItem(LS_NAME, name);
-    localStorage.setItem(LS_BIRTHDAY, birthday);
+    store.name     = name;
+    store.birthday = birthday;
 
     const debug = isDebugMode();
 
@@ -1155,7 +1145,7 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, s
   // 実績統計更新・チェック（新規占いのみ）
   if (!skipStats) {
     const isDebug = name === 'uko@debug';
-    const streakSaved = JSON.parse(localStorage.getItem(LS_STREAK) || 'null');
+    const streakSaved = store.streak;
     updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, isDebug, streakCount: streakSaved ? streakSaved.count : 1 });
     checkAndUnlockAchievements();
     renderAchievements();
@@ -1275,9 +1265,8 @@ function displayTarot(card, isReversed, isRestored = false) {
       lastFortuneCardFlipped = true;
 
       // コレクションに追加し、新規なら図鑑を再描画（スクロール演出付き）
-      const newKey = addToCollection(card.id, isReversed);
+      const newKey = addToCollection(card.id, isReversed); // 内部で scheduleSync 済み
       if (newKey && newBadgeEl) newBadgeEl.style.display = 'block';
-      scheduleSync(); // collection を Firestore へ同期
       renderCollection(newKey);
       checkAndUnlockAchievements();
       renderAchievements();
