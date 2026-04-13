@@ -583,7 +583,7 @@ main {
   background: var(--surface2);
   border-radius: 8px;
   padding: 12px 14px;
-  text-align: left;
+  text-align: center;
 }
 
 /* 挨拶 */
@@ -1012,8 +1012,12 @@ footer {
 
 /* ===== アチーブメントトースト ===== */
 @keyframes ach-toast-in {
-  from { transform: translateX(-50%) translateY(100px); opacity: 0; }
+  from { transform: translateX(-50%) translateY(120px); opacity: 0; }
   to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+}
+@keyframes ach-toast-out {
+  from { transform: translateX(-50%) translateY(0);     opacity: 1; }
+  to   { transform: translateX(-50%) translateY(120px); opacity: 0; }
 }
 @keyframes ach-toast-glow {
   0%,100% { box-shadow: 0 0 8px 1px rgba(255,204,0,0.35); }
@@ -1028,34 +1032,37 @@ footer {
   background: var(--surface);
   border: 2px solid var(--accent);
   border-radius: 10px;
-  padding: 10px 20px;
+  padding: 12px 20px 14px;
   text-align: center;
-  min-width: 220px;
-  max-width: 88vw;
+  width: min(calc(100vw - 32px), 600px);
   z-index: 2000;
   pointer-events: none;
 }
 
 .ach-toast-show {
-  animation: ach-toast-in 0.35s ease-out forwards,
-             ach-toast-glow 1.5s ease-in-out 0.35s infinite;
+  animation: ach-toast-in 0.38s ease-out forwards,
+             ach-toast-glow 1.5s ease-in-out 0.38s infinite;
 }
 
 .ach-toast-hide {
-  transition: opacity 0.4s ease, transform 0.4s ease;
-  opacity: 0;
-  transform: translateX(-50%) translateY(30px);
+  animation: ach-toast-out 0.42s ease-in forwards;
 }
 
 .ach-toast-label {
   font-size: 0.68rem;
   color: var(--gold);
   letter-spacing: 0.12em;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
 }
 
 .ach-toast-name {
   font-size: 0.95rem;
   font-weight: bold;
   color: var(--text);
+  margin-bottom: 4px;
+}
+
+.ach-toast-condition {
+  font-size: 0.75rem;
+  color: var(--muted);
 }

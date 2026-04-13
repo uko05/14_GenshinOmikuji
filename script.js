@@ -294,8 +294,9 @@ function processToastQueue() {
   const toast  = document.getElementById('ach-toast');
   if (!toast) { achToastBusy = false; return; }
 
-  document.getElementById('ach-toast-label').textContent = t('achUnlocked');
-  document.getElementById('ach-toast-name').textContent  = isEn ? ach.nameEn : ach.name;
+  document.getElementById('ach-toast-label').textContent     = t('achUnlocked');
+  document.getElementById('ach-toast-name').textContent      = isEn ? ach.nameEn      : ach.name;
+  document.getElementById('ach-toast-condition').textContent = isEn ? ach.conditionEn : ach.condition;
 
   toast.style.display = 'block';
   void toast.offsetWidth; // reflow
@@ -305,12 +306,13 @@ function processToastQueue() {
   setTimeout(() => {
     toast.classList.remove('ach-toast-show');
     toast.classList.add('ach-toast-hide');
+    // 退場アニメーション(0.42s)完了後に非表示にして次のトーストへ
     setTimeout(() => {
       toast.style.display = 'none';
       toast.classList.remove('ach-toast-hide');
       processToastQueue();
-    }, 500);
-  }, 3200);
+    }, 450);
+  }, 6400); // 表示時間 6.4秒（2倍）
 }
 
 // ===== 共通：保存用ヘッダー HTML =====
