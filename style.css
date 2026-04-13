@@ -789,65 +789,68 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
 
 .col-card-inner {
   position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.7s ease;
-}
-
-.col-card-inner.col-flipped {
-  transform: rotateY(180deg);
+  /* transform-style / transition はアニメ中のみ付与 */
 }
 
 /* ③ シャドバ風ズームめくり演出（スケールと回転を分離してなめらかに） */
 
-/* スケール：ease-in-out で自然なベル曲線 */
 @keyframes col-zoom-reveal {
   0%,  100% { transform: scale(1); }
   50%        { transform: scale(4); }
 }
 
-/* 回転：linear で一定速度 */
 @keyframes col-rotate-reveal {
   from { transform: rotateY(0deg); }
   to   { transform: rotateY(180deg); }
 }
 
-.col-card-zoom {
-  transform-style: preserve-3d;
-}
-
+/* アニメーション中だけ 3D コンテキストを有効にする */
 .col-card-zoom.col-reveal {
   animation: col-zoom-reveal 1.5s ease-in-out forwards;
+  transform-style: preserve-3d;
   position: relative;
   z-index: 10;
 }
 
 .col-card-inner.col-reveal {
   animation: col-rotate-reveal 1.5s linear forwards;
+  transform-style: preserve-3d;
   transition: none;
+}
+
+/* アニメーション中の裏面・表面：backface-visibility で制御 */
+.col-card-inner.col-reveal .col-card-back {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.col-card-inner.col-reveal .col-card-front {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(180deg); /* 初期は裏向き → 180deg で表になる */
+  visibility: visible;
 }
 
 /* 裏面：通常フローで親の高さを確定させる */
 .col-card-back {
   display: block;
-  backface-visibility: hidden;
-  border-radius: 4px;     /* ③ box-shadow なし */
+  border-radius: 4px;
   overflow: hidden;
 }
 
 .col-card-back img {
   width: 72px;
-  height: auto;           /* ① 元画像の縦横比そのまま */
+  height: auto;
   display: block;
 }
 
-/* 表面：裏面と同サイズで重ねる */
+/* 表面：デフォルトは非表示。absolute で裏面に重ねる */
 .col-card-front {
   position: absolute;
   inset: 0;
-  backface-visibility: hidden;
-  border-radius: 4px;     /* ③ box-shadow なし */
+  border-radius: 4px;
   overflow: hidden;
-  transform: rotateY(180deg);
+  visibility: hidden; /* backface-visibility に依存せず非表示 */
 }
 
 .col-card-front img {
@@ -855,6 +858,24 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   height: 100%;
   object-fit: fill;
   display: block;
+}
+
+/* 最終フリップ状態：3D 不要・シンプルに表示切り替え（実機・html2canvas 対応） */
+.col-card-inner.col-flipped .col-card-back {
+  display: none;
+}
+
+.col-card-inner.col-flipped .col-card-front {
+  position: relative;
+  inset: auto;
+  transform: none;
+  visibility: visible;
+}
+
+.col-card-inner.col-flipped .col-card-front img {
+  width: 72px;
+  height: auto;
+  object-fit: fill;
 }
 
 /* ⑤ 未収録も元の色のまま（フィルターなし） */
