@@ -687,6 +687,7 @@ function initCardScatter() {
 
     div.addEventListener('pointerdown', (e) => {
       if (!isShuffled) return;
+      if (document.getElementById('daily-done-overlay')) return;
       dragCardIndex = i;
       dragStartX    = e.clientX;
       dragStartY    = e.clientY;
@@ -720,6 +721,7 @@ function initCardScatter() {
 
   container.addEventListener('pointermove', (e) => {
     if (!isShuffled || !(e.buttons > 0)) return;
+    if (document.getElementById('daily-done-overlay')) return;
 
     if (dragCardIndex !== null && !isDraggingAny) {
       const dx = e.clientX - dragStartX;
