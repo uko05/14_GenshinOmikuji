@@ -16,32 +16,6 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
-    // おみくじ統計バリデーション
-    function isValidOmikujiWrite() {
-      let d = request.resource.data;
-      return d.keys().hasOnly([
-          'zodiac', 'tarot', 'isReversed', 'playerName', 'birthday',
-          'fortuneLevel', 'overallComment',
-          'zodiacOverall', 'zodiacLove', 'zodiacWork', 'zodiacHealth',
-          'bioPhysical', 'bioEmotional', 'bioIntellectual', 'timestamp'
-        ])
-        && d.zodiac is string          && d.zodiac.size() <= 20
-        && d.tarot is string           && d.tarot.size() <= 20
-        && d.isReversed is bool
-        && d.playerName is string     
-        && d.birthday is string        && d.birthday.size() == 10
-        && d.fortuneLevel is string    && d.fortuneLevel.size() <= 5
-        && d.overallComment is string  && d.overallComment.size() <= 300
-        && d.zodiacOverall is string   && d.zodiacOverall.size() <= 300
-        && d.zodiacLove is string      && d.zodiacLove.size() <= 300
-        && d.zodiacWork is string      && d.zodiacWork.size() <= 300
-        && d.zodiacHealth is string    && d.zodiacHealth.size() <= 300
-        && d.bioPhysical is number
-        && d.bioEmotional is number
-        && d.bioIntellectual is number
-        && d.timestamp is timestamp;
-    }
-
     // TiersList 票数
     match /bakatareCounts/{character} {
       allow read:   if true;
@@ -61,13 +35,6 @@ service cloud.firestore {
     // GenshinOmikuji ユーザーデータ＋占い統計（端末変更対応）
     match /omikujiUsers/{userId} {
       allow read, write: if true;
-
-      // 占い統計ログ（サブコレクション・create のみ・read 不可）
-      match /stats/{statId} {
-        allow read:           if false;
-        allow create:         if isValidOmikujiWrite();
-        allow update, delete: if false;
-      }
     }
 
     // その他すべて拒否
