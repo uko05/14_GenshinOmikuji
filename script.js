@@ -614,8 +614,12 @@ function renderCollection(newKey = null) {
     const observer = new IntersectionObserver((entries, obs) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
-          const zoom  = entry.target;                          // スケール担当
-          const inner = zoom.querySelector('.col-card-inner'); // 回転担当
+          const zoom    = entry.target;                          // スケール担当
+          const inner   = zoom.querySelector('.col-card-inner'); // 回転担当
+          // グリッドアイテム（.col-item）のz-indexを上げて全隣接カードより前面に出す
+          const colItem = zoom.closest('.col-item');
+          if (colItem) colItem.style.zIndex = '10';
+
           zoom.classList.add('col-reveal');
           inner.classList.add('col-reveal');
           // 回転アニメーション終了後に確定状態へ差し替え
@@ -623,6 +627,7 @@ function renderCollection(newKey = null) {
             zoom.classList.remove('col-reveal');
             inner.classList.remove('col-reveal');
             inner.classList.add('col-flipped');
+            if (colItem) colItem.style.zIndex = ''; // z-index をリセット
           }, { once: true });
           obs.unobserve(zoom);
         }
