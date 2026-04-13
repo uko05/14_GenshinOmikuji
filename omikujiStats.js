@@ -1,5 +1,6 @@
 // omikujiStats.js
 import { db } from './firebaseConfig.js';
+import { getUserId } from './userData.js';
 import {
   collection,
   addDoc,
@@ -14,7 +15,8 @@ export async function submitOmikujiStats(data) {
   if (data.playerName !== 'uko@debug' && last && Date.now() - Number(last) < COOLDOWN_MS) return;
 
   try {
-    await addDoc(collection(db, 'omikujiStats'), {
+    const userId = getUserId();
+    await addDoc(collection(db, 'omikujiUsers', userId, 'stats'), {
       ...data,
       timestamp: serverTimestamp(),
     });

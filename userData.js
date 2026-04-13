@@ -61,7 +61,7 @@ export const store = {
 export async function loadUserDataFromFirestore() {
   try {
     const userId = getUserId();
-    const snap   = await getDoc(doc(db, 'users', userId));
+    const snap   = await getDoc(doc(db, 'omikujiUsers', userId));
 
     if (snap.exists()) {
       // Firestore のデータでストアを初期化
@@ -140,7 +140,7 @@ export async function syncUserDataToFirestore() {
       achStats:     store.achStats,
       updatedAt:    serverTimestamp(),
     };
-    await setDoc(doc(db, 'users', userId), payload, { merge: true });
+    await setDoc(doc(db, 'omikujiUsers', userId), payload, { merge: true });
     return true;
   } catch (e) {
     console.error('[userData] Firestore sync failed:', e);

@@ -58,16 +58,16 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // GenshinOmikuji 統計（create のみ・read 不可）
-    match /omikujiStats/{docId} {
-      allow read:             if false;
-      allow create:           if isValidOmikujiWrite();
-      allow update, delete:   if false;
-    }
-
-    // GenshinOmikuji ユーザーデータ（端末変更対応）
-    match /users/{userId} {
+    // GenshinOmikuji ユーザーデータ＋占い統計（端末変更対応）
+    match /omikujiUsers/{userId} {
       allow read, write: if true;
+
+      // 占い統計ログ（サブコレクション・create のみ・read 不可）
+      match /stats/{statId} {
+        allow read:           if false;
+        allow create:         if isValidOmikujiWrite();
+        allow update, delete: if false;
+      }
     }
 
     // その他すべて拒否
