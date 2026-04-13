@@ -1205,11 +1205,16 @@ function displayTarot(card, isReversed, isRestored = false) {
   if (tarotRevealT1) { clearTimeout(tarotRevealT1); tarotRevealT1 = null; }
   if (tarotRevealT2) { clearTimeout(tarotRevealT2); tarotRevealT2 = null; }
 
-  const cardEl = document.getElementById('tarot-card');
-  cardEl.querySelector('.card-front img').src = card.filename;
-  cardEl.querySelector('.card-front img').style.transform = isReversed ? 'rotate(180deg)' : '';
-  cardEl.querySelector('.card-back img').src = CARD_BACK;
+  const cardEl    = document.getElementById('tarot-card');
+  const frontFace = cardEl.querySelector('.card-front');
+  frontFace.querySelector('img').src             = card.filename;
+  frontFace.querySelector('img').style.transform = isReversed ? 'rotate(180deg)' : '';
+  cardEl.querySelector('.card-back img').src      = CARD_BACK;
   cardEl.querySelector('.card-back').style.visibility = '';
+
+  // NEW! バッジをリセット
+  const newBadgeEl = document.getElementById('tarot-new-badge');
+  if (newBadgeEl) newBadgeEl.style.display = 'none';
 
   const nameEl = document.getElementById('tarot-name');
   const keyEl  = document.getElementById('tarot-keyword');
@@ -1224,6 +1229,8 @@ function displayTarot(card, isReversed, isRestored = false) {
   const displayName = `${card.number} ${cardName}${posLabel}`;
 
   if (isRestored) {
+    // 復元時はカード表面を即表示（visibility 保険は不要）
+    frontFace.style.visibility = '';
     cardEl.classList.add('flipped');
     cardEl.onclick = null;
     nameEl.textContent = displayName;
@@ -1233,6 +1240,9 @@ function displayTarot(card, isReversed, isRestored = false) {
     keyEl.classList.add('tarot-flipin');
     msgEl.classList.add('tarot-flipin');
   } else {
+    // 未開封時：result が display:none→block になる瞬間に裏面が一瞬見えるのを防ぐため
+    // card-front を visibility:hidden で隠し、タップ時に解除する
+    frontFace.style.visibility = 'hidden';
     cardEl.classList.remove('flipped');
     [nameEl, keyEl, msgEl].forEach(el => {
       el.textContent = '';
@@ -1242,11 +1252,14 @@ function displayTarot(card, isReversed, isRestored = false) {
     cardEl.onclick = () => {
       if (cardEl.classList.contains('flipped')) return;
       cardEl.onclick = null;
+      // フリップ開始前に表面を見えるようにする（アニメーションで徐々に表示）
+      frontFace.style.visibility = '';
       cardEl.classList.add('flipped');
       lastFortuneCardFlipped = true;
 
       // コレクションに追加し、新規なら図鑑を再描画（スクロール演出付き）
       const newKey = addToCollection(card.id, isReversed);
+      if (newKey && newBadgeEl) newBadgeEl.style.display = 'block';
       renderCollection(newKey);
       checkAndUnlockAchievements();
       renderAchievements();

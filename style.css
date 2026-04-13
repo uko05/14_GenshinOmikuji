@@ -420,6 +420,20 @@ main {
   gap: 16px;
 }
 
+.tarot-new-badge {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #aa8800;
+  letter-spacing: 0.12em;
+  text-shadow: 0 0 8px rgba(255,204,0,0.6);
+  animation: tarot-new-glow 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes tarot-new-glow {
+  from { opacity: 0.8; text-shadow: 0 0 6px rgba(255,204,0,0.4); }
+  to   { opacity: 1.0; text-shadow: 0 0 14px rgba(255,204,0,0.9); }
+}
+
 .card-scene {
   position: relative;
   width: 200px;
@@ -785,6 +799,13 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   width: 72px;
   perspective: 600px;
   overflow: visible;
+}
+
+/* 全カードに position + z-index:0 を明示することで、
+   アニメーション中の z-index:10 が必ず上に来るようにする */
+.col-card-zoom {
+  position: relative;
+  z-index: 0;
 }
 
 .col-card-inner {
