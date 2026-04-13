@@ -805,9 +805,10 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
 }
 
 /* アニメーション中だけ 3D コンテキストを有効にする */
+/* preserve-3d は内側の inner だけに持たせる。zoom 側に preserve-3d を付けると
+   通常の stacking context が生成されず z-index が隣カードに効かなくなるため除外。 */
 .col-card-zoom.col-reveal {
   animation: col-zoom-reveal 1.5s ease-in-out forwards;
-  transform-style: preserve-3d;
   position: relative;
   z-index: 10;
 }
@@ -992,4 +993,54 @@ footer {
   .zodiac-row { grid-template-columns: 48px 1fr; }
   .card-scatter-area { height: 510px; }
   .input-row { flex-direction: column; gap: 8px; }
+}
+
+/* ===== アチーブメントトースト ===== */
+@keyframes ach-toast-in {
+  from { transform: translateX(-50%) translateY(100px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+}
+@keyframes ach-toast-glow {
+  0%,100% { box-shadow: 0 0 8px 1px rgba(255,204,0,0.35); }
+  50%      { box-shadow: 0 0 18px 5px rgba(255,204,0,0.65); }
+}
+
+.ach-toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 20px;
+  text-align: center;
+  min-width: 220px;
+  max-width: 88vw;
+  z-index: 2000;
+  pointer-events: none;
+}
+
+.ach-toast-show {
+  animation: ach-toast-in 0.35s ease-out forwards,
+             ach-toast-glow 1.5s ease-in-out 0.35s infinite;
+}
+
+.ach-toast-hide {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  opacity: 0;
+  transform: translateX(-50%) translateY(30px);
+}
+
+.ach-toast-label {
+  font-size: 0.68rem;
+  color: var(--gold);
+  letter-spacing: 0.12em;
+  margin-bottom: 4px;
+}
+
+.ach-toast-name {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--text);
 }

@@ -49,7 +49,7 @@ const i18n = {
   ja: {
     headerSub:        '星座・バイオリズム・アルカナで今日のあなたを占います',
     cardSelectLabel:  'アルカナをシャッフルして1枚選んでください',
-    shuffleBtn:       '🂠 シャッフル',
+    shuffleBtn:       'シャッフル',
     labelName:        '名前（任意）',
     labelBirthday:    '生年月日',
     namePlaceholder:  'あなたの名前',
@@ -101,7 +101,7 @@ const i18n = {
   en: {
     headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
     cardSelectLabel:  'Shuffle the Arcana and choose one card',
-    shuffleBtn:       '🂠 Shuffle',
+    shuffleBtn:       'Shuffle',
     labelName:        'Name (optional)',
     labelBirthday:    'Birthday',
     namePlaceholder:  'Your name',
@@ -313,6 +313,26 @@ function processToastQueue() {
   }, 3200);
 }
 
+// ===== 共通：保存用ヘッダー HTML =====
+function buildSaveHeader(today) {
+  return `<div style="display:flex;align-items:flex-end;justify-content:center;gap:0;border-bottom:2px solid #ffcc00;padding-bottom:6px;margin-bottom:14px;">` +
+    `<img src="${omikujiFolder}yaemiko01.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">` +
+    `<div style="text-align:center;flex:1;padding-bottom:4px;">` +
+      `<div style="font-size:1.05rem;font-weight:bold;letter-spacing:0.1em;">${t('captureTitle')}</div>` +
+      `<div style="font-size:0.75rem;color:#888;">${today}</div>` +
+    `</div>` +
+    `<img src="${omikujiFolder}mona02.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">` +
+  `</div>`;
+}
+
+// ===== 共通：保存用フッター HTML =====
+function buildSaveFooter() {
+  return `<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;border-top:1px solid #ddd;padding-top:8px;">` +
+    `<img src="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/footer_icon/twitter_image.png" crossorigin="anonymous" style="width:20px;height:20px;object-fit:contain;">` +
+    `<span style="font-size:0.78rem;color:#555;">@uko_dayo_</span>` +
+  `</div>`;
+}
+
 // ===== 図鑑 画像保存 =====
 async function captureSection(sectionId, btnId) {
   const btn     = document.getElementById(btnId);
@@ -322,9 +342,24 @@ async function captureSection(sectionId, btnId) {
   btn.disabled    = true;
   btn.textContent = t('saving');
 
+  const today = getFortuneDate().replace(/-/g, '/');
+
+  // ヘッダー＋セクション複製をラップしたdivを生成
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = "position:absolute;left:-9999px;top:0;width:700px;background:#f4f4f9;padding:20px 18px;box-sizing:border-box;font-family:'MihoyoZenZero','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;color:#333;line-height:1.7;";
+  wrapper.innerHTML = buildSaveHeader(today);
+
+  const clone = section.cloneNode(true);
+  // 保存ボタンと見出し（セクション外から見えるため）は除去
+  clone.querySelector(`#${btnId}`)?.remove();
+  clone.style.cssText = 'background:transparent;border:none;box-shadow:none;padding:0;margin:0;';
+  wrapper.appendChild(clone);
+  wrapper.insertAdjacentHTML('beforeend', buildSaveFooter());
+
+  document.body.appendChild(wrapper);
   try {
-    const canvas = await html2canvas(section, {
-      useCORS: true, backgroundColor: null, scale: 2, logging: false,
+    const canvas = await html2canvas(wrapper, {
+      useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false,
     });
     const a = document.createElement('a');
     a.download = `genshin-collection-${getFortuneDate()}.png`;
@@ -333,6 +368,7 @@ async function captureSection(sectionId, btnId) {
   } catch {
     alert(t('saveFail'));
   } finally {
+    wrapper.remove();
     btn.disabled    = false;
     btn.textContent = t('saveCollection');
   }
@@ -345,46 +381,45 @@ async function captureAchievements(btnId) {
   btn.disabled    = true;
   btn.textContent = t('saving');
 
-  const isEn    = currentLang === 'en';
+  const isEn     = currentLang === 'en';
   const unlocked = loadUnlocked();
   const total    = ALL_ACHIEVEMENTS.length;
   const today    = getFortuneDate().replace(/-/g, '/');
 
   const S  = 'background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px 14px;margin-bottom:10px;';
   const T  = 'color:#aa8800;font-size:0.68rem;letter-spacing:0.15em;text-align:center;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;';
+  const TILE = 'background:#fffbe6;border:1px solid #ffcc00;border-radius:6px;padding:5px 8px;font-size:0.72rem;font-weight:bold;color:#333;display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;';
+  const EMPTY = 'font-size:0.70rem;color:#bbb;text-align:center;padding:4px 0;';
 
-  // グループごとに取得済みアチーブをタイルで並べる
+  // グループごとに表示（取得0でも枠は出す）
   let groupsHTML = '';
   ACHIEVEMENT_GROUPS.forEach(group => {
     const unlockedItems = group.items.filter(a => unlocked.has(a.id));
-    if (unlockedItems.length === 0) return;
     const groupName = isEn ? group.nameEn : group.name;
-    const tiles = unlockedItems.map(a => {
-      const name = isEn ? a.nameEn : a.name;
-      return `<div style="background:#fffbe6;border:1px solid #ffcc00;border-radius:6px;padding:5px 8px;font-size:0.72rem;font-weight:bold;color:#333;display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;">` +
-             `<span style="color:#aa8800;flex-shrink:0;">✦</span>` +
-             `<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</span>` +
-             `</div>`;
-    }).join('');
+    const tilesHTML = unlockedItems.length > 0
+      ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">` +
+          unlockedItems.map(a => {
+            const name = isEn ? a.nameEn : a.name;
+            return `<div style="${TILE}">` +
+              `<span style="color:#aa8800;flex-shrink:0;">✦</span>` +
+              `<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</span>` +
+            `</div>`;
+          }).join('') +
+        `</div>`
+      : `<div style="${EMPTY}">${isEn ? 'None yet' : 'まだ取得なし'}</div>`;
     groupsHTML += `<div style="${S}">` +
-      `<div style="${T}">${groupName} ${unlockedItems.length}/${group.items.length}</div>` +
-      `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">${tiles}</div>` +
-      `</div>`;
+      `<div style="${T}">${groupName}　${unlockedItems.length} / ${group.items.length}</div>` +
+      tilesHTML +
+    `</div>`;
   });
 
   const div = document.createElement('div');
-  div.style.cssText = "position:absolute;left:-9999px;top:0;width:540px;background:#f4f4f9;padding:16px 14px;box-sizing:border-box;font-family:'MihoyoZenZero','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;color:#333;line-height:1.6;";
+  div.style.cssText = "position:absolute;left:-9999px;top:0;width:700px;background:#f4f4f9;padding:20px 18px;box-sizing:border-box;font-family:'MihoyoZenZero','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;color:#333;line-height:1.6;";
   div.innerHTML =
-    `<div style="display:flex;align-items:center;justify-content:center;gap:10px;border-bottom:2px solid #ffcc00;padding-bottom:8px;margin-bottom:12px;">` +
-      `<span style="font-size:1.0rem;font-weight:bold;letter-spacing:0.08em;">${isEn ? 'Achievements' : 'アチーブメント'}</span>` +
-      `<span style="font-size:0.78rem;color:#aa8800;font-weight:bold;">${unlocked.size} / ${total}</span>` +
-      `<span style="font-size:0.72rem;color:#888;margin-left:auto;">${today}</span>` +
-    `</div>` +
+    buildSaveHeader(today) +
+    `<div style="font-size:0.78rem;color:#aa8800;font-weight:bold;text-align:right;margin-bottom:10px;">${unlocked.size} / ${total}</div>` +
     groupsHTML +
-    `<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;border-top:1px solid #ddd;padding-top:6px;">` +
-      `<img src="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/footer_icon/twitter_image.png" crossorigin="anonymous" style="width:16px;height:16px;object-fit:contain;">` +
-      `<span style="font-size:0.72rem;color:#555;">@uko_dayo_</span>` +
-    `</div>`;
+    buildSaveFooter();
 
   document.body.appendChild(div);
   try {
@@ -1287,15 +1322,7 @@ async function captureResult() {
   const div = document.createElement('div');
   div.style.cssText = "position:absolute;left:-9999px;top:0;width:700px;background:#f4f4f9;padding:20px 18px;box-sizing:border-box;font-family:'MihoyoZenZero','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;color:#333;line-height:1.7;";
 
-  div.innerHTML = `
-    <div style="display:flex;align-items:flex-end;justify-content:center;gap:0;border-bottom:2px solid #ffcc00;padding-bottom:6px;margin-bottom:14px;">
-      <img src="${omikujiFolder}yaemiko01.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">
-      <div style="text-align:center;flex:1;padding-bottom:4px;">
-        <div style="font-size:1.05rem;font-weight:bold;letter-spacing:0.1em;">${t('captureTitle')}</div>
-        <div style="font-size:0.75rem;color:#888;">${today}</div>
-      </div>
-      <img src="${omikujiFolder}mona02.png" crossorigin="anonymous" style="height:80px;object-fit:contain;flex-shrink:0;">
-    </div>
+  div.innerHTML = buildSaveHeader(today) + `
     <div style="display:flex;gap:12px;align-items:flex-start;">
       <div style="flex:1;min-width:0;">
         <div style="${S}">
@@ -1336,11 +1363,7 @@ async function captureResult() {
           ${luckyItemTarot ? `<div style="${LI}"><div style="${LL}">${t('luckyItemTarot')}</div><div style="${LV}">${luckyItemTarot}</div></div>` : ''}
         </div>
       </div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;border-top:1px solid #ddd;padding-top:8px;">
-      <img src="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/footer_icon/twitter_image.png" crossorigin="anonymous" style="width:20px;height:20px;object-fit:contain;">
-      <span style="font-size:0.78rem;color:#555;">@uko_dayo_</span>
-    </div>`;
+    </div>` + buildSaveFooter();
 
   document.body.appendChild(div);
   try {
