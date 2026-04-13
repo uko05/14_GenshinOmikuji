@@ -313,7 +313,7 @@ function processToastQueue() {
   }, 3200);
 }
 
-// ===== 図鑑・実績 画像保存 =====
+// ===== 図鑑 画像保存 =====
 async function captureSection(sectionId, btnId) {
   const btn     = document.getElementById(btnId);
   const section = document.getElementById(sectionId);
@@ -322,29 +322,83 @@ async function captureSection(sectionId, btnId) {
   btn.disabled    = true;
   btn.textContent = t('saving');
 
-  // achievement の場合は全グループを一時的に開く
-  let openedDetails = [];
-  if (sectionId === 'achievement-section') {
-    section.querySelectorAll('details:not([open])').forEach(d => {
-      d.setAttribute('open', '');
-      openedDetails.push(d);
-    });
-  }
-
   try {
     const canvas = await html2canvas(section, {
       useCORS: true, backgroundColor: null, scale: 2, logging: false,
     });
     const a = document.createElement('a');
-    a.download = `genshin-${sectionId === 'collection-section' ? 'collection' : 'achievements'}-${getFortuneDate()}.png`;
+    a.download = `genshin-collection-${getFortuneDate()}.png`;
     a.href = canvas.toDataURL('image/png');
     a.click();
   } catch {
     alert(t('saveFail'));
   } finally {
-    openedDetails.forEach(d => d.removeAttribute('open'));
     btn.disabled    = false;
-    btn.textContent = sectionId === 'collection-section' ? t('saveCollection') : t('saveAchievement');
+    btn.textContent = t('saveCollection');
+  }
+}
+
+// ===== 実績 画像保存 =====
+async function captureAchievements(btnId) {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.disabled    = true;
+  btn.textContent = t('saving');
+
+  const isEn    = currentLang === 'en';
+  const unlocked = loadUnlocked();
+  const total    = ALL_ACHIEVEMENTS.length;
+  const today    = getFortuneDate().replace(/-/g, '/');
+
+  const S  = 'background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px 14px;margin-bottom:10px;';
+  const T  = 'color:#aa8800;font-size:0.68rem;letter-spacing:0.15em;text-align:center;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;';
+
+  // グループごとに取得済みアチーブをタイルで並べる
+  let groupsHTML = '';
+  ACHIEVEMENT_GROUPS.forEach(group => {
+    const unlockedItems = group.items.filter(a => unlocked.has(a.id));
+    if (unlockedItems.length === 0) return;
+    const groupName = isEn ? group.nameEn : group.name;
+    const tiles = unlockedItems.map(a => {
+      const name = isEn ? a.nameEn : a.name;
+      return `<div style="background:#fffbe6;border:1px solid #ffcc00;border-radius:6px;padding:5px 8px;font-size:0.72rem;font-weight:bold;color:#333;display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;">` +
+             `<span style="color:#aa8800;flex-shrink:0;">✦</span>` +
+             `<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</span>` +
+             `</div>`;
+    }).join('');
+    groupsHTML += `<div style="${S}">` +
+      `<div style="${T}">${groupName} ${unlockedItems.length}/${group.items.length}</div>` +
+      `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">${tiles}</div>` +
+      `</div>`;
+  });
+
+  const div = document.createElement('div');
+  div.style.cssText = "position:absolute;left:-9999px;top:0;width:540px;background:#f4f4f9;padding:16px 14px;box-sizing:border-box;font-family:'MihoyoZenZero','Hiragino Kaku Gothic ProN','Meiryo',sans-serif;color:#333;line-height:1.6;";
+  div.innerHTML =
+    `<div style="display:flex;align-items:center;justify-content:center;gap:10px;border-bottom:2px solid #ffcc00;padding-bottom:8px;margin-bottom:12px;">` +
+      `<span style="font-size:1.0rem;font-weight:bold;letter-spacing:0.08em;">${isEn ? 'Achievements' : 'アチーブメント'}</span>` +
+      `<span style="font-size:0.78rem;color:#aa8800;font-weight:bold;">${unlocked.size} / ${total}</span>` +
+      `<span style="font-size:0.72rem;color:#888;margin-left:auto;">${today}</span>` +
+    `</div>` +
+    groupsHTML +
+    `<div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px;border-top:1px solid #ddd;padding-top:6px;">` +
+      `<img src="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/footer_icon/twitter_image.png" crossorigin="anonymous" style="width:16px;height:16px;object-fit:contain;">` +
+      `<span style="font-size:0.72rem;color:#555;">@uko_dayo_</span>` +
+    `</div>`;
+
+  document.body.appendChild(div);
+  try {
+    const canvas = await html2canvas(div, { useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false });
+    const a = document.createElement('a');
+    a.download = `genshin-achievements-${getFortuneDate()}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  } catch {
+    alert(t('saveFail'));
+  } finally {
+    div.remove();
+    btn.disabled    = false;
+    btn.textContent = t('saveAchievement');
   }
 }
 
@@ -921,7 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderAchievements();
 
   document.getElementById('save-col-btn').addEventListener('click', () => captureSection('collection-section', 'save-col-btn'));
-  document.getElementById('save-ach-btn').addEventListener('click', () => captureSection('achievement-section', 'save-ach-btn'));
+  document.getElementById('save-ach-btn').addEventListener('click', () => captureAchievements('save-ach-btn'));
 
   // タブ復帰時に日付が変わっていたら自動リロード
   localStorage.setItem(LS_LAST_VISIT, getFortuneDate());

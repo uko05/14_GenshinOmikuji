@@ -58,6 +58,27 @@
   <!-- 結果（占うまで非表示） -->
   <div id="result" style="display:none;">
 
+    <!-- タロット -->
+    <section class="section">
+      <div class="section-title" data-i18n="sectionTarot">アルカナからのメッセージ</div>
+      <div class="tarot-reveal">
+        <div class="card-scene">
+          <div class="tarot-card" id="tarot-card">
+            <div class="card-back">
+              <img src="" alt="カード裏面" crossorigin="anonymous">
+              <div class="tap-hint" data-i18n="tapHint">カードをタップしてください</div>
+            </div>
+            <div class="card-front"><img src="" alt="タロットカード"></div>
+          </div>
+        </div>
+        <div class="tarot-info">
+          <div class="tarot-name" id="tarot-name"></div>
+          <div class="tarot-keyword" id="tarot-keyword"></div>
+          <div class="tarot-message" id="tarot-message"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- 挨拶 + 運勢バッジ + 総合コメント -->
     <section class="section">
       <div id="result-greeting" class="result-greeting"></div>
@@ -101,27 +122,6 @@
     <section class="section">
       <div class="section-title" data-i18n="sectionBio">バイオリズム</div>
       <div id="biorhythm-bars"></div>
-    </section>
-
-    <!-- タロット -->
-    <section class="section">
-      <div class="section-title" data-i18n="sectionTarot">アルカナからのメッセージ</div>
-      <div class="tarot-reveal">
-        <div class="card-scene">
-          <div class="tarot-card" id="tarot-card">
-            <div class="card-back">
-              <img src="" alt="カード裏面" crossorigin="anonymous">
-              <div class="tap-hint" data-i18n="tapHint">カードをタップしてください</div>
-            </div>
-            <div class="card-front"><img src="" alt="タロットカード"></div>
-          </div>
-        </div>
-        <div class="tarot-info">
-          <div class="tarot-name" id="tarot-name"></div>
-          <div class="tarot-keyword" id="tarot-keyword"></div>
-          <div class="tarot-message" id="tarot-message"></div>
-        </div>
-      </div>
     </section>
 
     <!-- ラッキー情報 -->
