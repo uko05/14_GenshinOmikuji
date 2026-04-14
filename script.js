@@ -84,7 +84,7 @@ const i18n = {
     saveFail:           '画像の保存に失敗しました',
     captureTitle:       '✦ 原神おみくじ ✦',
     sectionCollection:   'アルカナ図鑑',
-    collectionProgress:  (n) => `${n} / 44 収録`,
+    collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} 収録`,
     colPosUpright:       '正',
     colPosReversed:      '逆',
     sectionAchievement:  'アチーブメント',
@@ -140,7 +140,7 @@ const i18n = {
     saveFail:           'Failed to save image',
     captureTitle:       '✦ Genshin Omikuji ✦',
     sectionCollection:   'Arcana Collection',
-    collectionProgress:  (n) => `${n} / 44 collected`,
+    collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} collected`,
     colPosUpright:       'U',
     colPosReversed:      'R',
     sectionAchievement:  'Achievements',
@@ -602,6 +602,11 @@ function addToCollection(cardId, isReversed, isRare = false) {
   col.add(key);
   saveCollection(col);
   return key;
+}
+
+// 図鑑の総収録可能枚数（通常22×2 + レアカード枚数）
+function totalCollectibleCount() {
+  return tarotCards.reduce((sum, card) => sum + (card.isRare ? 1 : 2), 0);
 }
 
 function renderCollection(newKey = null) {
