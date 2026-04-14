@@ -350,38 +350,67 @@ function buildSaveFooter() {
   `</div>`;
 }
 
-// ===== 画像保存共通：モバイルは写真として共有、PCはダウンロード =====
+// ===== 画像保存共通：iOS はプレビューモーダル、Android は共有、PC はダウンロード =====
+function showImageSaveModal(dataUrl) {
+  const isEn = currentLang === 'en';
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+  const hint = document.createElement('p');
+  hint.textContent = isEn ? 'Long-press the image → "Add to Photos"' : '画像を長押しして「写真に追加」を選んでください';
+  hint.style.cssText = 'color:#e8d8a0;font-size:0.82rem;margin-bottom:14px;text-align:center;line-height:1.5;';
+  const img = document.createElement('img');
+  img.src = dataUrl;
+  img.style.cssText = 'max-width:100%;max-height:65vh;border-radius:8px;display:block;';
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = isEn ? 'Close' : '閉じる';
+  closeBtn.style.cssText = 'margin-top:16px;padding:8px 28px;background:#3a3060;color:#e8d8a0;border:1px solid #7a5ab0;border-radius:6px;font-size:0.9rem;cursor:pointer;';
+  closeBtn.onclick = () => overlay.remove();
+  overlay.appendChild(hint);
+  overlay.appendChild(img);
+  overlay.appendChild(closeBtn);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
 async function saveOrShareImage(canvas, filename) {
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  if (navigator.share && isMobile) {
-    await new Promise((resolve, reject) => {
+  const isIOS    = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isAndroid = /Android/i.test(navigator.userAgent);
+
+  if (isIOS) {
+    // iOS Safari: <a download> が機能しないためプレビューモーダルで長押し保存を案内
+    showImageSaveModal(canvas.toDataURL('image/png'));
+    return;
+  }
+
+  if (isAndroid && navigator.share) {
+    await new Promise((resolve) => {
       canvas.toBlob(async (blob) => {
         try {
           const file = new File([blob], filename, { type: 'image/png' });
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({ files: [file] });
           } else {
-            // files 共有非対応のブラウザ → ダウンロード
             const a = document.createElement('a');
             a.download = filename;
             a.href = URL.createObjectURL(blob);
             a.click();
             setTimeout(() => URL.revokeObjectURL(a.href), 60000);
           }
-          resolve();
         } catch (e) {
-          if (e.name === 'AbortError') { resolve(); return; } // ユーザーキャンセル
-          // share 失敗時はダウンロードにフォールバック
-          const a = document.createElement('a');
-          a.download = filename;
-          a.href = URL.createObjectURL(blob);
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(a.href), 60000);
-          resolve();
+          if (e.name !== 'AbortError') {
+            // share 失敗時はダウンロードにフォールバック
+            const a = document.createElement('a');
+            a.download = filename;
+            a.href = URL.createObjectURL(blob);
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+          }
         }
+        resolve();
       }, 'image/png');
     });
   } else {
+    // PC: 直接ダウンロード
     const a = document.createElement('a');
     a.download = filename;
     a.href = canvas.toDataURL('image/png');
@@ -590,9 +619,10 @@ function saveCollection(_col) {
 }
 
 // 新規追加ならキーを返す、既収録なら null
-function addToCollection(cardId, isReversed) {
+// isRare=true のときはキーを cardId そのまま使用（正逆なし）
+function addToCollection(cardId, isReversed, isRare = false) {
   const col = loadCollection();
-  const key = `${cardId}_${isReversed ? 'reversed' : 'upright'}`;
+  const key = isRare ? cardId : `${cardId}_${isReversed ? 'reversed' : 'upright'}`;
   if (col.has(key)) return null;
   col.add(key);
   saveCollection(col);
@@ -1231,11 +1261,7 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, s
   displayFortuneBadge(fortuneLevel);
   document.getElementById('overall-comment').textContent = overallComment;
 
-  // レアカードをコレクションに登録
-  if (isRare && !skipStats) {
-    store.collection.add(card.id); // 'rare_bad' or 'rare_good'
-    scheduleSync();
-  }
+
 
   // ラッキー
   const luckyIdx = Math.floor(rng() * 3);
@@ -1374,7 +1400,7 @@ function displayTarot(card, isReversed, isRestored = false) {
       lastFortuneCardFlipped = true;
 
       // コレクションに追加し、新規なら図鑑を再描画（スクロール演出付き）
-      const newKey = addToCollection(card.id, isReversed); // 内部で scheduleSync 済み
+      const newKey = addToCollection(card.id, isReversed, card.isRare === true); // 内部で scheduleSync 済み
       if (newKey && newBadgeEl) newBadgeEl.style.display = 'block';
       renderCollection(newKey);
       checkAndUnlockAchievements(false, 1500);
