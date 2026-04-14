@@ -14,6 +14,8 @@ let selectedCardIndex = null;
 let isShuffled        = false;
 let isDraggingAny     = false;
 let currentLang       = 'ja';
+// レアカード差し替え状態 { pos: number } | null
+let rareCardOverride  = null;
 
 // ===== 画像保存用キャッシュ =====
 let captureCard       = null;
@@ -190,6 +192,7 @@ const ACH_STATS_DEFAULTS = {
   hadNoName: false, hadName: false, hadDebug: false,
   hadMidnight: false, hadEarlyMorning: false,
   hadOmisoka: false, hadNewYear: false, hadBirthday: false,
+  hadRareGood: false, hadRareBad: false,
 };
 
 function loadAchStats() {
@@ -298,11 +301,15 @@ function processToastQueue() {
   const toast  = document.getElementById('ach-toast');
   if (!toast) { achToastBusy = false; return; }
 
+  const rarity = ach.rarity || 'bronze';
   document.getElementById('ach-toast-label').textContent     = t('achUnlocked');
   document.getElementById('ach-toast-name').textContent      = isEn ? ach.nameEn      : ach.name;
   document.getElementById('ach-toast-condition').textContent = isEn ? ach.conditionEn : ach.condition;
 
   toast.style.display = 'block';
+  // レアリティクラスをリセットして付け直す
+  toast.classList.remove('rarity-bronze','rarity-silver','rarity-gold','rarity-legend');
+  toast.classList.add(`rarity-${rarity}`);
   void toast.offsetWidth; // reflow
   toast.classList.remove('ach-toast-hide');
   toast.classList.add('ach-toast-show');
@@ -423,8 +430,14 @@ async function captureAchievements(btnId) {
 
   const S  = 'background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px 14px;margin-bottom:10px;';
   const T  = 'color:#aa8800;font-size:0.68rem;letter-spacing:0.15em;text-align:center;border-bottom:1px solid #ddd;padding-bottom:6px;margin-bottom:10px;';
-  const TILE = 'background:#fffbe6;border:1px solid #ffcc00;border-radius:6px;padding:5px 8px;font-size:0.72rem;font-weight:bold;color:#333;display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;';
   const EMPTY = 'font-size:0.70rem;color:#bbb;text-align:center;padding:4px 0;';
+  const RARITY_TILE = {
+    bronze: 'background:#fffbe6;border:1px solid #cd7f32;color:#7a4000;',
+    silver: 'background:#f0f4f8;border:1px solid #a8b8c8;color:#2a3a4a;',
+    gold:   'background:#fffbe6;border:1px solid #d4a800;color:#5a3d00;',
+    legend: 'background:#f5eeff;border:1px solid #9b59b6;color:#5a0080;',
+  };
+  const TILE_BASE = 'border-radius:6px;padding:5px 8px;font-size:0.72rem;font-weight:bold;display:flex;align-items:center;gap:4px;min-width:0;overflow:hidden;';
 
   // グループごとに表示（取得0でも枠は出す）
   let groupsHTML = '';
@@ -434,9 +447,10 @@ async function captureAchievements(btnId) {
     const tilesHTML = unlockedItems.length > 0
       ? `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;">` +
           unlockedItems.map(a => {
-            const name = isEn ? a.nameEn : a.name;
-            return `<div style="${TILE}">` +
-              `<span style="color:#aa8800;flex-shrink:0;">✦</span>` +
+            const name     = isEn ? a.nameEn : a.name;
+            const rStyle   = RARITY_TILE[a.rarity || 'bronze'];
+            return `<div style="${TILE_BASE}${rStyle}">` +
+              `<span style="flex-shrink:0;">✦</span>` +
               `<span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</span>` +
             `</div>`;
           }).join('') +
@@ -501,17 +515,29 @@ function renderAchievements() {
     const itemsDiv = document.createElement('div');
     itemsDiv.className = 'ach-items';
 
+    const RARITY_LABEL = { bronze:'Bronze', silver:'Silver', gold:'Gold', legend:'Legend' };
     group.items.forEach(ach => {
       const isUnlocked = unlocked.has(ach.id);
       const name       = isEn ? ach.nameEn      : ach.name;
-      const condition  = isEn ? ach.conditionEn : ach.condition;
+      const rarity     = ach.rarity || 'bronze';
+
+      // prerequisite がある場合の条件テキスト切り替え
+      let condition;
+      if (ach.prerequisite && !unlocked.has(ach.prerequisite)) {
+        condition = isEn ? (ach.conditionLockedEn || ach.conditionEn) : (ach.conditionLocked || ach.condition);
+      } else {
+        condition = isEn ? ach.conditionEn : ach.condition;
+      }
 
       const item = document.createElement('div');
-      item.className = `ach-item ${isUnlocked ? 'ach-unlocked' : 'ach-locked'}`;
+      item.className = `ach-item rarity-${rarity} ${isUnlocked ? 'ach-unlocked' : 'ach-locked'}`;
       item.innerHTML =
         `<span class="ach-icon">${isUnlocked ? '✦' : '？'}</span>` +
         `<div class="ach-text">` +
-          `<span class="ach-name">${isUnlocked ? name : '？？？'}</span>` +
+          `<span class="ach-name">` +
+            `${isUnlocked ? name : '？？？'}` +
+            `<span class="ach-rarity rarity-badge-${rarity}">${RARITY_LABEL[rarity]}</span>` +
+          `</span>` +
           `<span class="ach-condition">${condition}</span>` +
         `</div>`;
       itemsDiv.appendChild(item);
@@ -912,6 +938,13 @@ function shuffleCards() {
     });
     isShuffled = true;
 
+    // rare_Bad: 1% でランダムな1枚をレアカードに差し替え（最大1枚）
+    rareCardOverride = null;
+    if (Math.random() < 0.01) {
+      const pos = Math.floor(Math.random() * 22); // 通常カード22枚の中からランダム選択
+      rareCardOverride = { pos };
+    }
+
     selectedCardIndex = null;
     document.getElementById('card-selected-name').textContent = '';
     updateFortuneBtn();
@@ -988,7 +1021,8 @@ function showDailyDoneOverlay() {
 }
 
 function isDebugMode() {
-  return document.getElementById('player-name').value.trim() === 'uko@debug';
+  const n = document.getElementById('player-name').value.trim();
+  return n === 'uko@debug' || n === 'uko@rare_bad' || n === 'uko@rare_good';
 }
 
 function updateFortuneBtn() {
@@ -1097,15 +1131,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     }
 
-    const todayStr   = getFortuneDate();
-    const seed       = hashCode(todayStr + birthday + selectedCardIndex);
-    const isReversed = seededRandom(seed)() < 0.5;
+    const todayStr = getFortuneDate();
 
-    saveResult(birthday, selectedCardIndex, isReversed);
+    // レアカード判定（デバッグ強制 > シャッフル差し替え > 確率）
+    let effectiveCardIndex = selectedCardIndex;
+    if (name === 'uko@rare_bad') {
+      effectiveCardIndex = 22; // rare_Bad 強制
+    } else if (name === 'uko@rare_good') {
+      effectiveCardIndex = 23; // rare_Good 強制
+    } else if (rareCardOverride !== null && rareCardOverride.pos === selectedCardIndex) {
+      effectiveCardIndex = 22; // rare_Bad (tarotCards[22])
+    } else if (Math.random() < 0.005) {
+      effectiveCardIndex = 23; // rare_Good (tarotCards[23]) 0.5%
+    }
+
+    // レアカードは常に正位置
+    const isRare     = effectiveCardIndex >= 22;
+    const seed       = hashCode(todayStr + birthday + effectiveCardIndex);
+    const isReversed = isRare ? false : seededRandom(seed)() < 0.5;
+
+    saveResult(birthday, effectiveCardIndex, isReversed);
     const streakResult = !debug ? updateStreak() : { count: 0, isReturn: false };
     scheduleSync(); // name, birthday, result, streak を Firestore へ同期
     renderStreak();
-    runFortune(birthday, name, selectedCardIndex, isReversed);
+    runFortune(birthday, name, effectiveCardIndex, isReversed);
     document.getElementById('result').style.display = 'block';
     document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
     if (!debug) {
@@ -1147,21 +1196,32 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, s
   displayBiorhythm(bio);
 
   // タロット
-  const card = tarotCards[cardIndex];
+  const card   = tarotCards[cardIndex];
+  const isRare = card.isRare === true;
   captureCard       = card;
   captureIsReversed = isReversed;
   displayTarot(card, isReversed, isRestored);
 
-  // 運勢レベル（日英ともに同じ RNG 位置で決定）
-  const fortuneLevel = fortuneLevels[pickWeighted(rng, fortuneWeights)];
+  // 運勢レベル（レアカードは専用レベルを強制）
+  let fortuneLevel, overallComment;
+  if (isRare) {
+    fortuneLevel   = card.id === 'rare_bad' ? '大凶' : '超大吉';
+    overallComment = isEn ? card.upright_en.message : card.upright.message;
+  } else {
+    fortuneLevel   = fortuneLevels[pickWeighted(rng, fortuneWeights)];
+    const bioAvg     = (bio.physical + bio.emotional + bio.intellectual) / 3;
+    const bioTier    = bioAvg > 0.2 ? 'high' : bioAvg < -0.2 ? 'low' : 'mid';
+    const commentPool = isEn ? comments_en : comments;
+    overallComment = pick(commentPool[fortuneLevel][bioTier]);
+  }
   displayFortuneBadge(fortuneLevel);
-
-  // 総合コメント
-  const bioAvg     = (bio.physical + bio.emotional + bio.intellectual) / 3;
-  const bioTier    = bioAvg > 0.2 ? 'high' : bioAvg < -0.2 ? 'low' : 'mid';
-  const commentPool = isEn ? comments_en : comments;
-  const overallComment = pick(commentPool[fortuneLevel][bioTier]);
   document.getElementById('overall-comment').textContent = overallComment;
+
+  // レアカードをコレクションに登録
+  if (isRare && !skipStats) {
+    store.collection.add(card.id); // 'rare_bad' or 'rare_good'
+    scheduleSync();
+  }
 
   // ラッキー
   const luckyIdx = Math.floor(rng() * 3);

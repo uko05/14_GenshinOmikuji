@@ -184,4 +184,24 @@ export const tarotCards = [
     upright_en: { keyword: 'Completion · Achievement · Integration', message: "Today is a memorable day marking the completion of something. Enjoy the moment as everything you have built comes to fruition.", lucky: 'A globe' },
     reversed_en: { keyword: 'Incompletion · Lack of fulfillment · Procrastination', message: "You may be close to the finish line but unable to take the final leap. Go ahead and take that last step.", lucky: 'A finish-line ribbon' },
   },
+
+  // ===== 激レアアルカナ（index 22・23 / 正位置のみ） =====
+  {
+    id: 'rare_bad', name: '奈落のアルカナ', nameEn: 'Arcana of the Abyss', number: '???',
+    filename: `${omikujiFolder}rare_Bad.png`,
+    isRare: true,
+    upright: { keyword: '試練・深淵・宿命の刻', message: '深い闇の中にこそ、本物の光が宿る。今日という日は、あなたの魂が試されている。逃げるのではなく、正面から向き合え。この試練を乗り越えた先に、真の強さが待っている。', lucky: '折れない心' },
+    reversed: { keyword: '試練・深淵・宿命の刻', message: '深い闇の中にこそ、本物の光が宿る。今日という日は、あなたの魂が試されている。逃げるのではなく、正面から向き合え。この試練を乗り越えた先に、真の強さが待っている。', lucky: '折れない心' },
+    upright_en: { keyword: 'Trial · Abyss · Hour of Fate', message: "Within the deepest darkness, true light resides. Today is the day your soul is being tested. Do not flee — face it head-on. Beyond this trial, your true strength awaits.", lucky: 'An unbroken spirit' },
+    reversed_en: { keyword: 'Trial · Abyss · Hour of Fate', message: "Within the deepest darkness, true light resides. Today is the day your soul is being tested. Do not flee — face it head-on. Beyond this trial, your true strength awaits.", lucky: 'An unbroken spirit' },
+  },
+  {
+    id: 'rare_good', name: '七星のアルカナ', nameEn: 'Arcana of Seven Stars', number: '★',
+    filename: `${omikujiFolder}rare_Good.png`,
+    isRare: true,
+    upright: { keyword: '奇跡・祝福・星の恵み', message: '七つの星が一線に並んだ奇跡の日。今日のあなたには、いつもと違う特別な風が吹いている。何をしても運が味方する——恐れず、思い切って動き出そう。', lucky: '七色の何か' },
+    reversed: { keyword: '奇跡・祝福・星の恵み', message: '七つの星が一線に並んだ奇跡の日。今日のあなたには、いつもと違う特別な風が吹いている。何をしても運が味方する——恐れず、思い切って動き出そう。', lucky: '七色の何か' },
+    upright_en: { keyword: 'Miracle · Blessing · Grace of the Stars', message: "A miraculous day when seven stars align in one line. A special breeze unlike any other blows toward you today. Luck is on your side in all things — be bold and make your move.", lucky: 'Something of seven colors' },
+    reversed_en: { keyword: 'Miracle · Blessing · Grace of the Stars', message: "A miraculous day when seven stars align in one line. A special breeze unlike any other blows toward you today. Luck is on your side in all things — be bold and make your move.", lucky: 'Something of seven colors' },
+  },
 ];
