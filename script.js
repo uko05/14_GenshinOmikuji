@@ -90,6 +90,10 @@ const i18n = {
     saveCollection:      '図鑑を画像保存',
     saveAchievement:     '実績を画像保存',
     achUnlocked:         '✦ アチーブメント解放！',
+    descTarot:   'シャッフルして引いたカードが、今日のあなたへのメッセージを語ります',
+    descFortune: '生年月日と選んだアルカナから、今日の総合運をお伝えします',
+    descZodiac:  '生年月日から星座を判定し、総合・恋愛・仕事・健康の4項目を占います',
+    descBio:     '身体(23日)・感情(28日)・知性(33日)の3つのリズムで今日のコンディションを算出します',
   },
   en: {
     headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
@@ -142,6 +146,10 @@ const i18n = {
     saveCollection:      'Save Collection',
     saveAchievement:     'Save Achievements',
     achUnlocked:         '✦ Achievement Unlocked!',
+    descTarot:   'The card you drew speaks a message for you today',
+    descFortune: 'Your overall fortune derived from your birthday and chosen Arcana',
+    descZodiac:  'Fortune in 4 areas — Overall, Love, Work & Health — based on your zodiac sign',
+    descBio:     'Your daily condition via 3 rhythms: Physical (23d), Emotional (28d), Intellectual (33d)',
   },
 };
 
@@ -308,7 +316,7 @@ function processToastQueue() {
       toast.classList.remove('ach-toast-hide');
       processToastQueue();
     }, 450);
-  }, 4800); // 表示時間 4.8秒（元の1.5倍）
+  }, 3200); // 表示時間 3.2秒
 }
 
 // ===== 共通：保存用ヘッダー HTML =====
@@ -329,6 +337,38 @@ function buildSaveFooter() {
     `<img src="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/footer_icon/twitter_image.png" crossorigin="anonymous" style="width:20px;height:20px;object-fit:contain;">` +
     `<span style="font-size:0.78rem;color:#555;">@uko_dayo_</span>` +
   `</div>`;
+}
+
+// ===== 画像保存共通：モバイルは写真として共有、PCはダウンロード =====
+async function saveOrShareImage(canvas, filename) {
+  if (navigator.share) {
+    await new Promise((resolve, reject) => {
+      canvas.toBlob(async (blob) => {
+        try {
+          const file = new File([blob], filename, { type: 'image/png' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file] });
+          } else {
+            // files 共有非対応のブラウザ → ダウンロード
+            const a = document.createElement('a');
+            a.download = filename;
+            a.href = URL.createObjectURL(blob);
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+          }
+          resolve();
+        } catch (e) {
+          if (e.name === 'AbortError') { resolve(); return; } // ユーザーキャンセル
+          reject(e);
+        }
+      }, 'image/png');
+    });
+  } else {
+    const a = document.createElement('a');
+    a.download = filename;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  }
 }
 
 // ===== 図鑑 画像保存 =====
@@ -359,10 +399,7 @@ async function captureSection(sectionId, btnId) {
     const canvas = await html2canvas(wrapper, {
       useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false,
     });
-    const a = document.createElement('a');
-    a.download = `genshin-collection-${getFortuneDate()}.png`;
-    a.href = canvas.toDataURL('image/png');
-    a.click();
+    await saveOrShareImage(canvas, `genshin-collection-${getFortuneDate()}.png`);
   } catch {
     alert(t('saveFail'));
   } finally {
@@ -422,10 +459,7 @@ async function captureAchievements(btnId) {
   document.body.appendChild(div);
   try {
     const canvas = await html2canvas(div, { useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false });
-    const a = document.createElement('a');
-    a.download = `genshin-achievements-${getFortuneDate()}.png`;
-    a.href = canvas.toDataURL('image/png');
-    a.click();
+    await saveOrShareImage(canvas, `genshin-achievements-${getFortuneDate()}.png`);
   } catch {
     alert(t('saveFail'));
   } finally {
@@ -843,6 +877,7 @@ function initCardScatter() {
 
   container.addEventListener('touchmove', (e) => {
     if (!isShuffled || isDraggingAny) return;
+    if (document.getElementById('daily-done-overlay')) return;
     e.preventDefault();
     const touch = e.touches[0];
     pushCards({ clientX: touch.clientX, clientY: touch.clientY, buttons: 1 }, container);
@@ -1388,10 +1423,7 @@ async function captureResult() {
   document.body.appendChild(div);
   try {
     const canvas = await html2canvas(div, { useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false });
-    const a = document.createElement('a');
-    a.download = `genshin-omikuji-${getFortuneDate()}.png`;
-    a.href = canvas.toDataURL('image/png');
-    a.click();
+    await saveOrShareImage(canvas, `genshin-omikuji-${getFortuneDate()}.png`);
   } catch (e) {
     alert(t('saveFail'));
     console.error(e);

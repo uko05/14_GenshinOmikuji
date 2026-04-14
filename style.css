@@ -185,6 +185,13 @@ main {
   background: var(--border);
 }
 
+.section-desc {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+  margin: -8px 0 12px;
+}
+
 /* 運勢バッジ */
 .fortune-badge {
   display: inline-block;
@@ -1029,12 +1036,12 @@ footer {
   bottom: 28px;
   left: 50%;
   transform: translateX(-50%) translateY(0);
-  background: var(--surface);
+  background: #1e2140;
   border: 2px solid var(--accent);
   border-radius: 10px;
   padding: 12px 20px 14px;
   text-align: center;
-  width: min(calc(100vw - 32px), 600px);
+  width: min(70vw, 420px);
   z-index: 2000;
   pointer-events: none;
 }
@@ -1058,11 +1065,11 @@ footer {
 .ach-toast-name {
   font-size: 0.95rem;
   font-weight: bold;
-  color: var(--text);
+  color: #ffffff;
   margin-bottom: 4px;
 }
 
 .ach-toast-condition {
   font-size: 0.75rem;
-  color: var(--muted);
+  color: #aaaacc;
 }
