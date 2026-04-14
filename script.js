@@ -260,7 +260,7 @@ function loadUnlocked() {
   return store.achievements; // store の Set を直接返す（変更は store に即反映）
 }
 
-function checkAndUnlockAchievements(silent = false) {
+function checkAndUnlockAchievements(silent = false, toastDelay = 0) {
   const unlocked = loadUnlocked();
   const stats    = loadAchStats();
   const col      = loadCollection();
@@ -276,7 +276,11 @@ function checkAndUnlockAchievements(silent = false) {
   if (newIds.length > 0) {
     // store.achievements は loadUnlocked() が返した同一参照なので既に更新済み
     scheduleSync();
-    if (!silent) newIds.forEach(id => showAchToast(id));
+    if (!silent) {
+      const show = () => newIds.forEach(id => showAchToast(id));
+      if (toastDelay > 0) setTimeout(show, toastDelay);
+      else show();
+    }
   }
 }
 
@@ -367,7 +371,13 @@ async function saveOrShareImage(canvas, filename) {
           resolve();
         } catch (e) {
           if (e.name === 'AbortError') { resolve(); return; } // ユーザーキャンセル
-          reject(e);
+          // share 失敗時はダウンロードにフォールバック
+          const a = document.createElement('a');
+          a.download = filename;
+          a.href = URL.createObjectURL(blob);
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+          resolve();
         }
       }, 'image/png');
     });
@@ -1017,6 +1027,7 @@ function selectCard(index) {
 function showDailyDoneOverlay() {
   const area = document.getElementById('card-scatter-area');
   if (document.getElementById('daily-done-overlay')) return;
+  area.style.touchAction = 'pan-y'; // オーバーレイ表示中は縦スクロールを許可
   const overlay = document.createElement('div');
   overlay.id = 'daily-done-overlay';
   overlay.innerHTML = `<div class="daily-done-text"><span data-i18n="doneTitle">${t('doneTitle')}</span><small data-i18n="doneSubtitle">${t('doneSubtitle')}</small></div>`;
@@ -1366,7 +1377,7 @@ function displayTarot(card, isReversed, isRestored = false) {
       const newKey = addToCollection(card.id, isReversed); // 内部で scheduleSync 済み
       if (newKey && newBadgeEl) newBadgeEl.style.display = 'block';
       renderCollection(newKey);
-      checkAndUnlockAchievements();
+      checkAndUnlockAchievements(false, 1500);
       renderAchievements();
 
       tarotRevealT1 = setTimeout(() => {

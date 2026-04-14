@@ -637,6 +637,8 @@ main {
   font-size: 0.95rem;
   padding: 8px 10px;
   width: 100%;
+  height: 40px;
+  box-sizing: border-box;
   outline: none;
 }
 
@@ -1042,8 +1044,11 @@ footer {
 @media (max-width: 480px) {
   .lucky-grid { grid-template-columns: 1fr; }
   .zodiac-row { grid-template-columns: 48px 1fr; }
-  .card-scatter-area { height: 510px; }
+  .card-scatter-area { height: 408px; }
   .input-row { flex-direction: column; gap: 8px; }
+  /* ヘッダー：言語ボタンと重ならないよう上部に余白 */
+  header { padding-top: 44px; }
+  .lang-switch { top: 10px; font-size: 12px; }
 }
 
 /* ===== アチーブメントトースト ===== */
@@ -1081,10 +1086,10 @@ footer {
 }
 
 /* レアリティ別トースト */
-.ach-toast.rarity-bronze { background: #2e1800; border-color: #cd7f32; box-shadow: 0 0 14px 2px rgba(205,127,50,0.4); }
-.ach-toast.rarity-silver { background: #0e1e30; border-color: #a8b8c8; box-shadow: 0 0 14px 2px rgba(168,184,200,0.4); }
-.ach-toast.rarity-gold   { background: #2a1e00; border-color: #d4a800; box-shadow: 0 0 14px 2px rgba(212,168,0,0.45); }
-.ach-toast.rarity-legend { background: #1c0a32; border-color: #9b59b6; box-shadow: 0 0 14px 2px rgba(155,89,182,0.5); }
+.ach-toast.rarity-bronze { background: rgba(205,127,50,0.18);  border-color: #cd7f32; box-shadow: 0 0 14px 2px rgba(205,127,50,0.35); }
+.ach-toast.rarity-silver { background: rgba(168,184,200,0.18); border-color: #a8b8c8; box-shadow: 0 0 14px 2px rgba(168,184,200,0.35); }
+.ach-toast.rarity-gold   { background: rgba(212,168,0,0.20);   border-color: #d4a800; box-shadow: 0 0 14px 2px rgba(212,168,0,0.4); }
+.ach-toast.rarity-legend { background: rgba(155,89,182,0.22);  border-color: #9b59b6; box-shadow: 0 0 14px 2px rgba(155,89,182,0.45); }
 @keyframes ach-legend-glow {
   0%,100% { box-shadow: 0 0 10px 2px rgba(155,89,182,0.4); }
   50%      { box-shadow: 0 0 22px 7px rgba(155,89,182,0.75); }
@@ -1108,11 +1113,11 @@ footer {
 .ach-toast-name {
   font-size: 0.95rem;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--text);
   margin-bottom: 4px;
 }
 
 .ach-toast-condition {
   font-size: 0.75rem;
-  color: #aaaacc;
+  color: var(--muted);
 }
