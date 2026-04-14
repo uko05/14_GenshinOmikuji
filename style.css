@@ -209,7 +209,7 @@ main {
 .fortune-末吉 { color: #448844; background: rgba(68, 136, 68, 0.08); border: 1px solid rgba(68,136,68,0.3); }
 .fortune-凶   { color: var(--muted); background: var(--surface2); border: 1px solid var(--border); }
 .fortune-超大吉 { color: #c084fc; background: rgba(155,89,182,0.12); border: 1px solid rgba(155,89,182,0.5); animation: ach-legend-shimmer 1.5s ease-in-out infinite; }
-.fortune-大凶   { color: #111; background: #1a1a2e; border: 1px solid #333; }
+.fortune-大凶   { color: #c8b0e0; background: #1a1028; border: 1px solid #5a3870; }
 
 /* 星座セクション */
 .zodiac-header {
@@ -781,31 +781,31 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
 .ach-locked .ach-name { color: var(--muted); }
 .ach-condition { font-size: 0.72rem; color: var(--muted); }
 
-/* レアリティバッジ */
+/* レアリティバッジ（小ラベル） */
 .ach-rarity {
-  font-size: 0.58rem;
+  font-size: 0.56rem;
   font-weight: bold;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   padding: 1px 5px;
   border-radius: 3px;
   margin-left: 5px;
   vertical-align: middle;
   flex-shrink: 0;
 }
-.rarity-badge-bronze { background: #3a1a00; color: #cd7f32; border: 1px solid #cd7f32; }
-.rarity-badge-silver { background: #151e26; color: #a8b8c8; border: 1px solid #a8b8c8; }
-.rarity-badge-gold   { background: #1e1500; color: #d4a800; border: 1px solid #d4a800; }
-.rarity-badge-legend { background: #160a28; color: #c084fc; border: 1px solid #9b59b6; }
+.rarity-badge-bronze { background: rgba(205,127,50,0.15); color: #b06010; border: 1px solid #cd7f32; }
+.rarity-badge-silver { background: rgba(168,184,200,0.15); color: #5a7a96; border: 1px solid #a8b8c8; }
+.rarity-badge-gold   { background: rgba(212,168,0,0.15);   color: #9a6c00; border: 1px solid #d4a800; }
+.rarity-badge-legend { background: rgba(155,89,182,0.15);  color: #7a30b0; border: 1px solid #9b59b6; }
 
-/* アチーブアイテム：アンロック時にレアリティ左ボーダー */
-.ach-item.rarity-bronze.ach-unlocked { border-left: 3px solid #cd7f32; padding-left: 9px; }
-.ach-item.rarity-silver.ach-unlocked { border-left: 3px solid #a8b8c8; padding-left: 9px; }
-.ach-item.rarity-gold.ach-unlocked   { border-left: 3px solid #d4a800; padding-left: 9px; }
-.ach-item.rarity-legend.ach-unlocked { border-left: 3px solid #9b59b6; padding-left: 9px; animation: ach-legend-shimmer 2s ease-in-out infinite; }
+/* アチーブアイテム：アンロック時に背景をレアリティ色に */
+.ach-item.rarity-bronze.ach-unlocked { background: rgba(205,127,50,0.13); border: 1px solid rgba(205,127,50,0.35); }
+.ach-item.rarity-silver.ach-unlocked { background: rgba(168,184,200,0.13); border: 1px solid rgba(168,184,200,0.35); }
+.ach-item.rarity-gold.ach-unlocked   { background: rgba(212,168,0,0.15);   border: 1px solid rgba(212,168,0,0.4); }
+.ach-item.rarity-legend.ach-unlocked { background: rgba(155,89,182,0.15);  border: 1px solid rgba(155,89,182,0.45); animation: ach-legend-shimmer 2s ease-in-out infinite; }
 
 @keyframes ach-legend-shimmer {
   0%,100% { box-shadow: inset 0 0 0 0 transparent; }
-  50%      { box-shadow: inset 0 0 8px 0 rgba(155, 89, 182, 0.25); }
+  50%      { box-shadow: inset 0 0 10px 0 rgba(155,89,182,0.3); }
 }
 
 /* ===== アルカナ図鑑 ===== */
@@ -1081,10 +1081,10 @@ footer {
 }
 
 /* レアリティ別トースト */
-.ach-toast.rarity-bronze { background: #1a0d00; border-color: #cd7f32; }
-.ach-toast.rarity-silver { background: #0d1520; border-color: #a8b8c8; }
-.ach-toast.rarity-gold   { background: #1a1200; border-color: #d4a800; }
-.ach-toast.rarity-legend { background: #0e0720; border-color: #9b59b6; }
+.ach-toast.rarity-bronze { background: #2e1800; border-color: #cd7f32; box-shadow: 0 0 14px 2px rgba(205,127,50,0.4); }
+.ach-toast.rarity-silver { background: #0e1e30; border-color: #a8b8c8; box-shadow: 0 0 14px 2px rgba(168,184,200,0.4); }
+.ach-toast.rarity-gold   { background: #2a1e00; border-color: #d4a800; box-shadow: 0 0 14px 2px rgba(212,168,0,0.45); }
+.ach-toast.rarity-legend { background: #1c0a32; border-color: #9b59b6; box-shadow: 0 0 14px 2px rgba(155,89,182,0.5); }
 @keyframes ach-legend-glow {
   0%,100% { box-shadow: 0 0 10px 2px rgba(155,89,182,0.4); }
   50%      { box-shadow: 0 0 22px 7px rgba(155,89,182,0.75); }

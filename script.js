@@ -601,9 +601,11 @@ function renderCollection(newKey = null) {
   grid.innerHTML = '';
 
   tarotCards.forEach(card => {
-    ['upright', 'reversed'].forEach(pos => {
+    // レアカードは正位置のみ・コレクションキーは card.id そのもの
+    const positions = card.isRare ? ['upright'] : ['upright', 'reversed'];
+    positions.forEach(pos => {
       const isReversed = pos === 'reversed';
-      const key        = `${card.id}_${pos}`;
+      const key        = card.isRare ? card.id : `${card.id}_${pos}`;
       const collected  = col.has(key);
       const isNew      = key === newKey;
 
@@ -637,7 +639,7 @@ function renderCollection(newKey = null) {
       const frontImg = document.createElement('img');
       frontImg.src = card.filename;
       frontImg.alt = collected ? card.name : '';
-      if (isReversed) frontImg.style.transform = 'rotate(180deg)';
+      if (!card.isRare && isReversed) frontImg.style.transform = 'rotate(180deg)';
       frontFace.appendChild(frontImg);
 
       inner.appendChild(backFace);
@@ -656,7 +658,7 @@ function renderCollection(newKey = null) {
       const label = document.createElement('div');
       label.className = 'col-label' + (isNew ? ' col-label-new' : '');
       if (collected) {
-        const posStr = isReversed ? i18n[currentLang].colPosReversed : i18n[currentLang].colPosUpright;
+        const posStr = card.isRare ? '★' : (isReversed ? i18n[currentLang].colPosReversed : i18n[currentLang].colPosUpright);
         label.textContent = `${card.number} ${posStr}`;
       } else {
         label.style.visibility = 'hidden';
