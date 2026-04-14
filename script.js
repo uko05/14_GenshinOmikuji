@@ -348,7 +348,8 @@ function buildSaveFooter() {
 
 // ===== 画像保存共通：モバイルは写真として共有、PCはダウンロード =====
 async function saveOrShareImage(canvas, filename) {
-  if (navigator.share) {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (navigator.share && isMobile) {
     await new Promise((resolve, reject) => {
       canvas.toBlob(async (blob) => {
         try {
