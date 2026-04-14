@@ -1088,10 +1088,10 @@ footer {
 }
 
 /* レアリティ別トースト */
-.ach-toast.rarity-bronze { background: #261b10; border-color: #cd7f32; box-shadow: 0 0 14px 2px rgba(205,127,50,0.35); }
-.ach-toast.rarity-silver { background: #1c2232; border-color: #a8b8c8; box-shadow: 0 0 14px 2px rgba(168,184,200,0.35); }
-.ach-toast.rarity-gold   { background: #221a08; border-color: #d4a800; box-shadow: 0 0 14px 2px rgba(212,168,0,0.4); }
-.ach-toast.rarity-legend { background: #1d1432; border-color: #9b59b6; box-shadow: 0 0 14px 2px rgba(155,89,182,0.45); }
+.ach-toast.rarity-bronze { background: #6b3a14; border-color: #cd7f32; box-shadow: 0 0 14px 2px rgba(205,127,50,0.5); }
+.ach-toast.rarity-silver { background: #2a3d54; border-color: #a8b8c8; box-shadow: 0 0 14px 2px rgba(168,184,200,0.5); }
+.ach-toast.rarity-gold   { background: #524008; border-color: #d4a800; box-shadow: 0 0 14px 2px rgba(212,168,0,0.55); }
+.ach-toast.rarity-legend { background: #3e1c66; border-color: #9b59b6; box-shadow: 0 0 14px 2px rgba(155,89,182,0.6); }
 @keyframes ach-legend-glow {
   0%,100% { box-shadow: 0 0 10px 2px rgba(155,89,182,0.4); }
   50%      { box-shadow: 0 0 22px 7px rgba(155,89,182,0.75); }
