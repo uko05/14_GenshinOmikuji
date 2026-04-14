@@ -350,72 +350,47 @@ function buildSaveFooter() {
   `</div>`;
 }
 
-// ===== 画像保存共通：iOS はプレビューモーダル、Android は共有、PC はダウンロード =====
-function showImageSaveModal(dataUrl) {
-  const isEn = currentLang === 'en';
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
-  const hint = document.createElement('p');
-  hint.textContent = isEn ? 'Long-press the image → "Add to Photos"' : '画像を長押しして「写真に追加」を選んでください';
-  hint.style.cssText = 'color:#e8d8a0;font-size:0.82rem;margin-bottom:14px;text-align:center;line-height:1.5;';
-  const img = document.createElement('img');
-  img.src = dataUrl;
-  img.style.cssText = 'max-width:100%;max-height:65vh;border-radius:8px;display:block;';
-  const closeBtn = document.createElement('button');
-  closeBtn.textContent = isEn ? 'Close' : '閉じる';
-  closeBtn.style.cssText = 'margin-top:16px;padding:8px 28px;background:#3a3060;color:#e8d8a0;border:1px solid #7a5ab0;border-radius:6px;font-size:0.9rem;cursor:pointer;';
-  closeBtn.onclick = () => overlay.remove();
-  overlay.appendChild(hint);
-  overlay.appendChild(img);
-  overlay.appendChild(closeBtn);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
-}
-
+// ===== 画像保存共通：モバイルは共有→新タブ、PCはダウンロード =====
 async function saveOrShareImage(canvas, filename) {
-  const isIOS    = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-  const isAndroid = /Android/i.test(navigator.userAgent);
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 0;
 
-  if (isIOS) {
-    // iOS Safari: <a download> が機能しないためプレビューモーダルで長押し保存を案内
-    showImageSaveModal(canvas.toDataURL('image/png'));
-    return;
-  }
+  await new Promise((resolve) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) { resolve(); return; }
 
-  if (isAndroid && navigator.share) {
-    await new Promise((resolve) => {
-      canvas.toBlob(async (blob) => {
+      if (isMobile) {
+        // モバイル：まず Share API を試す
         try {
           const file = new File([blob], filename, { type: 'image/png' });
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({ files: [file] });
-          } else {
-            const a = document.createElement('a');
-            a.download = filename;
-            a.href = URL.createObjectURL(blob);
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+            resolve();
+            return;
           }
         } catch (e) {
-          if (e.name !== 'AbortError') {
-            // share 失敗時はダウンロードにフォールバック
-            const a = document.createElement('a');
-            a.download = filename;
-            a.href = URL.createObjectURL(blob);
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(a.href), 60000);
-          }
+          if (e.name === 'AbortError') { resolve(); return; } // ユーザーキャンセル
+          // Share 失敗 → 新タブにフォールバック
         }
+        // Share 非対応 or 失敗 → 新タブで画像を開いて長押し保存を案内
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
         resolve();
-      }, 'image/png');
-    });
-  } else {
-    // PC: 直接ダウンロード
-    const a = document.createElement('a');
-    a.download = filename;
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-  }
+        return;
+      }
+
+      // PC：直接ダウンロード
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      resolve();
+    }, 'image/png');
+  });
 }
 
 // ===== 図鑑 画像保存 =====
