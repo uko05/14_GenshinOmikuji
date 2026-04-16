@@ -938,13 +938,15 @@ function initCardScatter() {
 
 // ===== 奈落ヒント演出 =====
 function showRareBadHint() {
-  // 散布エリアに暗幕ビネットエフェクト
+  // 散布エリアに暗幕ビネットエフェクト（占うまで持続）
   const area = document.getElementById('card-scatter-area');
   area.classList.add('abyss-active');
-  setTimeout(() => area.classList.remove('abyss-active'), 2000);
 
-  // トースト表示
+  // トーストをエリア中央に配置して表示
   const toast = document.getElementById('rare-bad-toast');
+  const rect  = area.getBoundingClientRect();
+  toast.style.top  = (rect.top  + rect.height / 2) + 'px';
+  toast.style.left = (rect.left + rect.width  / 2) + 'px';
   toast.style.display = 'block';
   void toast.offsetWidth;
   toast.classList.remove('hide');
@@ -1001,6 +1003,7 @@ function shuffleCards() {
       setTimeout(() => showRareBadHint(), 350);
     } else {
       rareBadState.el.style.display = 'none';
+      document.getElementById('card-scatter-area').classList.remove('abyss-active');
     }
 
     isShuffled = true;
@@ -1180,6 +1183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const birthday = birthdayInput.value;
     const name     = nameInput.value.trim();
     if (!birthday)                  { alert(t('alertBirthday')); return; }
+    document.getElementById('card-scatter-area').classList.remove('abyss-active');
     if (selectedCardIndex === null) { alert(t('alertCard')); return; }
 
     store.name     = name;
