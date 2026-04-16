@@ -936,6 +936,29 @@ function initCardScatter() {
   }, { passive: false });
 }
 
+// ===== 奈落ヒント演出 =====
+function showRareBadHint() {
+  // 散布エリアに暗幕ビネットエフェクト
+  const area = document.getElementById('card-scatter-area');
+  area.classList.add('abyss-active');
+  setTimeout(() => area.classList.remove('abyss-active'), 2000);
+
+  // トースト表示
+  const toast = document.getElementById('rare-bad-toast');
+  toast.style.display = 'block';
+  void toast.offsetWidth;
+  toast.classList.remove('hide');
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+    toast.classList.add('hide');
+    setTimeout(() => {
+      toast.style.display = 'none';
+      toast.classList.remove('hide');
+    }, 450);
+  }, 3600);
+}
+
 // ===== シャッフル =====
 function shuffleCards() {
   isShuffled = false;
@@ -964,15 +987,18 @@ function shuffleCards() {
       applyTransform(state, true);
     });
 
-    // 奈落のアルカナ（index 22）: 1% で追加、それ以外は非表示
+    // 奈落のアルカナ（index 22）: 1% または uko@rare_bad で追加、それ以外は非表示
+    const nameVal = document.getElementById('player-name')?.value.trim() || '';
+    const forceRareBad = nameVal === 'uko@rare_bad';
     const rareBadState = cardStates[22];
-    if (Math.random() < 0.01) {
+    if (Math.random() < 0.01 || forceRareBad) {
       rareBadState.x      = (Math.random() * 2 - 1) * maxX;
       rareBadState.y      = (Math.random() * 2 - 1) * maxY;
       rareBadState.rotate = (Math.random() * 2 - 1) * 65;
       rareBadState.zIndex = Math.floor(Math.random() * 23);
       rareBadState.el.style.display = '';
       applyTransform(rareBadState, true);
+      setTimeout(() => showRareBadHint(), 350);
     } else {
       rareBadState.el.style.display = 'none';
     }

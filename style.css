@@ -1055,6 +1055,72 @@ footer {
   .lang-switch { top: 10px; font-size: 12px; }
 }
 
+/* ===== 奈落のアルカナ ヒント演出 ===== */
+@keyframes scatter-abyss-pulse {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.card-scatter-area.abyss-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 20%, rgba(15, 0, 35, 0.82) 100%);
+  animation: scatter-abyss-pulse 2.0s ease-in-out forwards;
+  pointer-events: none;
+  z-index: 500;
+  border-radius: inherit;
+}
+
+@keyframes rare-bad-toast-in {
+  from { transform: translateX(-50%) translateY(-70px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+}
+@keyframes rare-bad-toast-out {
+  from { transform: translateX(-50%) translateY(0);     opacity: 1; }
+  to   { transform: translateX(-50%) translateY(-70px); opacity: 0; }
+}
+@keyframes rare-bad-glow {
+  0%, 100% { box-shadow: 0 0 14px 4px rgba(100, 0, 200, 0.5), inset 0 0 10px rgba(80, 0, 160, 0.2); }
+  50%       { box-shadow: 0 0 30px 10px rgba(130, 0, 240, 0.75), inset 0 0 20px rgba(100, 0, 200, 0.3); }
+}
+
+#rare-bad-toast {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-70px);
+  background: linear-gradient(135deg, #090012 0%, #1c0038 50%, #090012 100%);
+  border: 1px solid rgba(130, 50, 255, 0.65);
+  border-radius: 10px;
+  padding: 10px 26px;
+  text-align: center;
+  z-index: 3000;
+  pointer-events: none;
+  min-width: 220px;
+}
+#rare-bad-toast.show {
+  animation: rare-bad-toast-in 0.45s ease-out forwards,
+             rare-bad-glow     1.6s ease-in-out 0.45s infinite;
+}
+#rare-bad-toast.hide {
+  animation: rare-bad-toast-out 0.42s ease-in forwards;
+}
+.rare-bad-toast-icon {
+  font-size: 0.72rem;
+  color: #7a3ccc;
+  letter-spacing: 0.35em;
+  margin-bottom: 5px;
+}
+.rare-bad-toast-msg {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #c89aff;
+  letter-spacing: 0.1em;
+}
+
 /* ===== アチーブメントトースト ===== */
 @keyframes ach-toast-in {
   from { transform: translateX(-50%) translateY(120px); opacity: 0; }
