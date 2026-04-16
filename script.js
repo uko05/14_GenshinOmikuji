@@ -16,6 +16,8 @@ let isDraggingAny     = false;
 let currentLang       = 'ja';
 // レアカード差し替え状態 { pos: number } | null
 let rareCardOverride  = null;
+// シャッフル時に決定した各カードの正逆（index → boolean）
+let shuffleOrientations = [];
 
 // ===== 画像保存用キャッシュ =====
 let captureCard       = null;
@@ -961,6 +963,9 @@ function shuffleCards() {
     });
     isShuffled = true;
 
+    // 各カードの正逆をシャッフル時に決定
+    shuffleOrientations = tarotCards.map(() => Math.random() < 0.5);
+
     // rare_Bad: 1% でランダムな1枚をレアカードに差し替え（最大1枚）
     rareCardOverride = null;
     if (Math.random() < 0.01) {
@@ -1163,16 +1168,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       effectiveCardIndex = 22; // rare_Bad 強制
     } else if (name === 'uko@rare_good') {
       effectiveCardIndex = 23; // rare_Good 強制
-    } else if (rareCardOverride !== null && rareCardOverride.pos === selectedCardIndex) {
+    } else if (!debug && rareCardOverride !== null && rareCardOverride.pos === selectedCardIndex) {
       effectiveCardIndex = 22; // rare_Bad (tarotCards[22])
-    } else if (Math.random() < 0.005) {
+    } else if (!debug && Math.random() < 0.005) {
       effectiveCardIndex = 23; // rare_Good (tarotCards[23]) 0.5%
     }
 
     // レアカードは常に正位置
     const isRare     = effectiveCardIndex >= 22;
-    const seed       = hashCode(todayStr + birthday + effectiveCardIndex);
-    const isReversed = isRare ? false : seededRandom(seed)() < 0.5;
+    const isReversed = isRare ? false : (shuffleOrientations[effectiveCardIndex] ?? Math.random() < 0.5);
 
     saveResult(birthday, effectiveCardIndex, isReversed);
     const streakResult = !debug ? updateStreak() : { count: 0, isReturn: false };
