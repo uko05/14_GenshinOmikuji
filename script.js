@@ -14,8 +14,6 @@ let selectedCardIndex = null;
 let isShuffled        = false;
 let isDraggingAny     = false;
 let currentLang       = 'ja';
-// レアカード差し替え状態 { pos: number } | null
-let rareCardOverride  = null;
 // シャッフル時に決定した各カードの正逆（index → boolean）
 let shuffleOrientations = [];
 
@@ -37,7 +35,8 @@ let tarotRevealT1 = null;
 let tarotRevealT2 = null;
 
 // 各カードの位置・角度状態
-const cardStates = tarotCards.map((_, i) => ({
+// 通常22枚 + 奈落スロット1枚（index 22）。七星（index 23）は物理カードなし
+const cardStates = tarotCards.slice(0, 23).map((_, i) => ({
   x: 0, y: 0, rotate: 0, zIndex: i, el: null,
 }));
 
@@ -856,9 +855,11 @@ function initCardScatter() {
   let dragStartX    = 0;
   let dragStartY    = 0;
 
-  tarotCards.forEach((card, i) => {
+  // 通常22枚 + 奈落スロット（index 22）のみ作成。七星（index 23）は物理カードなし
+  tarotCards.slice(0, 23).forEach((card, i) => {
     const div = document.createElement('div');
     div.className = 'scatter-card';
+    if (i === 22) div.style.display = 'none'; // 奈落は初期非表示
     div.innerHTML = `<img src="${CARD_BACK}" alt="${card.name}" draggable="false">`;
 
     div.addEventListener('pointerdown', (e) => {
@@ -954,24 +955,32 @@ function shuffleCards() {
   });
 
   setTimeout(() => {
-    cardStates.forEach((state) => {
+    // 通常カード（0-21）を散布
+    cardStates.slice(0, 22).forEach((state) => {
       state.x      = (Math.random() * 2 - 1) * maxX;
       state.y      = (Math.random() * 2 - 1) * maxY;
       state.rotate = (Math.random() * 2 - 1) * 65;
-      state.zIndex = Math.floor(Math.random() * tarotCards.length);
+      state.zIndex = Math.floor(Math.random() * 22);
       applyTransform(state, true);
     });
+
+    // 奈落のアルカナ（index 22）: 1% で追加、それ以外は非表示
+    const rareBadState = cardStates[22];
+    if (Math.random() < 0.01) {
+      rareBadState.x      = (Math.random() * 2 - 1) * maxX;
+      rareBadState.y      = (Math.random() * 2 - 1) * maxY;
+      rareBadState.rotate = (Math.random() * 2 - 1) * 65;
+      rareBadState.zIndex = Math.floor(Math.random() * 23);
+      rareBadState.el.style.display = '';
+      applyTransform(rareBadState, true);
+    } else {
+      rareBadState.el.style.display = 'none';
+    }
+
     isShuffled = true;
 
-    // 各カードの正逆をシャッフル時に決定
-    shuffleOrientations = tarotCards.map(() => Math.random() < 0.5);
-
-    // rare_Bad: 1% でランダムな1枚をレアカードに差し替え（最大1枚）
-    rareCardOverride = null;
-    if (Math.random() < 0.01) {
-      const pos = Math.floor(Math.random() * 22); // 通常カード22枚の中からランダム選択
-      rareCardOverride = { pos };
-    }
+    // 各カードの正逆をシャッフル時に決定（通常22枚のみ）
+    shuffleOrientations = tarotCards.slice(0, 22).map(() => Math.random() < 0.5);
 
     selectedCardIndex = null;
     document.getElementById('card-selected-name').textContent = '';
@@ -992,6 +1001,7 @@ function pushCards(e, container) {
   const FORCE  = 45;
 
   cardStates.forEach(state => {
+    if (state.el && state.el.style.display === 'none') return;
     const dx   = state.x - px;
     const dy   = state.y - py;
     const dist = Math.sqrt(dx * dx + dy * dy) || 0.1;
@@ -1006,7 +1016,9 @@ function pushCards(e, container) {
   const SEP_DIST  = 38;
   const SEP_FORCE = 14;
   for (let a = 0; a < cardStates.length; a++) {
+    if (cardStates[a].el && cardStates[a].el.style.display === 'none') continue;
     for (let b = a + 1; b < cardStates.length; b++) {
+      if (cardStates[b].el && cardStates[b].el.style.display === 'none') continue;
       const dx   = cardStates[b].x - cardStates[a].x;
       const dy   = cardStates[b].y - cardStates[a].y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 0.1;
@@ -1168,8 +1180,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       effectiveCardIndex = 22; // rare_Bad 強制
     } else if (name === 'uko@rare_good') {
       effectiveCardIndex = 23; // rare_Good 強制
-    } else if (!debug && rareCardOverride !== null && rareCardOverride.pos === selectedCardIndex) {
-      effectiveCardIndex = 22; // rare_Bad (tarotCards[22])
     } else if (!debug && Math.random() < 0.005) {
       effectiveCardIndex = 23; // rare_Good (tarotCards[23]) 0.5%
     }
