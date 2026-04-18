@@ -107,7 +107,7 @@ export const ACHIEVEMENT_GROUPS = [
     items: [
       { id:'fun_noname',   rarity:'bronze', name:'名無しの旅人',      nameEn:'Nameless Traveler',    condition:'名前を入力せずに占う',    conditionEn:'Draw fortune without a name',            check:(s)=>s.hadNoName },
       { id:'fun_name',     rarity:'bronze', name:'名乗る者',          nameEn:'One Who Names Themselves', condition:'名前を入力して占う', conditionEn:'Draw fortune with a name entered',       check:(s)=>s.hadName },
-      { id:'fun_debug',    rarity:'gold',   name:'uko公認デバッガー',  nameEn:"uko's Debugger",       condition:'???',                   conditionEn:'???',                                    check:(s)=>s.hadDebug },
+      { id:'fun_ukosaba',  rarity:'gold',   name:'うこ鯖公認',         nameEn:'uko Server Certified',  condition:'名前の最初に「うこ鯖公認の」をつけて占う', conditionEn:'Draw fortune with your name starting with "うこ鯖公認の"', check:(s)=>s.hadUkoSaba },
       { id:'fun_midnight', rarity:'silver', name:'深夜の旅人',        nameEn:'Midnight Traveler',    condition:'深夜0〜2時の間に占う',   conditionEn:'Draw fortune between 0:00 and 2:00 AM', check:(s)=>s.hadMidnight },
       { id:'fun_early',    rarity:'silver', name:'早起きの旅人',      nameEn:'Early Bird',           condition:'朝5〜7時の間に占う',    conditionEn:'Draw fortune between 5:00 and 7:00 AM', check:(s)=>s.hadEarlyMorning },
       { id:'fun_omisoka',  rarity:'silver', name:'大晦日の占い',      nameEn:"New Year's Eve Fortune",condition:'12月31日に占う',       conditionEn:'Draw fortune on December 31st',          check:(s)=>s.hadOmisoka },

@@ -190,7 +190,7 @@ const ACH_STATS_DEFAULTS = {
   totalCount: 0, maxStreak: 0, hadReturn: false,
   fortuneLevelCounts: {}, zodiacsSeen: [],
   hadBioPeak: false, hadBioLow: false, hadBioCritical: false,
-  hadNoName: false, hadName: false, hadDebug: false,
+  hadNoName: false, hadName: false, hadDebug: false, hadUkoSaba: false,
   hadMidnight: false, hadEarlyMorning: false,
   hadOmisoka: false, hadNewYear: false, hadBirthday: false,
   hadRareGood: false, hadRareBad: false,
@@ -234,6 +234,7 @@ function updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, 
 
   // 名前
   if (name) stats.hadName = true; else stats.hadNoName = true;
+  if (name && name.startsWith('うこ鯖公認の')) stats.hadUkoSaba = true;
 
   // 時刻
   const hour = new Date().getHours();
