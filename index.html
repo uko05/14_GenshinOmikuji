@@ -37,20 +37,17 @@
       <p id="card-selected-name" class="card-selected-name"></p>
     </div>
 
-    <div class="input-row">
-      <div class="input-group">
+    <div class="input-grid">
+      <div class="input-group input-name">
         <label for="player-name" data-i18n="labelName">名前（任意）</label>
         <input type="text" id="player-name" placeholder="あなたの名前" maxlength="20">
       </div>
-      <div class="input-group">
+      <div class="input-group input-birthday">
         <label for="birthday" data-i18n="labelBirthday">生年月日</label>
         <input type="date" id="birthday">
       </div>
-    </div>
-
-    <div class="input-row gender-row">
-      <div class="input-group gender-group">
-        <label data-i18n="labelGender">性別（厄年表示用・任意）</label>
+      <div class="input-group input-gender">
+        <label data-i18n="labelGender">性別（任意）</label>
         <div class="gender-radios">
           <label class="gender-radio-label"><input type="radio" name="gender" value="male"> <span data-i18n="genderMale">男性</span></label>
           <label class="gender-radio-label"><input type="radio" name="gender" value="female"> <span data-i18n="genderFemale">女性</span></label>

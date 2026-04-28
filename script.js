@@ -139,15 +139,17 @@ const i18n = {
     descFortune: '生年月日と選んだアルカナから、今日の総合運をお伝えします',
     descZodiac:  '生年月日から星座を判定し、総合・恋愛・仕事・健康の4項目を占います',
     descBio:     '身体(23日)・感情(28日)・知性(33日)の3つのリズムで今日のコンディションを算出します',
-    labelGender:  '性別（厄年表示用・任意）',
+    labelGender:  '性別（任意）',
     genderMale:   '男性',
     genderFemale: '女性',
-    extraSummary:  '干支・厄年を確認する',
-    etoLabel:      '干支',
-    yakuThisLabel: '今年の厄年',
-    yakuNextLabel: '来年の厄年',
-    yakuSafe:      '平穏な年です',
-    yakuNoGender:  '性別を選択してください',
+    extraSummary:   '干支・厄年を確認する',
+    etoLabel:       '干支',
+    yakuThisLabel:  '今年の厄年',
+    yakuNextLabel:  '来年の厄年',
+    yakuSafe:       '平穏な年です',
+    yakuNoGender:   '性別を選択してください',
+    yakuFutureLabel: '次の本厄',
+    yakuAllPassed:   'これ以降の本厄はありません',
   },
   en: {
     headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
@@ -204,15 +206,17 @@ const i18n = {
     descFortune: 'Your overall fortune derived from your birthday and chosen Arcana',
     descZodiac:  'Fortune in 4 areas — Overall, Love, Work & Health — based on your zodiac sign',
     descBio:     'Your daily condition via 3 rhythms: Physical (23d), Emotional (28d), Intellectual (33d)',
-    labelGender:  'Gender (for unlucky year · optional)',
+    labelGender:  'Gender (optional)',
     genderMale:   'Male',
     genderFemale: 'Female',
-    extraSummary:  'View Zodiac Animal & Unlucky Years',
-    etoLabel:      'Chinese Zodiac',
-    yakuThisLabel: 'This Year',
-    yakuNextLabel: 'Next Year',
-    yakuSafe:      'Peaceful year',
-    yakuNoGender:  'Select a gender',
+    extraSummary:   'View Zodiac Animal & Unlucky Years',
+    etoLabel:       'Chinese Zodiac',
+    yakuThisLabel:  'This Year',
+    yakuNextLabel:  'Next Year',
+    yakuSafe:       'Peaceful year',
+    yakuNoGender:   'Select a gender',
+    yakuFutureLabel: 'Next Yakudoshi',
+    yakuAllPassed:   'All unlucky years have passed',
   },
 };
 
@@ -1661,6 +1665,9 @@ function displayExtraFortune(birthday, gender) {
   const yakuList   = gender && YAKUDOSHI[gender] ? YAKUDOSHI[gender] : null;
   const yaku       = yakuList ? (yakuList.find(y => y.age === suimei)     || null) : null;
   const yakuNext   = yakuList ? (yakuList.find(y => y.age === suimei + 1) || null) : null;
+  // suimei より後の最初の本厄（大厄含む）
+  const futureHonyaku     = yakuList ? (yakuList.find(y => y.typeJa.includes('本厄') && y.age > suimei) || null) : null;
+  const futureHonyakuYear = futureHonyaku ? thisYear + (futureHonyaku.age - suimei) : null;
 
   // 干支ブロック
   let html = `<div class="extra-block">`;
@@ -1695,6 +1702,16 @@ function displayExtraFortune(birthday, gender) {
   html += yakuBlock(yaku,     'yakuThisLabel');
   html += yakuBlock(yakuNext, 'yakuNextLabel');
   html += `</div>`;
+
+  // 次の本厄年表示
+  if (gender) {
+    if (futureHonyaku) {
+      const typeText = isEn ? futureHonyaku.typeEn : futureHonyaku.typeJa;
+      html += `<div class="extra-yaku-next">${t('yakuFutureLabel')}: ${futureHonyakuYear}${isEn ? '' : '年'} (${typeText})</div>`;
+    } else {
+      html += `<div class="extra-yaku-next">${t('yakuAllPassed')}</div>`;
+    }
+  }
 
   content.innerHTML = html;
 }
