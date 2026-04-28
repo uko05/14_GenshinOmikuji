@@ -1651,13 +1651,15 @@ function displayExtraFortune(birthday, gender) {
   const content = document.getElementById('extra-fortune-content');
   if (!content) return;
 
-  const birthYear = Number(birthday.split('-')[0]);
-  const isEn      = currentLang === 'en';
-  const eto       = ETO[((birthYear - 1900) % 12 + 12) % 12];
-  const suimei    = new Date().getFullYear() - birthYear + 1;
-  const yaku      = gender && YAKUDOSHI[gender]
-    ? (YAKUDOSHI[gender].find(y => y.age === suimei) || null)
-    : null;
+  const birthYear  = Number(birthday.split('-')[0]);
+  const isEn       = currentLang === 'en';
+  const eto        = ETO[((birthYear - 1900) % 12 + 12) % 12];
+  const thisYear   = new Date().getFullYear();
+  const suimei     = thisYear - birthYear + 1;
+  const suimeiNext = suimei + 1;
+  const yakuList   = gender && YAKUDOSHI[gender] ? YAKUDOSHI[gender] : null;
+  const yaku       = yakuList ? (yakuList.find(y => y.age === suimei)     || null) : null;
+  const yakuNext   = yakuList ? (yakuList.find(y => y.age === suimeiNext) || null) : null;
 
   // 干支ブロック
   let html = `<div class="extra-block">`;
@@ -1672,14 +1674,24 @@ function displayExtraFortune(birthday, gender) {
   html += `<div class="extra-block-title">${t('yakuLabel')}</div>`;
   if (!gender) {
     html += `<div class="extra-yaku-note">${t('yakuNoGender')}</div>`;
-  } else if (yaku) {
-    const typeText = isEn ? yaku.typeEn : yaku.typeJa;
-    html += `<div class="extra-yaku-result${yaku.dai ? ' extra-yaku-dai' : ' extra-yaku-warn'}">${typeText}</div>`;
-    const noteJa = yaku.dai ? '大厄の年です。神社への参拝や厄払いを検討してみては。' : '神社への参拝や厄払いを検討してみては。';
-    const noteEn = yaku.dai ? 'A major unlucky year. Consider visiting a shrine for a purification ritual.' : 'Consider visiting a shrine for a purification ritual.';
-    html += `<div class="extra-yaku-note">${isEn ? noteEn : noteJa}</div>`;
   } else {
-    html += `<div class="extra-yaku-safe">${t('yakuSafe')}</div>`;
+    // 今年
+    if (yaku) {
+      const typeText = isEn ? yaku.typeEn : yaku.typeJa;
+      html += `<div class="extra-yaku-result${yaku.dai ? ' extra-yaku-dai' : ' extra-yaku-warn'}">${typeText}</div>`;
+      const noteJa = yaku.dai ? '大厄の年です。神社への参拝や厄払いを検討してみては。' : '神社への参拝や厄払いを検討してみては。';
+      const noteEn = yaku.dai ? 'A major unlucky year. Consider visiting a shrine for a purification ritual.' : 'Consider visiting a shrine for a purification ritual.';
+      html += `<div class="extra-yaku-note">${isEn ? noteEn : noteJa}</div>`;
+    } else {
+      html += `<div class="extra-yaku-safe">${t('yakuSafe')}</div>`;
+    }
+    // 来年
+    if (yakuNext) {
+      const nextType = isEn ? yakuNext.typeEn : yakuNext.typeJa;
+      const nextJa   = `来年（${thisYear + 1}年）は${nextType}にあたります`;
+      const nextEn   = `Next year (${thisYear + 1}) will be ${nextType}`;
+      html += `<div class="extra-yaku-note" style="margin-top:6px;">${isEn ? nextEn : nextJa}</div>`;
+    }
   }
   html += `</div>`;
 

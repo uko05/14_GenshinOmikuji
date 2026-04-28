@@ -1242,9 +1242,15 @@ footer {
 }
 
 /* ===== 性別ラジオ ===== */
-.gender-row { margin-top: 10px; }
+.gender-row {
+  margin-top: 10px;
+  justify-content: center;
+}
 
-.gender-group { width: 100%; }
+.gender-group {
+  flex: 0 0 auto;
+  align-items: center;
+}
 
 .gender-radios {
   display: flex;
@@ -1276,28 +1282,39 @@ footer {
 /* ===== おまけ：干支・厄年 ===== */
 .extra-fortune-details { cursor: default; }
 
+@keyframes extra-summary-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
 .extra-fortune-summary {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: var(--gold);
+  color: #cc2200;
   font-size: 0.82rem;
   letter-spacing: 0.12em;
   cursor: pointer;
   list-style: none;
   user-select: none;
   padding: 2px 0;
+  animation: extra-summary-blink 1.6s ease-in-out infinite;
 }
 .extra-fortune-summary::-webkit-details-marker { display: none; }
 .extra-fortune-summary::after {
   content: '▶';
   font-size: 0.65rem;
-  color: var(--muted);
+  color: #cc2200;
   transition: transform 0.2s;
+}
+details#extra-fortune-section[open] > .extra-fortune-summary {
+  color: var(--gold);
+  animation: none;
 }
 details#extra-fortune-section[open] > .extra-fortune-summary::after {
   transform: rotate(90deg);
+  color: var(--muted);
 }
 
 .extra-fortune-content {
