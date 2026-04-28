@@ -1292,7 +1292,7 @@ footer {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  color: #cc2200;
+  color: #ff0000;
   font-size: 0.82rem;
   letter-spacing: 0.12em;
   cursor: pointer;
@@ -1305,7 +1305,7 @@ footer {
 .extra-fortune-summary::after {
   content: '▶';
   font-size: 0.65rem;
-  color: #cc2200;
+  color: #ff0000;
   transition: transform 0.2s;
 }
 details#extra-fortune-section[open] > .extra-fortune-summary {
@@ -1354,7 +1354,18 @@ details#extra-fortune-section[open] > .extra-fortune-summary::after {
   color: var(--muted);
 }
 
-.extra-yaku-safe  { font-size: 0.9rem; color: #448844; }
-.extra-yaku-warn  { font-size: 1rem; font-weight: bold; color: #cc6600; }
-.extra-yaku-dai   { font-size: 1rem; font-weight: bold; color: #cc2200; }
-.extra-yaku-note  { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+.extra-yaku-row {
+  display: flex;
+  gap: 10px;
+}
+
+.extra-yaku-half {
+  flex: 1;
+  min-width: 0;
+}
+
+.extra-yaku-safe   { font-size: 0.9rem; color: #448844; }
+.extra-yaku-result { font-size: 1rem; font-weight: bold; }
+.extra-yaku-warn   { font-size: 1rem; font-weight: bold; color: #cc6600; }
+.extra-yaku-dai    { font-size: 1rem; font-weight: bold; color: #cc2200; }
+.extra-yaku-note   { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }

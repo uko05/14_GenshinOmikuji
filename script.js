@@ -142,11 +142,12 @@ const i18n = {
     labelGender:  '性別（厄年表示用・任意）',
     genderMale:   '男性',
     genderFemale: '女性',
-    extraSummary: '干支・厄年を確認する',
-    etoLabel:     '干支',
-    yakuLabel:    '厄年（数え年）',
-    yakuSafe:     '今年は平穏な年です',
-    yakuNoGender: '性別を選択すると表示されます',
+    extraSummary:  '干支・厄年を確認する',
+    etoLabel:      '干支',
+    yakuThisLabel: '今年の厄年',
+    yakuNextLabel: '来年の厄年',
+    yakuSafe:      '平穏な年です',
+    yakuNoGender:  '性別を選択してください',
   },
   en: {
     headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
@@ -206,11 +207,12 @@ const i18n = {
     labelGender:  'Gender (for unlucky year · optional)',
     genderMale:   'Male',
     genderFemale: 'Female',
-    extraSummary: 'View Zodiac Animal & Unlucky Years',
-    etoLabel:     'Chinese Zodiac',
-    yakuLabel:    'Unlucky Years (Yakudoshi)',
-    yakuSafe:     'This year is a peaceful one',
-    yakuNoGender: 'Select a gender to view your unlucky year status',
+    extraSummary:  'View Zodiac Animal & Unlucky Years',
+    etoLabel:      'Chinese Zodiac',
+    yakuThisLabel: 'This Year',
+    yakuNextLabel: 'Next Year',
+    yakuSafe:      'Peaceful year',
+    yakuNoGender:  'Select a gender',
   },
 };
 
@@ -1656,10 +1658,9 @@ function displayExtraFortune(birthday, gender) {
   const eto        = ETO[((birthYear - 1900) % 12 + 12) % 12];
   const thisYear   = new Date().getFullYear();
   const suimei     = thisYear - birthYear + 1;
-  const suimeiNext = suimei + 1;
   const yakuList   = gender && YAKUDOSHI[gender] ? YAKUDOSHI[gender] : null;
   const yaku       = yakuList ? (yakuList.find(y => y.age === suimei)     || null) : null;
-  const yakuNext   = yakuList ? (yakuList.find(y => y.age === suimeiNext) || null) : null;
+  const yakuNext   = yakuList ? (yakuList.find(y => y.age === suimei + 1) || null) : null;
 
   // 干支ブロック
   let html = `<div class="extra-block">`;
@@ -1669,30 +1670,30 @@ function displayExtraFortune(birthday, gender) {
   html += `<span class="extra-eto-desc">${isEn ? eto.descEn : eto.descJa}</span>`;
   html += `</div></div>`;
 
-  // 厄年ブロック
-  html += `<div class="extra-block">`;
-  html += `<div class="extra-block-title">${t('yakuLabel')}</div>`;
-  if (!gender) {
-    html += `<div class="extra-yaku-note">${t('yakuNoGender')}</div>`;
-  } else {
-    // 今年
-    if (yaku) {
-      const typeText = isEn ? yaku.typeEn : yaku.typeJa;
-      html += `<div class="extra-yaku-result${yaku.dai ? ' extra-yaku-dai' : ' extra-yaku-warn'}">${typeText}</div>`;
-      const noteJa = yaku.dai ? '大厄の年です。神社への参拝や厄払いを検討してみては。' : '神社への参拝や厄払いを検討してみては。';
-      const noteEn = yaku.dai ? 'A major unlucky year. Consider visiting a shrine for a purification ritual.' : 'Consider visiting a shrine for a purification ritual.';
-      html += `<div class="extra-yaku-note">${isEn ? noteEn : noteJa}</div>`;
+  // 厄年：今年・来年 横並び
+  const yakuBlock = (yakuEntry, labelKey) => {
+    let b = `<div class="extra-block extra-yaku-half">`;
+    b += `<div class="extra-block-title">${t(labelKey)}</div>`;
+    if (!gender) {
+      b += `<div class="extra-yaku-note">${t('yakuNoGender')}</div>`;
+    } else if (yakuEntry) {
+      const typeText = isEn ? yakuEntry.typeEn : yakuEntry.typeJa;
+      b += `<div class="extra-yaku-result${yakuEntry.dai ? ' extra-yaku-dai' : ' extra-yaku-warn'}">${typeText}</div>`;
+      if (yakuEntry.dai) {
+        b += `<div class="extra-yaku-note">${isEn ? 'Major unlucky year.' : '大厄にあたります。'}</div>`;
+      } else {
+        b += `<div class="extra-yaku-note">${isEn ? 'Consider a purification ritual.' : '厄払いを検討してみては。'}</div>`;
+      }
     } else {
-      html += `<div class="extra-yaku-safe">${t('yakuSafe')}</div>`;
+      b += `<div class="extra-yaku-safe">${t('yakuSafe')}</div>`;
     }
-    // 来年
-    if (yakuNext) {
-      const nextType = isEn ? yakuNext.typeEn : yakuNext.typeJa;
-      const nextJa   = `来年（${thisYear + 1}年）は${nextType}にあたります`;
-      const nextEn   = `Next year (${thisYear + 1}) will be ${nextType}`;
-      html += `<div class="extra-yaku-note" style="margin-top:6px;">${isEn ? nextEn : nextJa}</div>`;
-    }
-  }
+    b += `</div>`;
+    return b;
+  };
+
+  html += `<div class="extra-yaku-row">`;
+  html += yakuBlock(yaku,     'yakuThisLabel');
+  html += yakuBlock(yakuNext, 'yakuNextLabel');
   html += `</div>`;
 
   content.innerHTML = html;
