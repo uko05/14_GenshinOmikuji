@@ -48,6 +48,16 @@
       </div>
     </div>
 
+    <div class="input-row gender-row">
+      <div class="input-group gender-group">
+        <label data-i18n="labelGender">性別（厄年表示用・任意）</label>
+        <div class="gender-radios">
+          <label class="gender-radio-label"><input type="radio" name="gender" value="male"> <span data-i18n="genderMale">男性</span></label>
+          <label class="gender-radio-label"><input type="radio" name="gender" value="female"> <span data-i18n="genderFemale">女性</span></label>
+        </div>
+      </div>
+    </div>
+
     <div class="fortune-btn-row">
       <img id="chara-left" src="" alt="" class="chara-deco chara-left">
       <button class="fortune-btn" id="fortune-btn" disabled data-i18n="fortuneBtn">今日の運勢を占う</button>
@@ -151,6 +161,12 @@
         </div>
       </div>
     </section>
+
+    <!-- おまけ：干支・厄年（画像保存対象外） -->
+    <details id="extra-fortune-section" class="section extra-fortune-details">
+      <summary class="extra-fortune-summary"><span data-i18n="extraSummary">干支・厄年を確認する</span></summary>
+      <div id="extra-fortune-content" class="extra-fortune-content"></div>
+    </details>
 
     <!-- 画像保存ボタン -->
     <div style="text-align:center; margin-top:8px; margin-bottom:8px;">

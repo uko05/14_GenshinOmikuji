@@ -6,6 +6,48 @@ import { submitOmikujiStats } from './omikujiStats.js';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit } from './userData.js';
 
+// ===== 干支データ =====
+const ETO = [
+  { ja: '子（ねずみ）', en: 'Rat (子)',      descJa: '知恵者で器用、社交的な性格',             descEn: 'Clever and resourceful with a social nature' },
+  { ja: '丑（うし）',   en: 'Ox (丑)',       descJa: '忍耐強く勤勉、信頼される存在',           descEn: 'Patient and hardworking, a trusted presence' },
+  { ja: '寅（とら）',   en: 'Tiger (寅)',    descJa: '勇敢で行動力があり、リーダー気質',       descEn: 'Brave and decisive with natural leadership' },
+  { ja: '卯（うさぎ）', en: 'Rabbit (卯)',   descJa: '温和で平和的、直感が鋭い',               descEn: 'Gentle and peaceful with sharp intuition' },
+  { ja: '辰（たつ）',   en: 'Dragon (辰)',   descJa: 'カリスマ的で情熱的、大きな夢を持つ',     descEn: 'Charismatic and passionate, a visionary dreamer' },
+  { ja: '巳（へび）',   en: 'Snake (巳)',    descJa: '思慮深く神秘的、深い洞察力を持つ',       descEn: 'Thoughtful and mysterious with deep insight' },
+  { ja: '午（うま）',   en: 'Horse (午)',    descJa: '自由奔放で活発、仲間思い',               descEn: 'Free-spirited and energetic, loyal to friends' },
+  { ja: '未（ひつじ）', en: 'Goat (未)',     descJa: '温厚で芸術的センスがあり、優しい',       descEn: 'Gentle with artistic sensibility and warmth' },
+  { ja: '申（さる）',   en: 'Monkey (申)',   descJa: '好奇心旺盛で機転が利き、器用',           descEn: 'Curious and witty with nimble hands and mind' },
+  { ja: '酉（とり）',   en: 'Rooster (酉)', descJa: '几帳面で誠実、完璧主義な一面も',         descEn: 'Meticulous and sincere with a perfectionist streak' },
+  { ja: '戌（いぬ）',   en: 'Dog (戌)',      descJa: '忠実で誠実、面倒見が良い',               descEn: 'Loyal and sincere, always there for others' },
+  { ja: '亥（いのしし）', en: 'Pig (亥)',    descJa: '正直で純粋、情熱と粘り強さを持つ',       descEn: 'Honest and pure with passion and perseverance' },
+];
+
+// ===== 厄年データ（数え年） =====
+const YAKUDOSHI = {
+  male: [
+    { age: 24, typeJa: '前厄',       typeEn: 'Pre-Yakudoshi',      dai: false },
+    { age: 25, typeJa: '本厄',       typeEn: 'Yakudoshi',          dai: false },
+    { age: 26, typeJa: '後厄',       typeEn: 'Post-Yakudoshi',     dai: false },
+    { age: 41, typeJa: '前厄',       typeEn: 'Pre-Yakudoshi',      dai: false },
+    { age: 42, typeJa: '本厄（大厄）', typeEn: 'Yakudoshi (Major)', dai: true  },
+    { age: 43, typeJa: '後厄',       typeEn: 'Post-Yakudoshi',     dai: false },
+    { age: 60, typeJa: '前厄',       typeEn: 'Pre-Yakudoshi',      dai: false },
+    { age: 61, typeJa: '本厄',       typeEn: 'Yakudoshi',          dai: false },
+    { age: 62, typeJa: '後厄',       typeEn: 'Post-Yakudoshi',     dai: false },
+  ],
+  female: [
+    { age: 18, typeJa: '前厄',       typeEn: 'Pre-Yakudoshi',      dai: false },
+    { age: 19, typeJa: '本厄',       typeEn: 'Yakudoshi',          dai: false },
+    { age: 20, typeJa: '後厄',       typeEn: 'Post-Yakudoshi',     dai: false },
+    { age: 32, typeJa: '前厄',       typeEn: 'Pre-Yakudoshi',      dai: false },
+    { age: 33, typeJa: '本厄（大厄）', typeEn: 'Yakudoshi (Major)', dai: true  },
+    { age: 34, typeJa: '後厄',       typeEn: 'Post-Yakudoshi',     dai: false },
+    { age: 36, typeJa: '前厄',       typeEn: 'Pre-Yakudoshi',      dai: false },
+    { age: 37, typeJa: '本厄',       typeEn: 'Yakudoshi',          dai: false },
+    { age: 38, typeJa: '後厄',       typeEn: 'Post-Yakudoshi',     dai: false },
+  ],
+};
+
 // ===== ローカルストレージキー（lastVisit のみ残す） =====
 // 他のデータはすべて Firestore（store 経由）で管理する
 
@@ -97,6 +139,14 @@ const i18n = {
     descFortune: '生年月日と選んだアルカナから、今日の総合運をお伝えします',
     descZodiac:  '生年月日から星座を判定し、総合・恋愛・仕事・健康の4項目を占います',
     descBio:     '身体(23日)・感情(28日)・知性(33日)の3つのリズムで今日のコンディションを算出します',
+    labelGender:  '性別（厄年表示用・任意）',
+    genderMale:   '男性',
+    genderFemale: '女性',
+    extraSummary: '干支・厄年を確認する',
+    etoLabel:     '干支',
+    yakuLabel:    '厄年（数え年）',
+    yakuSafe:     '今年は平穏な年です',
+    yakuNoGender: '性別を選択すると表示されます',
   },
   en: {
     headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
@@ -153,6 +203,14 @@ const i18n = {
     descFortune: 'Your overall fortune derived from your birthday and chosen Arcana',
     descZodiac:  'Fortune in 4 areas — Overall, Love, Work & Health — based on your zodiac sign',
     descBio:     'Your daily condition via 3 rhythms: Physical (23d), Emotional (28d), Intellectual (33d)',
+    labelGender:  'Gender (for unlucky year · optional)',
+    genderMale:   'Male',
+    genderFemale: 'Female',
+    extraSummary: 'View Zodiac Animal & Unlucky Years',
+    etoLabel:     'Chinese Zodiac',
+    yakuLabel:    'Unlucky Years (Yakudoshi)',
+    yakuSafe:     'This year is a peaceful one',
+    yakuNoGender: 'Select a gender to view your unlucky year status',
   },
 };
 
@@ -1125,6 +1183,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // store からデータ復元（Firestore ロード済みのインメモリストアから取得）
   nameInput.value = store.name || '';
+  if (store.gender) {
+    const genderEl = document.querySelector(`input[name="gender"][value="${store.gender}"]`);
+    if (genderEl) genderEl.checked = true;
+  }
+  document.querySelectorAll('input[name="gender"]').forEach(r => {
+    r.addEventListener('change', () => {
+      store.gender = r.value;
+      scheduleSync();
+      if (document.getElementById('result').style.display !== 'none' && lastFortuneBirthday) {
+        displayExtraFortune(lastFortuneBirthday, r.value);
+      }
+    });
+  });
   const storedBirthday = store.birthday;
   if (storedBirthday) {
     birthdayInput.value = storedBirthday;
@@ -1289,18 +1360,23 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, s
 
 
   // ラッキー
-  const luckyIdx = Math.floor(rng() * 3);
+  const luckyColorIdx  = Math.floor(rng() * zodiacData.luckyColor.length);
+  const luckyItemIdx   = Math.floor(rng() * zodiacData.luckyItem.length);
+  const luckyNumberIdx = Math.floor(rng() * zodiacData.luckyNumber.length);
   const cardData = isReversed
     ? (isEn ? card.reversed_en : card.reversed)
     : (isEn ? card.upright_en  : card.upright);
-  document.getElementById('lucky-color').textContent       = (isEn ? zodiacData.luckyColor_en : zodiacData.luckyColor)[luckyIdx];
-  document.getElementById('lucky-item-zodiac').textContent = (isEn ? zodiacData.luckyItem_en  : zodiacData.luckyItem)[luckyIdx];
-  document.getElementById('lucky-number').textContent      = zodiacData.luckyNumber[luckyIdx];
+  document.getElementById('lucky-color').textContent       = (isEn ? zodiacData.luckyColor_en : zodiacData.luckyColor)[luckyColorIdx];
+  document.getElementById('lucky-item-zodiac').textContent = (isEn ? zodiacData.luckyItem_en  : zodiacData.luckyItem)[luckyItemIdx];
+  document.getElementById('lucky-number').textContent      = zodiacData.luckyNumber[luckyNumberIdx];
   document.getElementById('lucky-item-tarot').textContent  = cardData.lucky;
   document.getElementById('lucky-item-tarot-row').style.display = 'block';
 
   // 挨拶
   document.getElementById('result-greeting').textContent = i18n[currentLang].greeting(name);
+
+  // おまけ：干支・厄年
+  displayExtraFortune(birthday, getGender());
 
   // 実績統計更新・チェック（新規占いのみ）
   if (!skipStats) {
@@ -1564,4 +1640,48 @@ function displayFortuneBadge(level) {
   badge.textContent   = currentLang === 'en' ? fortuneLevels_en[fortuneLevels.indexOf(level)] : level;
   badge.dataset.level = level;
   badge.className     = `fortune-badge fortune-${level}`;
+}
+
+function getGender() {
+  const sel = document.querySelector('input[name="gender"]:checked');
+  return sel ? sel.value : '';
+}
+
+function displayExtraFortune(birthday, gender) {
+  const content = document.getElementById('extra-fortune-content');
+  if (!content) return;
+
+  const birthYear = Number(birthday.split('-')[0]);
+  const isEn      = currentLang === 'en';
+  const eto       = ETO[((birthYear - 1900) % 12 + 12) % 12];
+  const suimei    = new Date().getFullYear() - birthYear + 1;
+  const yaku      = gender && YAKUDOSHI[gender]
+    ? (YAKUDOSHI[gender].find(y => y.age === suimei) || null)
+    : null;
+
+  // 干支ブロック
+  let html = `<div class="extra-block">`;
+  html += `<div class="extra-block-title">${t('etoLabel')}</div>`;
+  html += `<div class="extra-eto">`;
+  html += `<span class="extra-eto-name">${isEn ? eto.en : eto.ja}</span>`;
+  html += `<span class="extra-eto-desc">${isEn ? eto.descEn : eto.descJa}</span>`;
+  html += `</div></div>`;
+
+  // 厄年ブロック
+  html += `<div class="extra-block">`;
+  html += `<div class="extra-block-title">${t('yakuLabel')}</div>`;
+  if (!gender) {
+    html += `<div class="extra-yaku-note">${t('yakuNoGender')}</div>`;
+  } else if (yaku) {
+    const typeText = isEn ? yaku.typeEn : yaku.typeJa;
+    html += `<div class="extra-yaku-result${yaku.dai ? ' extra-yaku-dai' : ' extra-yaku-warn'}">${typeText}</div>`;
+    const noteJa = yaku.dai ? '大厄の年です。神社への参拝や厄払いを検討してみては。' : '神社への参拝や厄払いを検討してみては。';
+    const noteEn = yaku.dai ? 'A major unlucky year. Consider visiting a shrine for a purification ritual.' : 'Consider visiting a shrine for a purification ritual.';
+    html += `<div class="extra-yaku-note">${isEn ? noteEn : noteJa}</div>`;
+  } else {
+    html += `<div class="extra-yaku-safe">${t('yakuSafe')}</div>`;
+  }
+  html += `</div>`;
+
+  content.innerHTML = html;
 }

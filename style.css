@@ -1240,3 +1240,104 @@ footer {
   font-size: 0.75rem;
   color: var(--muted);
 }
+
+/* ===== 性別ラジオ ===== */
+.gender-row { margin-top: 10px; }
+
+.gender-group { width: 100%; }
+
+.gender-radios {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  height: 40px;
+}
+
+.gender-radio-label {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  margin: 0 !important;
+  letter-spacing: normal;
+}
+
+.gender-radio-label input[type="radio"] {
+  width: auto;
+  height: auto;
+  accent-color: var(--gold);
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* ===== おまけ：干支・厄年 ===== */
+.extra-fortune-details { cursor: default; }
+
+.extra-fortune-summary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--gold);
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  padding: 2px 0;
+}
+.extra-fortune-summary::-webkit-details-marker { display: none; }
+.extra-fortune-summary::after {
+  content: '▶';
+  font-size: 0.65rem;
+  color: var(--muted);
+  transition: transform 0.2s;
+}
+details#extra-fortune-section[open] > .extra-fortune-summary::after {
+  transform: rotate(90deg);
+}
+
+.extra-fortune-content {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.extra-block {
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.extra-block-title {
+  color: var(--gold);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  margin-bottom: 8px;
+}
+
+.extra-eto {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.extra-eto-name {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--text);
+}
+
+.extra-eto-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.extra-yaku-safe  { font-size: 0.9rem; color: #448844; }
+.extra-yaku-warn  { font-size: 1rem; font-weight: bold; color: #cc6600; }
+.extra-yaku-dai   { font-size: 1rem; font-weight: bold; color: #cc2200; }
+.extra-yaku-note  { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }

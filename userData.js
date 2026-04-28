@@ -49,6 +49,7 @@ export function setLastVisit(v) { localStorage.setItem(LS_LAST_VISIT, v); }
 export const store = {
   name:         '',
   birthday:     '',
+  gender:       '',
   lang:         'ja',
   streak:       null,
   result:       null,
@@ -68,6 +69,7 @@ export async function loadUserDataFromFirestore() {
       const d = snap.data();
       if (d.name         != null) store.name     = d.name;
       if (d.birthday     != null) store.birthday = d.birthday;
+      if (d.gender       != null) store.gender   = d.gender;
       if (d.lang         != null) store.lang     = d.lang;
       if (d.streak       != null) store.streak   = d.streak;
       if (d.result       != null) store.result   = d.result;
@@ -132,6 +134,7 @@ export async function syncUserDataToFirestore() {
     const payload = {
       name:         store.name,
       birthday:     store.birthday,
+      gender:       store.gender,
       lang:         store.lang,
       streak:       store.streak,
       result:       store.result,
