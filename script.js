@@ -86,6 +86,7 @@ const cardStates = tarotCards.slice(0, 23).map((_, i) => ({
 const i18n = {
   ja: {
     headerSub:        '星座・バイオリズム・アルカナで今日のあなたを占います',
+    accountLinkLabel: '機種変・データ管理はこちら（登録は任意です）',
     cardSelectLabel:  'アルカナをシャッフルして1枚選んでください',
     shuffleBtn:       'シャッフル',
     labelName:        '名前（任意）',
@@ -153,6 +154,7 @@ const i18n = {
   },
   en: {
     headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
+    accountLinkLabel: 'Switched devices? Manage your data here (registration optional)',
     cardSelectLabel:  'Shuffle the Arcana and choose one card',
     shuffleBtn:       'Shuffle',
     labelName:        'Name (optional)',

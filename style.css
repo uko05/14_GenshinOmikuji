@@ -83,6 +83,15 @@ header p {
   font-size: 0.85rem;
 }
 
+.account-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-decoration: underline;
+}
+.account-link:hover { color: var(--gold); }
+
 /* メインコンテナ */
 main {
   max-width: 680px;
