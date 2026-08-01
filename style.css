@@ -56,11 +56,18 @@ header {
   letter-spacing: 0.05em;
 }
 
-/* 言語切り替え */
-.lang-switch {
+/* ヘッダー右上（ログイン状態＋言語切り替え） */
+.header-topbar {
   position: absolute;
   top: 12px;
   right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 言語切り替え */
+.lang-switch {
   font-size: 13px;
   opacity: 0.8;
   white-space: nowrap;
@@ -1080,7 +1087,8 @@ footer {
   .input-gender .gender-radios { gap: 10px; }
   /* ヘッダー：言語ボタンと重ならないよう上部に余白 */
   header { padding-top: 44px; }
-  .lang-switch { top: 10px; font-size: 12px; }
+  .header-topbar { top: 10px; }
+  .lang-switch { font-size: 12px; }
 }
 
 /* ===== 奈落のアルカナ ヒント演出 ===== */
