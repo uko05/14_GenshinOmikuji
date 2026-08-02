@@ -4,7 +4,9 @@ import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
-import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit } from './userData.js';
+import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js';
+import { db } from './firebaseConfig.js';
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // ===== 干支データ =====
 const ETO = [
@@ -1056,11 +1058,9 @@ function shuffleCards() {
       applyTransform(state, true);
     });
 
-    // 奈落のアルカナ（index 22）: 1% または uko@rare_bad で追加、それ以外は非表示
-    const nameVal = document.getElementById('player-name')?.value.trim() || '';
-    const forceRareBad = nameVal === 'uko@rare_bad';
+    // 奈落のアルカナ（index 22）: 1%で追加、それ以外は非表示
     const rareBadState = cardStates[22];
-    if (Math.random() < 0.01 || forceRareBad) {
+    if (Math.random() < 0.01) {
       rareBadState.x      = (Math.random() * 2 - 1) * maxX;
       rareBadState.y      = (Math.random() * 2 - 1) * maxY;
       rareBadState.rotate = (Math.random() * 2 - 1) * 65;
@@ -1157,9 +1157,21 @@ function showDailyDoneOverlay() {
   area.appendChild(overlay);
 }
 
+// 管理画面(AccountCenter)でロール「デバッガー」+「原神おみくじ」を付与された場合だけ true。
+// 初期化時に一度だけFirestoreから取得してキャッシュする（loadDebuggerRole参照）。
+let isOmikujiDebugger = false;
+
 function isDebugMode() {
-  const n = document.getElementById('player-name').value.trim();
-  return n === 'uko@debug' || n === 'uko@rare_bad' || n === 'uko@rare_good';
+  return isOmikujiDebugger;
+}
+
+async function loadDebuggerRole() {
+  try {
+    const snap = await getDoc(doc(db, 'sharedUserRoles', getUserId()));
+    isOmikujiDebugger = !!(snap.exists() && snap.data().debugOmikuji);
+  } catch (e) {
+    console.warn('[debug] ロール取得に失敗:', e);
+  }
 }
 
 function updateFortuneBtn() {
@@ -1178,6 +1190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Firestore からデータをロード（端末変更対応）
   // localStorage を Firestore の内容で上書きしてから UI を初期化する
   await loadUserDataFromFirestore();
+  await loadDebuggerRole();
 
   // 言語切り替え初期化
   initLangSwitch();
@@ -1284,13 +1297,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const todayStr = getFortuneDate();
 
-    // レアカード判定（デバッグ強制 > シャッフル差し替え > 確率）
+    // レアカード判定（シャッフル差し替え > 確率）
     let effectiveCardIndex = selectedCardIndex;
-    if (name === 'uko@rare_bad') {
-      effectiveCardIndex = 22; // rare_Bad 強制
-    } else if (name === 'uko@rare_good') {
-      effectiveCardIndex = 23; // rare_Good 強制
-    } else if (!debug && Math.random() < 0.005) {
+    if (!debug && Math.random() < 0.005) {
       effectiveCardIndex = 23; // rare_Good (tarotCards[23]) 0.5%
     }
 
@@ -1388,7 +1397,7 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, s
 
   // 実績統計更新・チェック（新規占いのみ）
   if (!skipStats) {
-    const isDebug = name === 'uko@debug';
+    const isDebug = isDebugMode();
     const streakSaved = store.streak;
     updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, isDebug, streakCount: streakSaved ? streakSaved.count : 1 });
     checkAndUnlockAchievements();
