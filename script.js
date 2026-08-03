@@ -3,7 +3,7 @@ import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry } from './feed.js';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry } from './feed.js';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js';
 import { db } from './firebaseConfig.js';
@@ -360,7 +360,18 @@ function checkAndUnlockAchievements(silent = false, toastDelay = 0) {
     // store.achievements は loadUnlocked() が返した同一参照なので既に更新済み
     scheduleSync();
     if (!silent) {
-      const show = () => newIds.forEach(id => showAchToast(id));
+      const show = () => {
+        newIds.forEach(id => showAchToast(id));
+        newIds.forEach((id) => {
+          const ach = ALL_ACHIEVEMENTS.find(a => a.id === id);
+          if (!ach) return;
+          submitAchievementFeedEntry({
+            name: store.name,
+            achievementName: currentLang === 'en' ? ach.nameEn : ach.name,
+            rarity: ach.rarity || 'bronze',
+          });
+        });
+      };
       if (toastDelay > 0) setTimeout(show, toastDelay);
       else show();
     }

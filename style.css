@@ -1365,6 +1365,40 @@ footer {
   font-weight: bold;
 }
 
+/* アチーブメント獲得投稿（アチーブポップと同じレアリティ配色） */
+.feed-item-achievement { border: none; }
+.feed-item-achievement .feed-item-line { font-weight: bold; }
+
+.feed-item-achievement.rarity-bronze {
+  background: linear-gradient(135deg, #a57e65 0%, #f3cfb8 50%, #a57e65 100%);
+  border: 1px solid #cd7f32;
+}
+.feed-item-achievement.rarity-silver {
+  background: linear-gradient(135deg, #757575 0%, #e8e8e8 50%, #757575 100%);
+  border: 1px solid #a8b8c8;
+}
+.feed-item-achievement.rarity-gold {
+  background: linear-gradient(135deg, #daaf08 0%, #fee9a0 50%, #daaf08 100%);
+  border: 1px solid #d4a800;
+}
+.feed-item-achievement.rarity-legend {
+  background: linear-gradient(135deg, #5a1090 0%, #d4a8ff 50%, #5a1090 100%);
+  border: 1px solid #9b59b6;
+}
+
+.feed-item-achievement.rarity-bronze .feed-item-line,
+.feed-item-achievement.rarity-silver .feed-item-line,
+.feed-item-achievement.rarity-gold .feed-item-line {
+  color: #1a1000;
+}
+.feed-item-achievement.rarity-bronze .feed-item-time,
+.feed-item-achievement.rarity-silver .feed-item-time,
+.feed-item-achievement.rarity-gold .feed-item-time {
+  color: rgba(0, 0, 0, 0.6);
+}
+.feed-item-achievement.rarity-legend .feed-item-line { color: #ffffff; }
+.feed-item-achievement.rarity-legend .feed-item-time { color: rgba(255, 255, 255, 0.75); }
+
 .feed-item-time {
   font-size: 0.7rem;
   color: var(--muted);
@@ -1405,12 +1439,13 @@ footer {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #4a2038 0%, #6b2a3a 100%);
-  border: 2px solid #ff9466;
-  border-radius: 30px;
-  padding: 6px 20px 6px 6px;
+  gap: 10px;
+  background: #ffffff;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 20px;
   width: min(70vw, 420px);
   z-index: 2050;
   pointer-events: none;
@@ -1419,16 +1454,16 @@ footer {
 .like-toast-hide  { animation: like-toast-out 0.32s ease-in forwards; }
 
 .like-toast-avatar {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
 }
 
 .like-toast-text {
-  font-size: 0.78rem;
-  color: #ffe6d9;
+  font-size: 0.85rem;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

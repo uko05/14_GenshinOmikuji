@@ -3,7 +3,7 @@
 import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js';
 import {
-  collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, onSnapshot,
+  collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
   query, where, orderBy, limit, serverTimestamp, increment, Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
@@ -25,6 +25,7 @@ const STR = {
     hourAgo:   (n) => `${n}時間前`,
     normalLine: (name, level) => `${name}さんが${level}を引きました`,
     rareLine:   (name, card)  => `${name}さんが${card}を引き当てました！`,
+    achLine:    (name, ach)   => `${name}さんが「${ach}」を取得しました！`,
   },
   en: {
     noName:    'Nameless Traveler',
@@ -36,6 +37,7 @@ const STR = {
     hourAgo:   (n) => `${n}h ago`,
     normalLine: (name, level) => `${name} got ${level}!`,
     rareLine:   (name, card)  => `${name} drew ${card}!!`,
+    achLine:    (name, ach)   => `${name} unlocked "${ach}"!`,
   },
 };
 function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
@@ -235,6 +237,7 @@ export async function submitFeedEntry({ name, cardName, fortuneLevel, isRare }) 
     const userId = getUserId();
     const avatar = await getMyAvatar(userId);
     await addDoc(collection(db, 'omikujiFeed'), {
+      type: 'fortune',
       userId,
       name: name || '',
       cardName: cardName || '',
@@ -248,6 +251,27 @@ export async function submitFeedEntry({ name, cardName, fortuneLevel, isRare }) 
     localStorage.setItem(LS_FEED_POSTED_DATE, today);
   } catch (e) {
     console.error('[feed] submit failed', e);
+  }
+}
+
+// ===== アチーブメント獲得のフィード投稿(新規解放ごとに呼ばれる、遡及・サイレント解放時は呼ばない) =====
+export async function submitAchievementFeedEntry({ name, achievementName, rarity }) {
+  try {
+    const userId = getUserId();
+    const avatar = await getMyAvatar(userId);
+    await addDoc(collection(db, 'omikujiFeed'), {
+      type: 'achievement',
+      userId,
+      name: name || '',
+      achievementName: achievementName || '',
+      rarity: rarity || 'bronze',
+      avatarGame: avatar.game,
+      avatarIcon: avatar.icon,
+      likeCount: 0,
+      createdAt: serverTimestamp(),
+    });
+  } catch (e) {
+    console.error('[feed] achievement submit failed', e);
   }
 }
 
@@ -271,19 +295,24 @@ async function loadFeedDebuggerRole() {
 async function toggleLike(entry, likeBtn, opts = {}) {
   const myUserId = getUserId();
   const allowSelf = !!opts.allowSelf;
-  if (!isFeedDebugger) {
-    if (!allowSelf && myUserId === entry.userId) return;
-    if (myLikedIds.has(entry.id)) return;
-  }
+  const privileged = isFeedDebugger;
+
+  if (!privileged && !allowSelf && myUserId === entry.userId) return;
+  if (!privileged && myLikedIds.has(entry.id)) return;
 
   likeBtn.disabled = true;
   try {
-    // デバッガー・管理者は毎回別ドキュメントにして重複いいねチェックをすり抜けて何度でも押せるようにする
-    const likeDocId = isFeedDebugger ? `${myUserId}_${Date.now()}` : myUserId;
-    const likeRef = doc(db, 'omikujiFeed', entry.id, 'likes', likeDocId);
-    if (!isFeedDebugger) {
-      const already = await getDoc(likeRef);
-      if (already.exists()) { myLikedIds.add(entry.id); return; }
+    const likeRef = doc(db, 'omikujiFeed', entry.id, 'likes', myUserId);
+    const already  = await getDoc(likeRef);
+
+    if (already.exists()) {
+      if (!privileged) { myLikedIds.add(entry.id); return; }
+      // デバッガー・管理者: 確認用にいいねを取り消して再度押せる状態に戻す
+      await deleteDoc(likeRef);
+      await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(-1) });
+      myLikedIds.delete(entry.id);
+      likeBtn.classList.remove('liked');
+      return;
     }
 
     await setDoc(likeRef, { likedAt: serverTimestamp() });
@@ -305,7 +334,7 @@ async function toggleLike(entry, likeBtn, opts = {}) {
   } catch (e) {
     console.error('[feed] like failed', e);
   } finally {
-    likeBtn.disabled = isFeedDebugger ? false : myLikedIds.has(entry.id);
+    likeBtn.disabled = privileged ? false : myLikedIds.has(entry.id);
   }
 }
 
@@ -327,6 +356,9 @@ function renderFeedList(entries) {
   entries.forEach((entry) => {
     const item = document.createElement('div');
     item.className = 'feed-item';
+    if (entry.type === 'achievement') {
+      item.classList.add('feed-item-achievement', `rarity-${entry.rarity || 'bronze'}`);
+    }
 
     const avatar = document.createElement('img');
     avatar.className = 'feed-avatar';
@@ -340,10 +372,14 @@ function renderFeedList(entries) {
     const name = entry.name || s().noName;
     const lineEl = document.createElement('span');
     lineEl.className = 'feed-item-line';
-    lineEl.textContent = entry.isRare
-      ? s().rareLine(name, entry.cardName || entry.fortuneLevel)
-      : s().normalLine(name, entry.fortuneLevel || entry.cardName);
-    if (entry.isRare) lineEl.classList.add('feed-item-line-rare');
+    if (entry.type === 'achievement') {
+      lineEl.textContent = s().achLine(name, entry.achievementName);
+    } else {
+      lineEl.textContent = entry.isRare
+        ? s().rareLine(name, entry.cardName || entry.fortuneLevel)
+        : s().normalLine(name, entry.fortuneLevel || entry.cardName);
+      if (entry.isRare) lineEl.classList.add('feed-item-line-rare');
+    }
     body.appendChild(lineEl);
 
     const timeEl = document.createElement('span');
