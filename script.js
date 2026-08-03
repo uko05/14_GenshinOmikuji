@@ -1327,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const streakResult = !debug ? updateStreak() : { count: 0, isReturn: false };
     scheduleSync(); // name, birthday, result, streak を Firestore へ同期
     renderStreak();
-    runFortune(birthday, name, effectiveCardIndex, isReversed, false, false, true);
+    runFortune(birthday, name, effectiveCardIndex, isReversed);
     document.getElementById('result').style.display = 'block';
     document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
     if (!debug) {
@@ -1339,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ===== メイン占い処理 =====
 // skipStats=true のとき Firebase 送信・状態更新をスキップ（言語再描画用）
-function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, skipStats = false, isNewDraw = false) {
+function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, skipStats = false) {
   if (!skipStats) {
     lastFortuneBirthday    = birthday;
     lastFortuneName        = name;
@@ -1438,9 +1438,7 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, s
       bioEmotional:    Math.round(bio.emotional    * 1000) / 1000,
       bioIntellectual: Math.round(bio.intellectual * 1000) / 1000,
     });
-    if (isNewDraw) {
-      submitFeedEntry({ name, cardName: card.name, fortuneLevel });
-    }
+    submitFeedEntry({ name, cardName: card.name, fortuneLevel });
   }
 }
 

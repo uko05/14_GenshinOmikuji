@@ -70,8 +70,18 @@ async function initPlayerAvatar() {
   });
 }
 
-// ===== フィード投稿（新規占い時のみ呼ばれる） =====
+// ===== フィード投稿(1日1回のみ。runFortune()のスキップされない全経路から呼ばれるが、
+//       既に当日分を投稿済みなら何もしない) =====
+const LS_FEED_POSTED_DATE = 'genshinOmikuji_feedPostedDate';
+
+function todayStr() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 export async function submitFeedEntry({ name, cardName, fortuneLevel }) {
+  const today = todayStr();
+  if (localStorage.getItem(LS_FEED_POSTED_DATE) === today) return;
   try {
     const userId = getUserId();
     const avatar = await getMyAvatar(userId);
@@ -85,6 +95,7 @@ export async function submitFeedEntry({ name, cardName, fortuneLevel }) {
       likeCount: 0,
       createdAt: serverTimestamp(),
     });
+    localStorage.setItem(LS_FEED_POSTED_DATE, today);
   } catch (e) {
     console.error('[feed] submit failed', e);
   }
