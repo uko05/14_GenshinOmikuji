@@ -1,11 +1,14 @@
 // feed.js
 // みんなの結果フィード・いいね・いいね通知・アバター表示
-import { db } from './firebaseConfig.js';
+import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js';
 import {
   collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, onSnapshot,
   query, where, orderBy, limit, serverTimestamp, increment, Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { genshinChars } from 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/chara_data/genshin_chars.js';
+import { starrailChars } from 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/02_Starrail/chara_data/starrail_chars.js';
 
 const GENSHIN_ICON_BASE  = 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/chara_icon/';
 const STARRAIL_ICON_BASE = 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/02_Starrail/chara_icon/';
@@ -20,6 +23,8 @@ const STR = {
     justNow:   'たった今',
     minAgo:    (n) => `${n}分前`,
     hourAgo:   (n) => `${n}時間前`,
+    normalLine: (name, level) => `${name}さんが${level}を引きました`,
+    rareLine:   (name, card)  => `${name}さんが${card}を引き当てました！`,
   },
   en: {
     noName:    'Nameless Traveler',
@@ -29,9 +34,31 @@ const STR = {
     justNow:   'just now',
     minAgo:    (n) => `${n}m ago`,
     hourAgo:   (n) => `${n}h ago`,
+    normalLine: (name, level) => `${name} got ${level}!`,
+    rareLine:   (name, card)  => `${name} drew ${card}!!`,
   },
 };
 function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
+
+const auth = getAuth(app);
+let authUid = null;
+const authReady = new Promise((resolve) => {
+  onAuthStateChanged(auth, (user) => {
+    authUid = user ? user.uid : null;
+    resolve();
+  });
+});
+
+const ELEM_LABELS = {
+  ja: { hi: '炎', mizu: '水', koori: '氷', kaminari: '雷', kusa: '草', kaze: '風', iwa: '岩', kyosuu: '虚数', ryoushi: '量子', butsuri: '物理' },
+  en: { hi: 'Fire', mizu: 'Hydro', koori: 'Ice', kaminari: 'Lightning', kusa: 'Dendro', kaze: 'Wind', iwa: 'Geo', kyosuu: 'Imaginary', ryoushi: 'Quantum', butsuri: 'Physical' },
+};
+const GAME_ELEMS = {
+  genshin:  ['hi', 'mizu', 'koori', 'kaminari', 'kusa', 'kaze', 'iwa'],
+  starrail: ['hi', 'koori', 'kaze', 'kaminari', 'kyosuu', 'ryoushi', 'butsuri'],
+};
+const GAME_CHARS = { genshin: genshinChars, starrail: starrailChars };
+const GAME_ICON_BASE = { genshin: GENSHIN_ICON_BASE, starrail: STARRAIL_ICON_BASE };
 
 function avatarUrl(game, icon) {
   if (!game || !icon) return DEFAULT_AVATAR_URL;
@@ -63,11 +90,109 @@ async function initPlayerAvatar() {
   if (!img) return;
   const avatar = await getMyAvatar(getUserId());
   img.src = avatarUrl(avatar.game, avatar.icon);
-  img.addEventListener('click', () => {
-    if (avatar.game && avatar.icon) return; // 設定済みの人は変更不可（AccountCenter側で変更）
-    const modal = document.getElementById('avatar-nudge-modal');
-    if (modal) modal.style.display = 'flex';
+
+  img.addEventListener('click', async () => {
+    await authReady;
+    if (authUid) {
+      openAvatarPicker();
+    } else {
+      const modal = document.getElementById('avatar-nudge-modal');
+      if (modal) modal.style.display = 'flex';
+    }
   });
+}
+
+// ===== アバター選択ポップ（AccountCenterにログイン中のみ。24_AccountCenterと同じ
+//       ゲームタブ→属性タブ→アイコン一覧UIをここにも移植） =====
+let pickerGame = 'genshin';
+let pickerElem = GAME_ELEMS.genshin[0];
+
+function openAvatarPicker() {
+  const modal = document.getElementById('avatar-picker-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  renderPickerGameTabs();
+  renderPickerElemTabs();
+  renderPickerCharList();
+}
+
+function closeAvatarPicker() {
+  const modal = document.getElementById('avatar-picker-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function renderPickerGameTabs() {
+  const bar = document.getElementById('avatar-picker-game-tabs');
+  if (!bar) return;
+  bar.innerHTML = '';
+  const isEn = store.lang === 'en';
+  [['genshin', isEn ? 'Genshin' : '原神'], ['starrail', isEn ? 'Star Rail' : 'スタレ']].forEach(([game, label]) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'avatar-game-tab-btn' + (game === pickerGame ? ' active' : '');
+    btn.textContent = label;
+    btn.addEventListener('click', () => {
+      pickerGame = game;
+      pickerElem = GAME_ELEMS[game][0];
+      renderPickerGameTabs();
+      renderPickerElemTabs();
+      renderPickerCharList();
+    });
+    bar.appendChild(btn);
+  });
+}
+
+function renderPickerElemTabs() {
+  const bar = document.getElementById('avatar-picker-elem-tabs');
+  if (!bar) return;
+  bar.innerHTML = '';
+  const labels = ELEM_LABELS[store.lang === 'en' ? 'en' : 'ja'];
+  GAME_ELEMS[pickerGame].forEach((elem) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'avatar-elem-tab-btn' + (elem === pickerElem ? ' active' : '');
+    btn.textContent = labels[elem];
+    btn.addEventListener('click', () => {
+      pickerElem = elem;
+      renderPickerElemTabs();
+      renderPickerCharList();
+    });
+    bar.appendChild(btn);
+  });
+}
+
+function renderPickerCharList() {
+  const list = document.getElementById('avatar-picker-char-list');
+  if (!list) return;
+  list.innerHTML = '';
+  const chars = GAME_CHARS[pickerGame].filter((c) => c.element === pickerElem);
+  chars.forEach((c) => {
+    const name = c.name || c.icon.replace(/\.\w+$/, '');
+    const thumb = document.createElement('button');
+    thumb.type = 'button';
+    thumb.className = 'avatar-picker-thumb';
+    thumb.title = name;
+    const img = document.createElement('img');
+    img.src = GAME_ICON_BASE[pickerGame] + c.icon;
+    img.alt = name;
+    img.loading = 'lazy';
+    thumb.appendChild(img);
+    thumb.addEventListener('click', () => selectAvatarFromPicker(pickerGame, c.icon));
+    list.appendChild(thumb);
+  });
+}
+
+async function selectAvatarFromPicker(game, icon) {
+  try {
+    await setDoc(doc(db, 'userAvatars', getUserId()), {
+      game, icon, updatedAt: serverTimestamp(),
+    });
+    const img = document.getElementById('player-avatar');
+    if (img) img.src = avatarUrl(game, icon);
+    closeAvatarPicker();
+  } catch (e) {
+    console.error('[feed] avatar select failed', e);
+  }
 }
 
 // ===== フィード投稿(1日1回のみ。runFortune()のスキップされない全経路から呼ばれるが、
@@ -79,7 +204,7 @@ function todayStr() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-export async function submitFeedEntry({ name, cardName, fortuneLevel }) {
+export async function submitFeedEntry({ name, cardName, fortuneLevel, isRare }) {
   const today = todayStr();
   if (localStorage.getItem(LS_FEED_POSTED_DATE) === today) return;
   try {
@@ -90,6 +215,7 @@ export async function submitFeedEntry({ name, cardName, fortuneLevel }) {
       name: name || '',
       cardName: cardName || '',
       fortuneLevel: fortuneLevel || '',
+      isRare: !!isRare,
       avatarGame: avatar.game,
       avatarIcon: avatar.icon,
       likeCount: 0,
@@ -165,17 +291,16 @@ function renderFeedList(entries) {
     const body = document.createElement('div');
     body.className = 'feed-item-body';
 
-    const nameEl = document.createElement('div');
-    nameEl.className = 'feed-item-name';
-    nameEl.textContent = entry.name || s().noName;
-    body.appendChild(nameEl);
+    const name = entry.name || s().noName;
+    const lineEl = document.createElement('span');
+    lineEl.className = 'feed-item-line';
+    lineEl.textContent = entry.isRare
+      ? s().rareLine(name, entry.cardName || entry.fortuneLevel)
+      : s().normalLine(name, entry.fortuneLevel || entry.cardName);
+    if (entry.isRare) lineEl.classList.add('feed-item-line-rare');
+    body.appendChild(lineEl);
 
-    const resultEl = document.createElement('div');
-    resultEl.className = 'feed-item-result';
-    resultEl.textContent = [entry.cardName, entry.fortuneLevel].filter(Boolean).join(' ');
-    body.appendChild(resultEl);
-
-    const timeEl = document.createElement('div');
+    const timeEl = document.createElement('span');
     timeEl.className = 'feed-item-time';
     timeEl.textContent = relTime(entry.createdAt);
     body.appendChild(timeEl);
@@ -354,4 +479,9 @@ export function initFeed() {
   if (nudgeClose) nudgeClose.addEventListener('click', closeAvatarNudgeModal);
   const nudgeBackdrop = document.querySelector('#avatar-nudge-modal .col-modal-backdrop');
   if (nudgeBackdrop) nudgeBackdrop.addEventListener('click', closeAvatarNudgeModal);
+
+  const pickerClose = document.getElementById('avatar-picker-close');
+  if (pickerClose) pickerClose.addEventListener('click', closeAvatarPicker);
+  const pickerBackdrop = document.querySelector('#avatar-picker-modal .col-modal-backdrop');
+  if (pickerBackdrop) pickerBackdrop.addEventListener('click', closeAvatarPicker);
 }

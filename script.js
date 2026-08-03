@@ -1438,7 +1438,7 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, s
       bioEmotional:    Math.round(bio.emotional    * 1000) / 1000,
       bioIntellectual: Math.round(bio.intellectual * 1000) / 1000,
     });
-    submitFeedEntry({ name, cardName: card.name, fortuneLevel });
+    submitFeedEntry({ name, cardName: card.name, fortuneLevel, isRare });
   }
 }
 
