@@ -230,15 +230,33 @@ export async function submitFeedEntry({ name, cardName, fortuneLevel, isRare }) 
 // ===== いいね =====
 const myLikedIds = new Set();
 
+// デバッガー・管理者ロールは確認用に同じ投稿へ何度でもいいねできる
+let isFeedDebugger = false;
+async function loadFeedDebuggerRole() {
+  try {
+    const snap = await getDoc(doc(db, 'sharedUserRoles', getUserId()));
+    if (snap.exists()) {
+      const d = snap.data();
+      isFeedDebugger = d.role === 'admin' || d.role === 'debugger' || !!d.debugOmikuji;
+    }
+  } catch (e) {
+    console.warn('[feed] role fetch failed', e);
+  }
+}
+
 async function toggleLike(entry, likeBtn) {
   const myUserId = getUserId();
-  if (myUserId === entry.userId || myLikedIds.has(entry.id)) return;
+  if (!isFeedDebugger && (myUserId === entry.userId || myLikedIds.has(entry.id))) return;
 
   likeBtn.disabled = true;
   try {
-    const likeRef = doc(db, 'omikujiFeed', entry.id, 'likes', myUserId);
-    const already = await getDoc(likeRef);
-    if (already.exists()) { myLikedIds.add(entry.id); return; }
+    // デバッガー・管理者は毎回別ドキュメントにして重複いいねチェックをすり抜けて何度でも押せるようにする
+    const likeDocId = isFeedDebugger ? `${myUserId}_${Date.now()}` : myUserId;
+    const likeRef = doc(db, 'omikujiFeed', entry.id, 'likes', likeDocId);
+    if (!isFeedDebugger) {
+      const already = await getDoc(likeRef);
+      if (already.exists()) { myLikedIds.add(entry.id); return; }
+    }
 
     await setDoc(likeRef, { likedAt: serverTimestamp() });
     await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(1) });
@@ -259,7 +277,7 @@ async function toggleLike(entry, likeBtn) {
   } catch (e) {
     console.error('[feed] like failed', e);
   } finally {
-    likeBtn.disabled = myLikedIds.has(entry.id);
+    likeBtn.disabled = isFeedDebugger ? false : myLikedIds.has(entry.id);
   }
 }
 
@@ -312,10 +330,11 @@ function renderFeedList(entries) {
     likeBtn.innerHTML = `<span class="feed-like-icon">👍</span><span class="feed-like-count">${entry.likeCount || 0}</span>`;
     const isMine  = entry.userId === myUserId;
     const isLiked = myLikedIds.has(entry.id);
-    if (isMine || isLiked) {
+    if (!isFeedDebugger && (isMine || isLiked)) {
       likeBtn.disabled = true;
       if (isLiked) likeBtn.classList.add('liked');
     } else {
+      if (isLiked) likeBtn.classList.add('liked');
       likeBtn.addEventListener('click', () => toggleLike(entry, likeBtn));
     }
     item.appendChild(likeBtn);
@@ -462,8 +481,9 @@ function closeAvatarNudgeModal() {
 }
 
 // ===== 初期化 =====
-export function initFeed() {
+export async function initFeed() {
   initPlayerAvatar();
+  await loadFeedDebuggerRole();
   startFeedListener();
   startNotifListener();
 

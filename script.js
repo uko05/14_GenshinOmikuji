@@ -1181,7 +1181,11 @@ function isDebugMode() {
 async function loadDebuggerRole() {
   try {
     const snap = await getDoc(doc(db, 'sharedUserRoles', getUserId()));
-    isOmikujiDebugger = !!(snap.exists() && snap.data().debugOmikuji);
+    if (snap.exists()) {
+      const d = snap.data();
+      // 管理者はデバッガーの上位ロールなので、admin/debugger いずれの role でもデバッグ扱いにする
+      isOmikujiDebugger = d.role === 'admin' || d.role === 'debugger' || !!d.debugOmikuji;
+    }
   } catch (e) {
     console.warn('[debug] ロール取得に失敗:', e);
   }
