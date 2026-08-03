@@ -3,6 +3,7 @@ import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
+import { initFeed, submitFeedEntry } from './feed.js';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js';
 import { db } from './firebaseConfig.js';
@@ -153,6 +154,12 @@ const i18n = {
     yakuNoGender:   '性別を選択してください',
     yakuFutureLabel: '次の本厄',
     yakuAllPassed:   'これ以降の本厄はありません',
+    feedTitle:       'みんなの結果（24時間以内）',
+    feedEmpty:       'まだ結果がありません',
+    notifPanelTitle: 'いいね履歴',
+    notifPanelEmpty: 'まだいいねはありません',
+    avatarNudgeText: 'アカウント登録することで変更できます',
+    avatarNudgeBtn:  'アカウント登録へ',
   },
   en: {
     headerSub:        'Fortune reading with Zodiac, Biorhythm & Arcana',
@@ -221,6 +228,12 @@ const i18n = {
     yakuNoGender:   'Select a gender',
     yakuFutureLabel: 'Next Yakudoshi',
     yakuAllPassed:   'All unlucky years have passed',
+    feedTitle:       "Everyone's Results (last 24h)",
+    feedEmpty:       'No results yet',
+    notifPanelTitle: 'Like History',
+    notifPanelEmpty: 'No likes yet',
+    avatarNudgeText: 'Register an account to customize this.',
+    avatarNudgeBtn:  'Go to Registration',
   },
 };
 
@@ -1195,6 +1208,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 言語切り替え初期化
   initLangSwitch();
 
+  // みんなの結果フィード・いいね通知・アバター初期化
+  initFeed();
+
   // キャラクター画像
   document.getElementById('chara-left').src  = omikujiFolder + 'yaemiko01.png';
   document.getElementById('chara-right').src = omikujiFolder + 'mona02.png';
@@ -1311,7 +1327,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const streakResult = !debug ? updateStreak() : { count: 0, isReturn: false };
     scheduleSync(); // name, birthday, result, streak を Firestore へ同期
     renderStreak();
-    runFortune(birthday, name, effectiveCardIndex, isReversed);
+    runFortune(birthday, name, effectiveCardIndex, isReversed, false, false, true);
     document.getElementById('result').style.display = 'block';
     document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
     if (!debug) {
@@ -1323,7 +1339,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ===== メイン占い処理 =====
 // skipStats=true のとき Firebase 送信・状態更新をスキップ（言語再描画用）
-function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, skipStats = false) {
+function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, skipStats = false, isNewDraw = false) {
   if (!skipStats) {
     lastFortuneBirthday    = birthday;
     lastFortuneName        = name;
@@ -1422,6 +1438,9 @@ function runFortune(birthday, name, cardIndex, isReversed, isRestored = false, s
       bioEmotional:    Math.round(bio.emotional    * 1000) / 1000,
       bioIntellectual: Math.round(bio.intellectual * 1000) / 1000,
     });
+    if (isNewDraw) {
+      submitFeedEntry({ name, cardName: card.name, fortuneLevel });
+    }
   }
 }
 

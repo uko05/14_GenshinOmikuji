@@ -43,8 +43,11 @@
 
     <div class="input-grid">
       <div class="input-group input-name">
-        <label for="player-name" data-i18n="labelName">名前（任意）</label>
-        <input type="text" id="player-name" placeholder="あなたの名前" maxlength="20">
+        <img id="player-avatar" class="player-avatar" src="" alt="" title="">
+        <div class="input-name-fields">
+          <label for="player-name" data-i18n="labelName">名前（任意）</label>
+          <input type="text" id="player-name" placeholder="あなたの名前" maxlength="20">
+        </div>
       </div>
       <div class="input-group input-birthday">
         <label for="birthday" data-i18n="labelBirthday">生年月日</label>
@@ -64,6 +67,12 @@
       <button class="fortune-btn" id="fortune-btn" disabled data-i18n="fortuneBtn">今日の運勢を占う</button>
       <img id="chara-right" src="" alt="" class="chara-deco chara-right">
     </div>
+  </section>
+
+  <!-- みんなの結果フィード -->
+  <section id="feed-section" class="section">
+    <div class="section-title" data-i18n="feedTitle">みんなの結果（24時間以内）</div>
+    <div id="feed-list" class="feed-list"></div>
   </section>
 
   <!-- 結果（占うまで非表示） -->
@@ -226,6 +235,35 @@
   <div class="ach-toast-label"     id="ach-toast-label">✦ アチーブメント解放！</div>
   <div class="ach-toast-name"      id="ach-toast-name"></div>
   <div class="ach-toast-condition" id="ach-toast-condition"></div>
+</div>
+
+<!-- いいね通知トースト -->
+<div id="like-toast" class="like-toast" style="display:none;">
+  <img id="like-toast-avatar" class="like-toast-avatar" src="" alt="">
+  <div id="like-toast-text" class="like-toast-text"></div>
+</div>
+
+<!-- いいね通知ベル -->
+<button id="notif-bell" class="notif-bell" aria-label="いいね通知" title="いいね通知">🔔</button>
+
+<!-- いいね履歴パネル -->
+<div id="notif-panel" class="col-modal" style="display:none;">
+  <div class="col-modal-backdrop"></div>
+  <div class="col-modal-content notif-panel-content">
+    <button id="notif-panel-close" class="col-modal-close" aria-label="close">×</button>
+    <div class="notif-panel-title" data-i18n="notifPanelTitle">いいね履歴</div>
+    <div id="notif-panel-list" class="notif-panel-list"></div>
+  </div>
+</div>
+
+<!-- アバター未設定時の登録導線ポップ -->
+<div id="avatar-nudge-modal" class="col-modal" style="display:none;">
+  <div class="col-modal-backdrop"></div>
+  <div class="col-modal-content avatar-nudge-content">
+    <button id="avatar-nudge-close" class="col-modal-close" aria-label="close">×</button>
+    <p class="avatar-nudge-text" data-i18n="avatarNudgeText">アカウント登録することで変更できます</p>
+    <a href="https://uko05.github.io/24_AccountCenter/" target="_blank" rel="noopener" class="avatar-nudge-btn" data-i18n="avatarNudgeBtn">アカウント登録へ</a>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>

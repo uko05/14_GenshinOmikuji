@@ -645,9 +645,28 @@ main {
   text-align: left;
 }
 
-.input-name     { grid-column: 1; grid-row: 1; }
+.input-name     { grid-column: 1; grid-row: 1; flex-direction: row; align-items: center; gap: 10px; }
 .input-birthday { grid-column: 2; grid-row: 1; }
 .input-gender   { grid-column: 1 / 3; grid-row: 2; justify-self: center; }
+
+.input-name-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.player-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  background: var(--surface2);
+  cursor: pointer;
+  flex-shrink: 0;
+}
 
 .input-group {
   flex: 1;
@@ -1275,6 +1294,218 @@ footer {
 .ach-toast-condition {
   font-size: 0.75rem;
   color: var(--muted);
+}
+
+/* ===== みんなの結果フィード ===== */
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.feed-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 10px 0;
+}
+
+.feed-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.feed-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.feed-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.feed-item-name {
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feed-item-result {
+  font-size: 0.8rem;
+  color: var(--gold);
+}
+
+.feed-item-time {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.feed-like-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.82rem;
+  padding: 6px 12px;
+  flex-shrink: 0;
+}
+.feed-like-btn:disabled { cursor: default; opacity: 0.7; }
+.feed-like-btn.liked { border-color: var(--accent); background: rgba(255,204,0,0.15); }
+.feed-like-icon { font-size: 0.9rem; }
+
+/* ===== いいね通知トースト（アチーブトーストより薄め・短時間） ===== */
+@keyframes like-toast-in {
+  from { transform: translateX(-50%) translateY(80px); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0);    opacity: 1; }
+}
+@keyframes like-toast-out {
+  from { transform: translateX(-50%) translateY(0);    opacity: 1; }
+  to   { transform: translateX(-50%) translateY(80px); opacity: 0; }
+}
+
+.like-toast {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1e2140;
+  border: 2px solid var(--accent);
+  border-radius: 30px;
+  padding: 6px 16px 6px 6px;
+  width: max-content;
+  max-width: min(80vw, 340px);
+  z-index: 2050;
+  pointer-events: none;
+}
+.like-toast-show { animation: like-toast-in 0.32s ease-out forwards; }
+.like-toast-hide  { animation: like-toast-out 0.32s ease-in forwards; }
+
+.like-toast-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.like-toast-text {
+  font-size: 0.78rem;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ===== 通知ベル ===== */
+.notif-bell {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  font-size: 1.3rem;
+  cursor: pointer;
+  z-index: 900;
+}
+
+.notif-panel-content { text-align: left; }
+
+.notif-panel-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--gold);
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.notif-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.notif-empty {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 10px 0;
+}
+
+.notif-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.notif-row-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface2);
+  flex-shrink: 0;
+}
+
+.notif-row-col { flex: 1; min-width: 0; }
+
+.notif-row-text {
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+.notif-row-time {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+/* ===== アバター未登録ポップ ===== */
+.avatar-nudge-content { text-align: center; }
+
+.avatar-nudge-text {
+  font-size: 0.88rem;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.avatar-nudge-btn {
+  display: inline-block;
+  background: var(--accent);
+  border-radius: 50px;
+  color: var(--text);
+  font-weight: bold;
+  font-size: 0.85rem;
+  padding: 10px 24px;
+  text-decoration: none;
 }
 
 /* ===== 性別ラジオ ===== */
