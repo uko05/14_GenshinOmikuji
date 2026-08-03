@@ -312,6 +312,7 @@ async function toggleLike(entry, likeBtn, opts = {}) {
       // デバッガー・管理者: 確認用にいいねを取り消して再度押せる状態に戻す
       await deleteDoc(likeRef);
       await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(-1) });
+      await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(-1) }, { merge: true });
       myLikedIds.delete(entry.id);
       likeBtn.classList.remove('liked');
       return;
@@ -319,6 +320,7 @@ async function toggleLike(entry, likeBtn, opts = {}) {
 
     await setDoc(likeRef, { likedAt: serverTimestamp() });
     await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(1) });
+    await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(1) }, { merge: true });
     myLikedIds.add(entry.id);
     likeBtn.classList.add('liked');
 
@@ -409,10 +411,13 @@ function renderFeedList(entries) {
   });
 }
 
-const FEED_WINDOW_HOURS = 5;
+const FEED_WINDOW_HOURS = 24;
+// テスト期間中のデータを一覧から除外するための下限(2026-08-04 00:00 ローカル時刻以降のみ表示)
+const FEED_CUTOFF_MS = new Date(2026, 7, 4, 0, 0, 0).getTime();
 
 function startFeedListener() {
-  const since = Timestamp.fromMillis(Date.now() - FEED_WINDOW_HOURS * 60 * 60 * 1000);
+  const rollingSinceMs = Date.now() - FEED_WINDOW_HOURS * 60 * 60 * 1000;
+  const since = Timestamp.fromMillis(Math.max(rollingSinceMs, FEED_CUTOFF_MS));
   const q = query(
     collection(db, 'omikujiFeed'),
     where('createdAt', '>=', since),
