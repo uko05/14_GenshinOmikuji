@@ -153,6 +153,22 @@ main {
   margin-top: 8px;
 }
 
+.hide-feed-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+.hide-feed-label input[type="checkbox"] {
+  width: auto;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .chara-deco {
   height: 90px;
   object-fit: contain;
@@ -1435,7 +1451,7 @@ footer {
 
 .like-toast {
   position: fixed;
-  bottom: 100px;
+  bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;

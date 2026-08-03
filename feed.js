@@ -231,6 +231,7 @@ function todayStr() {
 }
 
 export async function submitFeedEntry({ name, cardName, fortuneLevel, isRare }) {
+  if (store.hideFromFeed) return;
   const today = todayStr();
   if (localStorage.getItem(LS_FEED_POSTED_DATE) === today) return;
   try {
@@ -256,6 +257,7 @@ export async function submitFeedEntry({ name, cardName, fortuneLevel, isRare }) 
 
 // ===== アチーブメント獲得のフィード投稿(新規解放ごとに呼ばれる、遡及・サイレント解放時は呼ばない) =====
 export async function submitAchievementFeedEntry({ name, achievementName, rarity }) {
+  if (store.hideFromFeed) return;
   try {
     const userId = getUserId();
     const avatar = await getMyAvatar(userId);
@@ -407,8 +409,10 @@ function renderFeedList(entries) {
   });
 }
 
+const FEED_WINDOW_HOURS = 5;
+
 function startFeedListener() {
-  const since = Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
+  const since = Timestamp.fromMillis(Date.now() - FEED_WINDOW_HOURS * 60 * 60 * 1000);
   const q = query(
     collection(db, 'omikujiFeed'),
     where('createdAt', '>=', since),

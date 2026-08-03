@@ -56,6 +56,7 @@ export const store = {
   collection:   new Set(),
   achievements: new Set(),
   achStats:     null,
+  hideFromFeed: false,
 };
 
 // ===== Firestore からロード =====
@@ -76,6 +77,7 @@ export async function loadUserDataFromFirestore() {
       if (d.collection   != null) store.collection   = new Set(d.collection);
       if (d.achievements != null) store.achievements = new Set(d.achievements);
       if (d.achStats     != null) store.achStats = d.achStats;
+      if (d.hideFromFeed != null) store.hideFromFeed = d.hideFromFeed;
       console.log('[userData] Loaded from Firestore:', userId);
       return true;
     }
@@ -141,6 +143,7 @@ export async function syncUserDataToFirestore() {
       collection:   [...store.collection],
       achievements: [...store.achievements],
       achStats:     store.achStats,
+      hideFromFeed: store.hideFromFeed,
       updatedAt:    serverTimestamp(),
     };
     await setDoc(doc(db, 'omikujiUsers', userId), payload, { merge: true });

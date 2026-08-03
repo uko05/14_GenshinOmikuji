@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="生年月日から今日の運勢を占う原神テーマのおみくじサイト。星座占い・バイオリズム・原神アルカナタロットで今日の運勢をチェック！">
   <title>原神おみくじ - うーこの部屋</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=5">
 
   <!-- Favicon -->
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/favicon.ico" type="image/x-icon">
@@ -67,6 +67,10 @@
       <button class="fortune-btn" id="fortune-btn" disabled data-i18n="fortuneBtn">今日の運勢を占う</button>
       <img id="chara-right" src="" alt="" class="chara-deco chara-right">
     </div>
+    <label class="hide-feed-label">
+      <input type="checkbox" id="hide-feed-checkbox">
+      <span data-i18n="hideFeedLabel">自分の占いを公開しない</span>
+    </label>
   </section>
 
   <!-- みんなの結果フィード -->
@@ -278,7 +282,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script type="module" src="script.js"></script>
+<script type="module" src="script.js?v=5"></script>
 <script type="module" src="https://uko05.github.io/24_AccountCenter/account-status.js"></script>
 <script src="https://uko05.github.io/TopPage00/shared/sidebar.js"></script>
 </body>
