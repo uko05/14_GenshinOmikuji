@@ -84,12 +84,35 @@ function relTime(ts) {
   return s().hourAgo(Math.floor(min / 60));
 }
 
+// 直近の自分のフィード投稿が今のアバターと食い違っていたら更新する
+// (投稿時点のアバターを非正規化しているため、投稿後にアバターを設定/変更した場合に必要)
+async function syncLatestFeedAvatar(userId, avatar) {
+  try {
+    const q = query(
+      collection(db, 'omikujiFeed'),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(1)
+    );
+    const snap = await getDocs(q);
+    if (snap.empty) return;
+    const docSnap = snap.docs[0];
+    const d = docSnap.data();
+    if ((d.avatarGame || null) !== (avatar.game || null) || (d.avatarIcon || null) !== (avatar.icon || null)) {
+      await updateDoc(docSnap.ref, { avatarGame: avatar.game || null, avatarIcon: avatar.icon || null });
+    }
+  } catch (e) {
+    console.warn('[feed] avatar sync failed', e);
+  }
+}
+
 // ===== 自分のアバター表示（名前欄の左） =====
 async function initPlayerAvatar() {
   const img = document.getElementById('player-avatar');
   if (!img) return;
   const avatar = await getMyAvatar(getUserId());
   img.src = avatarUrl(avatar.game, avatar.icon);
+  syncLatestFeedAvatar(getUserId(), avatar);
 
   img.addEventListener('click', async () => {
     await authReady;
@@ -189,6 +212,7 @@ async function selectAvatarFromPicker(game, icon) {
     });
     const img = document.getElementById('player-avatar');
     if (img) img.src = avatarUrl(game, icon);
+    syncLatestFeedAvatar(getUserId(), { game, icon });
     closeAvatarPicker();
   } catch (e) {
     console.error('[feed] avatar select failed', e);
@@ -244,9 +268,13 @@ async function loadFeedDebuggerRole() {
   }
 }
 
-async function toggleLike(entry, likeBtn) {
+async function toggleLike(entry, likeBtn, opts = {}) {
   const myUserId = getUserId();
-  if (!isFeedDebugger && (myUserId === entry.userId || myLikedIds.has(entry.id))) return;
+  const allowSelf = !!opts.allowSelf;
+  if (!isFeedDebugger) {
+    if (!allowSelf && myUserId === entry.userId) return;
+    if (myLikedIds.has(entry.id)) return;
+  }
 
   likeBtn.disabled = true;
   try {
@@ -462,6 +490,14 @@ async function openNotifPanel() {
       col.appendChild(text);
       col.appendChild(time);
       row.appendChild(col);
+
+      const likeBtn = document.createElement('button');
+      likeBtn.className = 'feed-like-btn notif-row-like-btn';
+      likeBtn.innerHTML = '<span class="feed-like-icon">👍</span>';
+      likeBtn.addEventListener('click', () => {
+        toggleLike({ id: d.feedId, userId: d.toUserId }, likeBtn, { allowSelf: true });
+      });
+      row.appendChild(likeBtn);
 
       listEl.appendChild(row);
     });
