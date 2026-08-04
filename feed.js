@@ -225,8 +225,9 @@ async function selectAvatarFromPicker(game, icon) {
   }
 }
 
-// ===== フィード投稿(1日1回のみ。runFortune()のスキップされない全経路から呼ばれるが、
-//       既に当日分を投稿済みなら何もしない) =====
+// ===== フィード投稿(通常ユーザーは1日1回のみ。runFortune()のスキップされない全経路から
+//       呼ばれるが、既に当日分を投稿済みなら何もしない。デバッガー・管理者ロールは
+//       確認用にこの日次制限を無視して毎回投稿する) =====
 const LS_FEED_POSTED_DATE = 'genshinOmikuji_feedPostedDate';
 
 function todayStr() {
@@ -237,7 +238,7 @@ function todayStr() {
 export async function submitFeedEntry({ name, cardName, fortuneLevel, isRare }) {
   if (store.hideFromFeed) return;
   const today = todayStr();
-  if (localStorage.getItem(LS_FEED_POSTED_DATE) === today) return;
+  if (!isFeedDebugger && localStorage.getItem(LS_FEED_POSTED_DATE) === today) return;
   try {
     const userId = getUserId();
     const avatar = await getMyAvatar(userId);
