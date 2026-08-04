@@ -26,6 +26,8 @@ const STR = {
     normalLine: (name, level) => `${name}さんが${level}を引きました`,
     rareLine:   (name, card)  => `${name}さんが${card}を引き当てました！`,
     achLine:    (name, ach)   => `${name}さんが「${ach}」を取得しました！`,
+    statsGivenInfo:    '「アゲいいね！」は、あなたが他の人の結果にいいねした回数です。今後実装予定のゲームで使えるポイントになる予定なので、コツコツ貯めておこう！',
+    statsReceivedInfo: '「モラいいね！」は、あなたの結果に他の人からもらったいいねの回数です。こちらも今後実装予定のゲームで使えるポイントになる予定です！',
   },
   en: {
     noName:    'Nameless Traveler',
@@ -38,6 +40,8 @@ const STR = {
     normalLine: (name, level) => `${name} got ${level}!`,
     rareLine:   (name, card)  => `${name} drew ${card}!!`,
     achLine:    (name, ach)   => `${name} unlocked "${ach}"!`,
+    statsGivenInfo:    '"Given" counts how many times you\'ve liked other people\'s results. It\'s planned to become usable points in a future game feature, so keep stacking them up!',
+    statsReceivedInfo: '"Received" counts how many times other people have liked your results. This will also become usable points in a future game feature!',
   },
 };
 function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
@@ -592,4 +596,25 @@ export async function initFeed() {
   if (pickerClose) pickerClose.addEventListener('click', closeAvatarPicker);
   const pickerBackdrop = document.querySelector('#avatar-picker-modal .col-modal-backdrop');
   if (pickerBackdrop) pickerBackdrop.addEventListener('click', closeAvatarPicker);
+
+  const givenItem = document.getElementById('stats-given-item');
+  if (givenItem) givenItem.addEventListener('click', () => openStatsInfoModal(s().statsGivenInfo));
+  const receivedItem = document.getElementById('stats-received-item');
+  if (receivedItem) receivedItem.addEventListener('click', () => openStatsInfoModal(s().statsReceivedInfo));
+  const statsInfoClose = document.getElementById('stats-info-close');
+  if (statsInfoClose) statsInfoClose.addEventListener('click', closeStatsInfoModal);
+  const statsInfoBackdrop = document.querySelector('#stats-info-modal .col-modal-backdrop');
+  if (statsInfoBackdrop) statsInfoBackdrop.addEventListener('click', closeStatsInfoModal);
+}
+
+function openStatsInfoModal(text) {
+  const modal = document.getElementById('stats-info-modal');
+  const textEl = document.getElementById('stats-info-text');
+  if (textEl) textEl.textContent = text;
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeStatsInfoModal() {
+  const modal = document.getElementById('stats-info-modal');
+  if (modal) modal.style.display = 'none';
 }
