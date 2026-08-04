@@ -3,7 +3,7 @@
 import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js';
 import {
-  collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
+  collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
   query, where, orderBy, limit, serverTimestamp, increment, Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
@@ -323,7 +323,7 @@ async function toggleLike(entry, likeBtn) {
       return;
     }
 
-    await setDoc(likeRef, { likedAt: serverTimestamp() });
+    await setDoc(likeRef, { likedAt: serverTimestamp(), likerUserId: myUserId });
     myLikedIds.add(entry.id);
     likeBtn.classList.add('liked');
     await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(1) });
@@ -421,6 +421,8 @@ const FEED_WINDOW_HOURS = 24;
 // テスト期間中のデータを一覧から除外するための下限(2026-08-04 00:00 ローカル時刻以降のみ表示)
 const FEED_CUTOFF_MS = new Date(2026, 7, 4, 0, 0, 0).getTime();
 
+let latestFeedEntries = [];
+
 function startFeedListener() {
   const rollingSinceMs = Date.now() - FEED_WINDOW_HOURS * 60 * 60 * 1000;
   const since = Timestamp.fromMillis(Math.max(rollingSinceMs, FEED_CUTOFF_MS));
@@ -431,8 +433,24 @@ function startFeedListener() {
     limit(200)
   );
   onSnapshot(q, (snap) => {
-    renderFeedList(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    latestFeedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderFeedList(latestFeedEntries);
   }, (err) => console.error('[feed] listen failed', err));
+}
+
+// 自分が過去にいいねした投稿一覧をリアルタイム購読し、リロード直後や他端末での
+// いいねでもボタンの色・disabled状態が正しく反映されるようにする
+function startMyLikesListener() {
+  const myUserId = getUserId();
+  const q = query(collectionGroup(db, 'likes'), where('likerUserId', '==', myUserId));
+  onSnapshot(q, (snap) => {
+    myLikedIds.clear();
+    snap.docs.forEach((d) => {
+      const feedId = d.ref.parent.parent?.id;
+      if (feedId) myLikedIds.add(feedId);
+    });
+    renderFeedList(latestFeedEntries);
+  }, (err) => console.error('[feed] my-likes listen failed', err));
 }
 
 // ===== いいね通知トースト（アチーブトーストと同じキュー方式・薄め短時間） =====
@@ -576,6 +594,7 @@ export async function initFeed() {
   initPlayerAvatar();
   await loadFeedDebuggerRole();
   startFeedListener();
+  startMyLikesListener();
   startNotifListener();
   startStatsFooterListener();
 
