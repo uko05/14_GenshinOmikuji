@@ -294,12 +294,11 @@ async function loadFeedDebuggerRole() {
   }
 }
 
-async function toggleLike(entry, likeBtn, opts = {}) {
+async function toggleLike(entry, likeBtn) {
   const myUserId = getUserId();
-  const allowSelf = !!opts.allowSelf;
   const privileged = isFeedDebugger;
 
-  if (!privileged && !allowSelf && myUserId === entry.userId) return;
+  if (!privileged && myUserId === entry.userId) return;
   if (!privileged && myLikedIds.has(entry.id)) return;
 
   likeBtn.disabled = true;
@@ -310,19 +309,22 @@ async function toggleLike(entry, likeBtn, opts = {}) {
     if (already.exists()) {
       if (!privileged) { myLikedIds.add(entry.id); return; }
       // デバッガー・管理者: 確認用にいいねを取り消して再度押せる状態に戻す
+      // (再描画をトリガーするlikeCount更新より先にローカル状態を更新し、再描画時の色反映ズレを防ぐ)
       await deleteDoc(likeRef);
-      await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(-1) });
-      await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(-1) }, { merge: true });
       myLikedIds.delete(entry.id);
       likeBtn.classList.remove('liked');
+      await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(-1) });
+      await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(-1) }, { merge: true });
+      await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(-1) }, { merge: true });
       return;
     }
 
     await setDoc(likeRef, { likedAt: serverTimestamp() });
-    await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(1) });
-    await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(1) }, { merge: true });
     myLikedIds.add(entry.id);
     likeBtn.classList.add('liked');
+    await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(1) });
+    await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(1) }, { merge: true });
+    await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(1) }, { merge: true });
 
     const myAvatar = await getMyAvatar(myUserId);
     await addDoc(collection(db, 'omikujiLikeNotifications'), {
@@ -451,7 +453,7 @@ function processLikeToastQueue() {
   if (avatarImg) avatarImg.src = avatarUrl(notif.fromAvatarGame, notif.fromAvatarIcon);
   if (textEl) textEl.textContent = s().likeToast(notif.fromName || s().noName);
 
-  toast.style.display = 'block';
+  toast.style.display = 'flex';
   void toast.offsetWidth; // reflow
   toast.classList.remove('like-toast-hide');
   toast.classList.add('like-toast-show');
@@ -535,14 +537,6 @@ async function openNotifPanel() {
       col.appendChild(text);
       col.appendChild(time);
       row.appendChild(col);
-
-      const likeBtn = document.createElement('button');
-      likeBtn.className = 'feed-like-btn notif-row-like-btn';
-      likeBtn.innerHTML = '<span class="feed-like-icon">👍</span>';
-      likeBtn.addEventListener('click', () => {
-        toggleLike({ id: d.feedId, userId: d.toUserId }, likeBtn, { allowSelf: true });
-      });
-      row.appendChild(likeBtn);
 
       listEl.appendChild(row);
     });

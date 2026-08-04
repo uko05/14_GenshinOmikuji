@@ -3,7 +3,7 @@ import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry } from './feed.js?v=6';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry } from './feed.js?v=7';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js';
 import { db } from './firebaseConfig.js';
@@ -1263,10 +1263,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const storedBirthday = store.birthday;
   if (storedBirthday) {
     birthdayInput.value = storedBirthday;
-  } else {
-    const d = new Date();
-    d.setFullYear(d.getFullYear() - 20);
-    birthdayInput.value = d.toISOString().slice(0, 10);
   }
   updateFortuneBtn();
 
