@@ -423,6 +423,11 @@ const FEED_CUTOFF_MS = new Date(2026, 7, 4, 0, 0, 0).getTime();
 
 let latestFeedEntries = [];
 
+// 言語切り替え時、既にレンダリング済みのフィード一覧を今の言語で再描画する
+export function refreshFeedLang() {
+  renderFeedList(latestFeedEntries);
+}
+
 function startFeedListener() {
   const rollingSinceMs = Date.now() - FEED_WINDOW_HOURS * 60 * 60 * 1000;
   const since = Timestamp.fromMillis(Math.max(rollingSinceMs, FEED_CUTOFF_MS));

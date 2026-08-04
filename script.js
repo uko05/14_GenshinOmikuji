@@ -3,7 +3,7 @@ import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry } from './feed.js?v=10';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=11';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js';
 import { db } from './firebaseConfig.js';
@@ -669,6 +669,7 @@ function renderAchievements() {
 function applyLang(lang) {
   currentLang = lang;
   document.documentElement.lang = lang === 'en' ? 'en' : 'ja';
+  document.title = lang === 'en' ? 'Genshin Omikuji - Uko\'s Room' : '原神おみくじ - うーこの部屋';
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.dataset.i18n;
     if (i18n[lang][key] !== undefined) el.textContent = i18n[lang][key];
@@ -683,6 +684,7 @@ function applyLang(lang) {
   renderCollection();
   renderStreak();
   renderAchievements();
+  refreshFeedLang();
 }
 
 // ===== アルカナ図鑑 =====
