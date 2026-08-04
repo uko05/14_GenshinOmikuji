@@ -3,7 +3,7 @@ import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry } from './feed.js?v=7';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry } from './feed.js?v=8';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js';
 import { db } from './firebaseConfig.js';
@@ -156,6 +156,9 @@ const i18n = {
     yakuAllPassed:   'これ以降の本厄はありません',
     feedTitle:       'みんなの結果（24時間以内）',
     hideFeedLabel:   '自分の占いを公開しない',
+    statsGivenLabel:    'アゲいいね！',
+    statsReceivedLabel: 'モラいいね！',
+    statsNotifLabel:    '通知',
     feedEmpty:       'まだ結果がありません',
     notifPanelTitle: 'いいね履歴',
     notifPanelEmpty: 'まだいいねはありません',
@@ -231,6 +234,9 @@ const i18n = {
     yakuAllPassed:   'All unlucky years have passed',
     feedTitle:       "Everyone's Results (last 24h)",
     hideFeedLabel:   "Don't publish my fortune",
+    statsGivenLabel:    'Given',
+    statsReceivedLabel: 'Received',
+    statsNotifLabel:    'Alerts',
     feedEmpty:       'No results yet',
     notifPanelTitle: 'Like History',
     notifPanelEmpty: 'No likes yet',

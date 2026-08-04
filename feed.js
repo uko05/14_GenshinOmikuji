@@ -556,11 +556,24 @@ function closeAvatarNudgeModal() {
 }
 
 // ===== 初期化 =====
+// ===== 固定フッターのアゲ/モラいいねカウント（リアルタイム） =====
+function startStatsFooterListener() {
+  const givenEl    = document.getElementById('stats-given-count');
+  const receivedEl = document.getElementById('stats-received-count');
+  if (!givenEl && !receivedEl) return;
+  onSnapshot(doc(db, 'omikujiUsers', getUserId()), (snap) => {
+    const d = snap.exists() ? snap.data() : {};
+    if (givenEl) givenEl.textContent = d.totalLikesGiven || 0;
+    if (receivedEl) receivedEl.textContent = d.totalLikesReceived || 0;
+  }, (err) => console.error('[feed] stats footer listen failed', err));
+}
+
 export async function initFeed() {
   initPlayerAvatar();
   await loadFeedDebuggerRole();
   startFeedListener();
   startNotifListener();
+  startStatsFooterListener();
 
   const bell = document.getElementById('notif-bell');
   if (bell) bell.addEventListener('click', openNotifPanel);
