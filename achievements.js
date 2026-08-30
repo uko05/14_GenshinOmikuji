@@ -50,7 +50,9 @@ export const ACHIEVEMENT_GROUPS = [
     id: 'collection', name: 'コレクション', nameEn: 'Collection',
     items: [
       { id:'col_first',    rarity:'bronze', name:'初収録',            nameEn:'First Arcana',         condition:'初めてアルカナを収録する',              conditionEn:'Add your first Arcana',              check:(_,col)=>col.size>=1 },
-      { id:'col_half',     rarity:'silver', name:'半分の真実',        nameEn:'Half Truth',           condition:'アルカナを22種収録する',                conditionEn:'Collect 22 Arcana cards',            check:(_,col)=>col.size>=22 },
+      // col.sizeそのままだとレアカード(rare_good/rare_bad)も数えてしまうため、
+      // 通常アルカナ(_upright/_reversedで終わるキー)だけを数える
+      { id:'col_half',     rarity:'silver', name:'半分の真実',        nameEn:'Half Truth',           condition:'アルカナを22種収録する',                conditionEn:'Collect 22 Arcana cards',            check:(_,col)=>[...col].filter(k=>k.endsWith('_upright')||k.endsWith('_reversed')).length>=22 },
       { id:'col_upright',  rarity:'gold',   name:'正位置コンプ',      nameEn:'Upright Complete',     condition:'正位置22種をすべて収録する',             conditionEn:'Collect all 22 upright cards',       check:(_,col)=>CARD_IDS.every(id=>col.has(`${id}_upright`)) },
       { id:'col_reversed', rarity:'gold',   name:'逆位置コンプ',      nameEn:'Reversed Complete',    condition:'逆位置22種をすべて収録する',             conditionEn:'Collect all 22 reversed cards',      check:(_,col)=>CARD_IDS.every(id=>col.has(`${id}_reversed`)) },
       { id:'col_all',      rarity:'legend', name:'マグナムオーパス',  nameEn:'Arcana Master',        condition:'アルカナ44種すべてを収録する',           conditionEn:'Collect all 44 Arcana cards',        check:(_,col)=>CARD_IDS.every(id=>col.has(`${id}_upright`)&&col.has(`${id}_reversed`)) },

@@ -642,9 +642,12 @@ function renderAchievements() {
       const name       = isEn ? ach.nameEn      : ach.name;
       const rarity     = ach.rarity || 'bronze';
 
-      // prerequisite がある場合の条件テキスト切り替え
+      // prerequisite がある場合の条件テキスト切り替え。
+      // ただし自分自身がもう解除済みなら、前提実績を持っていなくても本来の条件文を
+      // 見せる(rare_badはrare_goodより先に引ける独立抽選のため、先に引いた場合に
+      // 「達成済みなのに説明文だけ伏せ字のまま」になるのを防ぐ)。
       let condition;
-      if (ach.prerequisite && !unlocked.has(ach.prerequisite)) {
+      if (ach.prerequisite && !unlocked.has(ach.prerequisite) && !isUnlocked) {
         condition = isEn ? (ach.conditionLockedEn || ach.conditionEn) : (ach.conditionLocked || ach.condition);
       } else {
         condition = isEn ? ach.conditionEn : ach.condition;
