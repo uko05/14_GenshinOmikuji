@@ -76,7 +76,7 @@ export const ACHIEVEMENT_GROUPS = [
       { id:'fortune_kyo',        rarity:'bronze', name:'凶でも笑って',   nameEn:'Smile Through Misfortune',condition:'凶を引く',                               conditionEn:'Draw a Misfortune',                       check:(s)=>(s.fortuneLevelCounts['凶']||0)>=1 },
       { id:'fortune_kyo_3',      rarity:'silver', name:'凶の探求者',     nameEn:'Seeker of Misfortune',    condition:'凶を3回引く',                            conditionEn:'Draw Misfortune 3 times',                 check:(s)=>(s.fortuneLevelCounts['凶']||0)>=3 },
       { id:'fortune_both',       rarity:'silver', name:'波乱万丈',       nameEn:'Full of Ups and Downs',   condition:'大吉と凶を両方引いたことがある',          conditionEn:'Draw both Great Fortune and Misfortune', check:(s)=>(s.fortuneLevelCounts['大吉']||0)>=1&&(s.fortuneLevelCounts['凶']||0)>=1 },
-      { id:'fortune_all',        rarity:'gold',   name:'運勢の振れ幅',   nameEn:'Full Spectrum',           condition:'大吉・吉・中吉・小吉・末吉・凶をすべて引く', conditionEn:'Experience all 6 fortune levels',    check:(s)=>['大吉','吉','中吉','小吉','末吉','凶'].every(l=>(s.fortuneLevelCounts[l]||0)>=1) },
+      { id:'fortune_all',        rarity:'gold',   name:'運勢の振れ幅',   nameEn:'Full Spectrum',           condition:'大吉・中吉・小吉・末吉・凶をすべて引く', conditionEn:'Experience all 5 fortune levels',    retroactive:false, check:(s)=>['大吉','中吉','小吉','末吉','凶'].every(l=>(s.fortuneLevelCounts[l]||0)>=1) },
     ],
   },
   {

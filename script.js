@@ -358,6 +358,10 @@ function checkAndUnlockAchievements(silent = false, toastDelay = 0) {
   const newIds   = [];
 
   for (const ach of ALL_ACHIEVEMENTS) {
+    // retroactive:false の実績は、ページ読み込み時の遡及判定(silent)では評価しない。
+    // (fortune_all実績の条件修正で、過去のデータだけで急に無言解除されると
+    // 違和感があるため。実際に次に引いた時の判定でのみ解除させる。)
+    if (silent && ach.retroactive === false) continue;
     if (!unlocked.has(ach.id) && ach.check(stats, col)) {
       unlocked.add(ach.id);
       newIds.push(ach.id);
