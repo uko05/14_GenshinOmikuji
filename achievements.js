@@ -83,7 +83,6 @@ export const ACHIEVEMENT_GROUPS = [
     id: 'zodiac', name: '星座', nameEn: 'Zodiac',
     items: [
       { id:'zodiac_first', rarity:'bronze', name:'星読みの入門', nameEn:'First Star Reading', condition:'初めて星座占いを見る',       conditionEn:'See your first zodiac reading',          check:(s)=>s.zodiacsSeen.length>=1 },
-      { id:'zodiac_all',   rarity:'gold',   name:'十二宮の旅',   nameEn:'Zodiac Journey',     condition:'12星座すべての占いを見る',   conditionEn:'See fortune for all 12 zodiac signs',   check:(s)=>s.zodiacsSeen.length>=12 },
     ],
   },
   {
