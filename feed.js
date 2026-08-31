@@ -31,6 +31,9 @@ const STR = {
     statsGivenInfo:    '「アゲいいね！」は、あなたが他の人の結果にいいねした回数です。今後実装予定のゲームで使えるポイントになる予定なので、コツコツ貯めておこう！',
     statsReceivedInfo: '「モラいいね！」は、あなたの結果に他の人からもらったいいねの回数です。こちらも今後実装予定のゲームで使えるポイントになる予定です！',
     statsUpInfo:       '「UP（うーこポイント）」は、アゲいいね・モラいいねをすると貯まるポイントです（アゲいいね1回で1UP、モラいいね1回で2UP）。今後は他のサイトでミッションをクリアしてももらえるようになる予定です。貯めたUPは引き換え専用サイトで、色々なサイトのちょっとした特典と交換できます！',
+    deleteBtnTitle: 'この投稿をフィードから削除(管理者/デバッガー専用)',
+    deleteConfirm:  'この投稿をみんなの結果から削除しますか？（他の人からも見えなくなります）',
+    deleteFailed:   '削除に失敗しました。',
   },
   en: {
     noName:    'Nameless Traveler',
@@ -46,6 +49,9 @@ const STR = {
     statsGivenInfo:    '"Given" counts how many times you\'ve liked other people\'s results. It\'s planned to become usable points in a future game feature, so keep stacking them up!',
     statsReceivedInfo: '"Received" counts how many times other people have liked your results. This will also become usable points in a future game feature!',
     statsUpInfo:       '"UP" (Uko Points) are earned from Given/Received likes (1 UP per Given like, 2 UP per Received like). You\'ll also be able to earn them by completing missions on other sites in the future. Saved-up UP can be used on the dedicated redemption site to unlock small perks across various sites!',
+    deleteBtnTitle: 'Delete this post from the feed (admin/debugger only)',
+    deleteConfirm:  'Delete this post from everyone\'s results? (Others will no longer see it either)',
+    deleteFailed:   'Failed to delete.',
   },
 };
 function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
@@ -464,8 +470,30 @@ function renderFeedList(entries) {
     }
     item.appendChild(likeBtn);
 
+    // 管理者・デバッガーは検証で自分の投稿を量産しがちなので、自分の投稿だけ
+    // フィードから削除できるボタンを出す(他人の投稿は消せない)。
+    if (isFeedDebugger && isMine) {
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'feed-delete-btn';
+      deleteBtn.textContent = '－';
+      deleteBtn.title = s().deleteBtnTitle;
+      deleteBtn.addEventListener('click', () => deleteFeedEntry(entry.id));
+      item.appendChild(deleteBtn);
+    }
+
     list.appendChild(item);
   });
+}
+
+async function deleteFeedEntry(feedId) {
+  if (!confirm(s().deleteConfirm)) return;
+  try {
+    await deleteDoc(doc(db, 'omikujiFeed', feedId));
+  } catch (e) {
+    console.error('[feed] delete failed', e);
+    alert(s().deleteFailed);
+  }
 }
 
 const FEED_WINDOW_HOURS = 24;

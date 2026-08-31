@@ -1389,26 +1389,73 @@ footer {
 
 /* アチーブメント称号バッジ。名前の行とは別に2段目を丸ごと使うので、
    称号名がどれだけ長くても(コネクトバトル側の実績名を含め)省略せず出せる。
-   アチーブメント自体の枠と同じレアリティ配色。 */
+   デザインはコネクトバトルの称号バナー(title-slot-banner)・アカウント管理の
+   アチーブバッジ(ach-badge)と同じグラデーション・シマーアニメーションを使う。 */
 .feed-badge-row { line-height: 1; }
+
+@keyframes feed-badge-shimmer {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes feed-badge-pulse-bronze {
+  0%, 100% { box-shadow: 0 0 3px 1px rgba(205,127,50,0.3); }
+  50%      { box-shadow: 0 0 7px 2px rgba(205,127,50,0.65); }
+}
+@keyframes feed-badge-pulse-silver {
+  0%, 100% { box-shadow: 0 0 3px 1px rgba(168,184,200,0.3); }
+  50%      { box-shadow: 0 0 7px 2px rgba(168,184,200,0.65); }
+}
+@keyframes feed-badge-glow-legend {
+  0%, 100% { box-shadow: 0 0 7px 1px rgba(155,89,182,0.4); }
+  50%      { box-shadow: 0 0 14px 4px rgba(155,89,182,0.75); }
+}
+
 .feed-badge {
   display: inline-block;
-  padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 0.68rem;
+  padding: 2px 9px;
+  border-radius: 5px;
+  font-size: 0.72rem;
   font-weight: bold;
+  color: white;
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  box-sizing: border-box;
 }
-.feed-badge.rarity-bronze { background: rgba(205,127,50,0.18); color: #8a5a24; border: 1px solid rgba(205,127,50,0.4); }
-.feed-badge.rarity-silver { background: rgba(168,184,200,0.18); color: #5a6b7a; border: 1px solid rgba(168,184,200,0.4); }
-.feed-badge.rarity-gold   { background: rgba(212,168,0,0.2);   color: #8a6d00; border: 1px solid rgba(212,168,0,0.45); }
-.feed-badge.rarity-legend { background: rgba(155,89,182,0.2);  color: #6a3d80; border: 1px solid rgba(155,89,182,0.5); }
+
+.feed-badge.rarity-bronze {
+  background: linear-gradient(135deg, #a57e65, #cd7f32, #a57e65);
+  border: 1px solid #cd7f32;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.45);
+  animation: feed-badge-pulse-bronze 3s ease-in-out infinite;
+}
+.feed-badge.rarity-silver {
+  background: linear-gradient(135deg, #757575, #9e9e9e, #757575);
+  border: 1px solid #a8b8c8;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.45);
+  animation: feed-badge-pulse-silver 3s ease-in-out infinite;
+}
+.feed-badge.rarity-gold {
+  background: linear-gradient(45deg, #daaf08 0%, #daaf08 45%, #fee9a0 70%, #daaf08 85%, #daaf08 100%);
+  background-size: 800% 400%;
+  border: 1px solid #d4a800;
+  box-shadow: 0 0 7px 1px rgba(212,168,0,0.55);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.45);
+  animation: feed-badge-shimmer 5s infinite cubic-bezier(.62,.28,.23,.99);
+}
+.feed-badge.rarity-legend {
+  background: linear-gradient(45deg, #5a1090 0%, #8b3cc8 45%, #d4a8ff 70%, #8b3cc8 85%, #5a1090 100%);
+  background-size: 800% 400%;
+  border: 1px solid #9b59b6;
+  text-shadow: 0 1px 6px rgba(200,150,255,0.7);
+  animation: feed-badge-shimmer 4s infinite cubic-bezier(.62,.28,.23,.99),
+             feed-badge-glow-legend 1.2s ease-in-out infinite;
+}
+
 .feed-badge-empty {
   display: inline-block;
-  margin-left: 4px;
   width: 34px;
   height: 14px;
   border-radius: 999px;
@@ -1473,6 +1520,25 @@ footer {
 .feed-like-btn:disabled { cursor: default; opacity: 0.7; }
 .feed-like-btn.liked { border-color: var(--accent); background: rgba(255,204,0,0.15); }
 .feed-like-icon { font-size: 0.9rem; }
+
+/* 管理者/デバッガーが自分のテスト投稿をフィードから消すためのボタン */
+.feed-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  background: #fdecea;
+  border: 1px solid #c0392b;
+  border-radius: 50%;
+  color: #c0392b;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+.feed-delete-btn:hover { background: #c0392b; color: white; }
 
 /* ===== いいね通知トースト（アチーブトーストより薄め・短時間） ===== */
 @keyframes like-toast-in {
