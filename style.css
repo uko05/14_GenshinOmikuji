@@ -1364,7 +1364,8 @@ footer {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+  padding: 4px 0;
 }
 
 .feed-item-row1 {
@@ -1412,12 +1413,17 @@ footer {
 }
 
 .feed-badge {
-  display: inline-block;
-  padding: 2px 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 130px;
+  min-height: 40px;
+  padding: 6px 16px;
   border-radius: 5px;
-  font-size: 0.72rem;
+  font-size: 0.95rem;
   font-weight: bold;
   color: white;
+  text-align: center;
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
@@ -1456,11 +1462,11 @@ footer {
 
 .feed-badge-empty {
   display: inline-block;
-  width: 34px;
-  height: 14px;
-  border-radius: 999px;
+  width: 130px;
+  height: 40px;
+  border-radius: 5px;
   background: rgba(0,0,0,0.06);
-  vertical-align: middle;
+  box-sizing: border-box;
 }
 
 /* アチーブメント獲得投稿（アチーブポップと同じレアリティ配色） */
