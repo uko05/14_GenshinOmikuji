@@ -28,7 +28,7 @@ const STR = {
     achLine:    (name, ach)   => `${name}さんが「${ach}」を取得しました！`,
     statsGivenInfo:    '「アゲいいね！」は、あなたが他の人の結果にいいねした回数です。今後実装予定のゲームで使えるポイントになる予定なので、コツコツ貯めておこう！',
     statsReceivedInfo: '「モラいいね！」は、あなたの結果に他の人からもらったいいねの回数です。こちらも今後実装予定のゲームで使えるポイントになる予定です！',
-    statsUpInfo:       '「UP（うーこポイント）」は、いいねをあげたりもらったりすると貯まるポイントです（あげいいね1回で1UP、もらいいね1回で2UP）。貯めたUPは、今後用意する引き換え専用サイトで、色々なサイトのちょっとした特典と交換できるようになる予定です！',
+    statsUpInfo:       '「UP（うーこポイント）」は、アゲいいね・モラいいねをすると貯まるポイントです（アゲいいね1回で1UP、モラいいね1回で2UP）。今後は他のサイトでミッションをクリアしてももらえるようになる予定です。貯めたUPは引き換え専用サイトで、色々なサイトのちょっとした特典と交換できます！',
   },
   en: {
     noName:    'Nameless Traveler',
@@ -43,7 +43,7 @@ const STR = {
     achLine:    (name, ach)   => `${name} unlocked "${ach}"!`,
     statsGivenInfo:    '"Given" counts how many times you\'ve liked other people\'s results. It\'s planned to become usable points in a future game feature, so keep stacking them up!',
     statsReceivedInfo: '"Received" counts how many times other people have liked your results. This will also become usable points in a future game feature!',
-    statsUpInfo:       '"UP" (Uko Points) are earned by giving and receiving likes (1 UP per like given, 2 UP per like received). Saved-up UP will be usable on an upcoming dedicated redemption site to unlock small perks across various sites!',
+    statsUpInfo:       '"UP" (Uko Points) are earned from Given/Received likes (1 UP per Given like, 2 UP per Received like). You\'ll also be able to earn them by completing missions on other sites in the future. Saved-up UP can be used on the dedicated redemption site to unlock small perks across various sites!',
   },
 };
 function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
@@ -321,7 +321,7 @@ async function toggleLike(entry, likeBtn) {
       myLikedIds.delete(entry.id);
       likeBtn.classList.remove('liked');
       await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(-1) });
-      // UP(うーこポイント): もらいいね1回=2UP、あげいいね1回=1UP。取り消し時も対称に減らす
+      // UP(うーこポイント): モラいいね1回=2UP、アゲいいね1回=1UP。取り消し時も対称に減らす
       await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(-1), ukoPoints: increment(-2) }, { merge: true });
       await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(-1), ukoPoints: increment(-1) }, { merge: true });
       return;
@@ -331,7 +331,7 @@ async function toggleLike(entry, likeBtn) {
     myLikedIds.add(entry.id);
     likeBtn.classList.add('liked');
     await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(1) });
-    // UP(うーこポイント): もらいいね1回=2UP、あげいいね1回=1UP
+    // UP(うーこポイント): モラいいね1回=2UP、アゲいいね1回=1UP
     await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(1), ukoPoints: increment(2) }, { merge: true });
     await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(1), ukoPoints: increment(1) }, { merge: true });
 

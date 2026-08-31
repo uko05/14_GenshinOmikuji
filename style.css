@@ -1528,7 +1528,7 @@ footer {
 
 .stats-up-unit {
   margin-left: 1px;
-  color: #6a5acd;
+  color: var(--muted);
 }
 
 .stats-footer-label {
