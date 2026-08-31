@@ -1948,3 +1948,15 @@ details#extra-fortune-section[open] > .extra-fortune-summary::after {
   padding: 4px 8px;
   border-top: 1px solid var(--border);
 }
+
+/* 右下バージョン表示。固定フッター(.stats-footer)の真上に重なるよう配置
+   (bottom:0べったりだとフッターの下に隠れてしまうため)。 */
+.site-version {
+  position: fixed;
+  right: 8px;
+  bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  font-size: 11px;
+  color: rgba(0,0,0,0.2);
+  pointer-events: none;
+  z-index: 901;
+}
