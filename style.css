@@ -1390,6 +1390,10 @@ footer {
   font-size: 0.68rem;
   font-weight: bold;
   vertical-align: middle;
+  max-width: 80px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .feed-badge.rarity-bronze { background: rgba(205,127,50,0.18); color: #8a5a24; border: 1px solid rgba(205,127,50,0.4); }
 .feed-badge.rarity-silver { background: rgba(168,184,200,0.18); color: #5a6b7a; border: 1px solid rgba(168,184,200,0.4); }
