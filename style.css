@@ -1363,6 +1363,12 @@ footer {
   flex: 1;
   min-width: 0;
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.feed-item-row1 {
+  display: flex;
   align-items: baseline;
   gap: 8px;
   white-space: nowrap;
@@ -1381,16 +1387,17 @@ footer {
   font-weight: bold;
 }
 
-/* アチーブメント称号バッジ(名前の右)。アチーブメント自体の枠と同じレアリティ配色 */
+/* アチーブメント称号バッジ。名前の行とは別に2段目を丸ごと使うので、
+   称号名がどれだけ長くても(コネクトバトル側の実績名を含め)省略せず出せる。
+   アチーブメント自体の枠と同じレアリティ配色。 */
+.feed-badge-row { line-height: 1; }
 .feed-badge {
   display: inline-block;
-  margin-left: 4px;
   padding: 1px 6px;
   border-radius: 999px;
   font-size: 0.68rem;
   font-weight: bold;
-  vertical-align: middle;
-  max-width: 80px;
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

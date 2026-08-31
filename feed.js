@@ -368,9 +368,10 @@ async function toggleLike(entry, likeBtn) {
   }
 }
 
-// アチーブメントバッジ(名前の右)。投稿時点でbadgeDisplayUnlockedがtrueだった
-// 投稿にだけ、badge(あれば実際のバッジ、無ければうっすらグレーの空枠)を出す。
-// 表示が無効だった投稿には何も出さない(枠すら出さない)。
+// アチーブメントバッジ(名前の行の下に2段目として表示)。投稿時点でbadgeDisplayUnlockedが
+// trueだった投稿にだけ、badge(あれば実際のバッジ、無ければうっすらグレーの空枠)を出す。
+// 表示が無効だった投稿には何も出さない(枠すら出さない)。2段目に独立させることで、
+// 称号名がどれだけ長くても(コネクトバトル側の実績名を含め)1行を丸ごと使える。
 function buildFeedBadgeEl(entry) {
   if (!entry.badgeDisplayUnlocked) return null;
   const badge = document.createElement('span');
@@ -418,8 +419,6 @@ function renderFeedList(entries) {
     const lineEl = document.createElement('span');
     lineEl.className = 'feed-item-line';
     lineEl.appendChild(document.createTextNode(name));
-    const badgeEl = buildFeedBadgeEl(entry);
-    if (badgeEl) lineEl.appendChild(badgeEl);
     if (entry.type === 'achievement') {
       lineEl.appendChild(document.createTextNode(s().achLine(entry.achievementName)));
     } else {
@@ -430,12 +429,24 @@ function renderFeedList(entries) {
       ));
       if (entry.isRare) lineEl.classList.add('feed-item-line-rare');
     }
-    body.appendChild(lineEl);
 
     const timeEl = document.createElement('span');
     timeEl.className = 'feed-item-time';
     timeEl.textContent = relTime(entry.createdAt);
-    body.appendChild(timeEl);
+
+    const row1 = document.createElement('span');
+    row1.className = 'feed-item-row1';
+    row1.appendChild(lineEl);
+    row1.appendChild(timeEl);
+    body.appendChild(row1);
+
+    const badgeEl = buildFeedBadgeEl(entry);
+    if (badgeEl) {
+      const badgeRow = document.createElement('div');
+      badgeRow.className = 'feed-badge-row';
+      badgeRow.appendChild(badgeEl);
+      body.appendChild(badgeRow);
+    }
 
     item.appendChild(body);
 
