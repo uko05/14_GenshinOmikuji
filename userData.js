@@ -57,6 +57,11 @@ export const store = {
   achievements: new Set(),
   achStats:     null,
   hideFromFeed: false,
+  // sitePerks/equippedBadge は08_UPoint/24_AccountCenterが直接書き込む値の
+  // 読み取り専用キャッシュ。syncUserDataToFirestoreの書き戻し対象には含めない
+  // (含めると、他タブでの更新をこちらの古いローカル値で上書きしてしまうため)。
+  sitePerks:    null,
+  equippedBadge: null,
 };
 
 // ===== Firestore からロード =====
@@ -78,6 +83,8 @@ export async function loadUserDataFromFirestore() {
       if (d.achievements != null) store.achievements = new Set(d.achievements);
       if (d.achStats     != null) store.achStats = d.achStats;
       if (d.hideFromFeed != null) store.hideFromFeed = d.hideFromFeed;
+      if (d.sitePerks    != null) store.sitePerks    = d.sitePerks;
+      if (d.equippedBadge != null) store.equippedBadge = d.equippedBadge;
       console.log('[userData] Loaded from Firestore:', userId);
       return true;
     }

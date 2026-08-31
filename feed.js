@@ -23,9 +23,11 @@ const STR = {
     justNow:   'たった今',
     minAgo:    (n) => `${n}分前`,
     hourAgo:   (n) => `${n}時間前`,
-    normalLine: (name, level) => `${name}さんが${level}を引きました`,
-    rareLine:   (name, card)  => `${name}さんが${card}を引き当てました！`,
-    achLine:    (name, ach)   => `${name}さんが「${ach}」を取得しました！`,
+    // 名前の直後にアチーブバッジ(あれば)を差し込めるよう、名前より後ろの
+    // サフィックス部分だけを返す(nameは呼び出し側で別ノードとして先に出す)。
+    normalLine: (level) => `さんが${level}を引きました`,
+    rareLine:   (card)  => `さんが${card}を引き当てました！`,
+    achLine:    (ach)   => `さんが「${ach}」を取得しました！`,
     statsGivenInfo:    '「アゲいいね！」は、あなたが他の人の結果にいいねした回数です。今後実装予定のゲームで使えるポイントになる予定なので、コツコツ貯めておこう！',
     statsReceivedInfo: '「モラいいね！」は、あなたの結果に他の人からもらったいいねの回数です。こちらも今後実装予定のゲームで使えるポイントになる予定です！',
     statsUpInfo:       '「UP（うーこポイント）」は、アゲいいね・モラいいねをすると貯まるポイントです（アゲいいね1回で1UP、モラいいね1回で2UP）。今後は他のサイトでミッションをクリアしてももらえるようになる予定です。貯めたUPは引き換え専用サイトで、色々なサイトのちょっとした特典と交換できます！',
@@ -38,9 +40,9 @@ const STR = {
     justNow:   'just now',
     minAgo:    (n) => `${n}m ago`,
     hourAgo:   (n) => `${n}h ago`,
-    normalLine: (name, level) => `${name} got ${level}!`,
-    rareLine:   (name, card)  => `${name} drew ${card}!!`,
-    achLine:    (name, ach)   => `${name} unlocked "${ach}"!`,
+    normalLine: (level) => ` got ${level}!`,
+    rareLine:   (card)  => ` drew ${card}!!`,
+    achLine:    (ach)   => ` unlocked "${ach}"!`,
     statsGivenInfo:    '"Given" counts how many times you\'ve liked other people\'s results. It\'s planned to become usable points in a future game feature, so keep stacking them up!',
     statsReceivedInfo: '"Received" counts how many times other people have liked your results. This will also become usable points in a future game feature!',
     statsUpInfo:       '"UP" (Uko Points) are earned from Given/Received likes (1 UP per Given like, 2 UP per Received like). You\'ll also be able to earn them by completing missions on other sites in the future. Saved-up UP can be used on the dedicated redemption site to unlock small perks across various sites!',
@@ -237,6 +239,17 @@ function todayStr() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
+// 08_UPointで「アチーブメント表示」を解放している場合のみ、24_AccountCenterで
+// 設定した称号(store.equippedBadge、無ければnull)を投稿時点でコピーして持たせる。
+// 投稿後に称号を変えても過去の投稿には反映されない(アバターと同じ仕様)。
+function getBadgeSnapshot() {
+  const unlocked = !!store.sitePerks?.omikuji?.achievementDisplayUnlocked;
+  return {
+    badgeDisplayUnlocked: unlocked,
+    badge: unlocked ? (store.equippedBadge || null) : null,
+  };
+}
+
 export async function submitFeedEntry({ name, cardName, fortuneLevel, isRare }) {
   if (store.hideFromFeed) return;
   const today = todayStr();
@@ -255,6 +268,7 @@ export async function submitFeedEntry({ name, cardName, fortuneLevel, isRare }) 
       avatarIcon: avatar.icon,
       likeCount: 0,
       createdAt: serverTimestamp(),
+      ...getBadgeSnapshot(),
     });
     localStorage.setItem(LS_FEED_POSTED_DATE, today);
   } catch (e) {
@@ -278,6 +292,7 @@ export async function submitAchievementFeedEntry({ name, achievementName, rarity
       avatarIcon: avatar.icon,
       likeCount: 0,
       createdAt: serverTimestamp(),
+      ...getBadgeSnapshot(),
     });
   } catch (e) {
     console.error('[feed] achievement submit failed', e);
@@ -353,6 +368,21 @@ async function toggleLike(entry, likeBtn) {
   }
 }
 
+// アチーブメントバッジ(名前の右)。投稿時点でbadgeDisplayUnlockedがtrueだった
+// 投稿にだけ、badge(あれば実際のバッジ、無ければうっすらグレーの空枠)を出す。
+// 表示が無効だった投稿には何も出さない(枠すら出さない)。
+function buildFeedBadgeEl(entry) {
+  if (!entry.badgeDisplayUnlocked) return null;
+  const badge = document.createElement('span');
+  if (entry.badge && entry.badge.name) {
+    badge.className = `feed-badge rarity-${entry.badge.rarity || 'bronze'}`;
+    badge.textContent = (store.lang === 'en' && entry.badge.nameEn) ? entry.badge.nameEn : entry.badge.name;
+  } else {
+    badge.className = 'feed-badge feed-badge-empty';
+  }
+  return badge;
+}
+
 // ===== フィード一覧描画 =====
 function renderFeedList(entries) {
   const list = document.getElementById('feed-list');
@@ -387,12 +417,17 @@ function renderFeedList(entries) {
     const name = entry.name || s().noName;
     const lineEl = document.createElement('span');
     lineEl.className = 'feed-item-line';
+    lineEl.appendChild(document.createTextNode(name));
+    const badgeEl = buildFeedBadgeEl(entry);
+    if (badgeEl) lineEl.appendChild(badgeEl);
     if (entry.type === 'achievement') {
-      lineEl.textContent = s().achLine(name, entry.achievementName);
+      lineEl.appendChild(document.createTextNode(s().achLine(entry.achievementName)));
     } else {
-      lineEl.textContent = entry.isRare
-        ? s().rareLine(name, entry.cardName || entry.fortuneLevel)
-        : s().normalLine(name, entry.fortuneLevel || entry.cardName);
+      lineEl.appendChild(document.createTextNode(
+        entry.isRare
+          ? s().rareLine(entry.cardName || entry.fortuneLevel)
+          : s().normalLine(entry.fortuneLevel || entry.cardName)
+      ));
       if (entry.isRare) lineEl.classList.add('feed-item-line-rare');
     }
     body.appendChild(lineEl);

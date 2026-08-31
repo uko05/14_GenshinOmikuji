@@ -1381,6 +1381,30 @@ footer {
   font-weight: bold;
 }
 
+/* アチーブメント称号バッジ(名前の右)。アチーブメント自体の枠と同じレアリティ配色 */
+.feed-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: bold;
+  vertical-align: middle;
+}
+.feed-badge.rarity-bronze { background: rgba(205,127,50,0.18); color: #8a5a24; border: 1px solid rgba(205,127,50,0.4); }
+.feed-badge.rarity-silver { background: rgba(168,184,200,0.18); color: #5a6b7a; border: 1px solid rgba(168,184,200,0.4); }
+.feed-badge.rarity-gold   { background: rgba(212,168,0,0.2);   color: #8a6d00; border: 1px solid rgba(212,168,0,0.45); }
+.feed-badge.rarity-legend { background: rgba(155,89,182,0.2);  color: #6a3d80; border: 1px solid rgba(155,89,182,0.5); }
+.feed-badge-empty {
+  display: inline-block;
+  margin-left: 4px;
+  width: 34px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.06);
+  vertical-align: middle;
+}
+
 /* アチーブメント獲得投稿（アチーブポップと同じレアリティ配色） */
 .feed-item-achievement { border: none; }
 .feed-item-achievement .feed-item-line { font-weight: bold; }
