@@ -598,7 +598,7 @@ function startStatsFooterListener() {
     const d = snap.exists() ? snap.data() : {};
     if (givenEl) givenEl.textContent = d.totalLikesGiven || 0;
     if (receivedEl) receivedEl.textContent = d.totalLikesReceived || 0;
-    if (upEl) upEl.textContent = `${d.ukoPoints || 0}UP`;
+    if (upEl) upEl.textContent = d.ukoPoints || 0;
   }, (err) => console.error('[feed] stats footer listen failed', err));
 }
 

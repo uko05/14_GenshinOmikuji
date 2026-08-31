@@ -1526,6 +1526,11 @@ footer {
   line-height: 1.2;
 }
 
+.stats-up-unit {
+  margin-left: 1px;
+  color: #6a5acd;
+}
+
 .stats-footer-label {
   font-size: 0.65rem;
   color: var(--muted);
