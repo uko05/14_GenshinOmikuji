@@ -412,18 +412,16 @@ function ensureFeedBadgeWidth() {
 }
 
 // アチーブメントバッジ(名前の行の下に2段目として表示)。投稿時点でbadgeDisplayUnlockedが
-// trueだった投稿にだけ、badge(あれば実際のバッジ、無ければうっすらグレーの空枠)を出す。
-// 表示が無効だった投稿には何も出さない(枠すら出さない)。2段目に独立させることで、
-// 称号名がどれだけ長くても(コネクトバトル側の実績名を含め)1行を丸ごと使える。
+// trueかつ実際に称号を設定していた投稿にだけ出す。表示解放済みでも称号未設定の場合や、
+// 表示自体が無効だった投稿には何も出さない(未解放の人と同じ通常の1行表示になる)。
+// 2段目に独立させることで、称号名がどれだけ長くても(コネクトバトル側の実績名を
+// 含め)1行を丸ごと使える。
 function buildFeedBadgeEl(entry) {
   if (!entry.badgeDisplayUnlocked) return null;
+  if (!entry.badge || !entry.badge.name) return null;
   const badge = document.createElement('span');
-  if (entry.badge && entry.badge.name) {
-    badge.className = `feed-badge rarity-${entry.badge.rarity || 'bronze'}`;
-    badge.textContent = (store.lang === 'en' && entry.badge.nameEn) ? entry.badge.nameEn : entry.badge.name;
-  } else {
-    badge.className = 'feed-badge feed-badge-empty';
-  }
+  badge.className = `feed-badge rarity-${entry.badge.rarity || 'bronze'}`;
+  badge.textContent = (store.lang === 'en' && entry.badge.nameEn) ? entry.badge.nameEn : entry.badge.name;
   return badge;
 }
 

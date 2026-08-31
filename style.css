@@ -1460,15 +1460,6 @@ footer {
              feed-badge-glow-legend 1.2s ease-in-out infinite;
 }
 
-.feed-badge-empty {
-  display: inline-block;
-  width: var(--feed-badge-width, 170px);
-  height: 32px;
-  border-radius: 5px;
-  background: rgba(0,0,0,0.06);
-  box-sizing: border-box;
-}
-
 /* アチーブメント獲得投稿（アチーブポップと同じレアリティ配色） */
 .feed-item-achievement { border: none; }
 .feed-item-achievement .feed-item-line { font-weight: bold; }
