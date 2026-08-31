@@ -374,6 +374,43 @@ async function toggleLike(entry, likeBtn) {
   }
 }
 
+// バッジの横幅を全員共通の固定値にするための基準文字列。
+// 原神おみくじ・コネクトバトル両方の実績名の中で現状最長のもの
+// (コネクトバトルの「法の皇帝であり、盤上の支配者」14文字)。
+// 将来もっと長い名前の実績が追加されたら、ここも合わせて更新すること。
+const LONGEST_BADGE_NAME = '法の皇帝であり、盤上の支配者';
+let feedBadgeWidthReady = false;
+
+// 見えない位置に実際の.feed-badgeと同じ見た目の要素を1つ描画して実測することで、
+// フォントが変わっても正確な幅を出す(手打ちの推測値だとフォント次第でズレるため)。
+function measureBadgeWidth() {
+  const probe = document.createElement('span');
+  probe.className = 'feed-badge rarity-legend';
+  probe.style.position = 'absolute';
+  probe.style.visibility = 'hidden';
+  probe.style.width = 'auto';
+  probe.style.whiteSpace = 'nowrap';
+  probe.textContent = LONGEST_BADGE_NAME;
+  document.body.appendChild(probe);
+  const width = Math.ceil(probe.getBoundingClientRect().width);
+  document.body.removeChild(probe);
+  if (width > 0) {
+    document.documentElement.style.setProperty('--feed-badge-width', `${width}px`);
+  }
+}
+
+function ensureFeedBadgeWidth() {
+  if (feedBadgeWidthReady) return;
+  feedBadgeWidthReady = true;
+  // カスタムフォント(MihoyoZenZero)の読み込み完了を待ってから測る。
+  // 先に測ると代替フォントの幅で固定されてしまい、実際の見た目とズレるため。
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(measureBadgeWidth);
+  } else {
+    measureBadgeWidth();
+  }
+}
+
 // アチーブメントバッジ(名前の行の下に2段目として表示)。投稿時点でbadgeDisplayUnlockedが
 // trueだった投稿にだけ、badge(あれば実際のバッジ、無ければうっすらグレーの空枠)を出す。
 // 表示が無効だった投稿には何も出さない(枠すら出さない)。2段目に独立させることで、
@@ -677,6 +714,7 @@ function startStatsFooterListener() {
 }
 
 export async function initFeed() {
+  ensureFeedBadgeWidth();
   initPlayerAvatar();
   await loadFeedDebuggerRole();
   startFeedListener();

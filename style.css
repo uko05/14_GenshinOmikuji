@@ -1416,7 +1416,7 @@ footer {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 130px;
+  width: var(--feed-badge-width, 170px);
   min-height: 32px;
   padding: 3px 16px;
   border-radius: 5px;
@@ -1462,7 +1462,7 @@ footer {
 
 .feed-badge-empty {
   display: inline-block;
-  width: 130px;
+  width: var(--feed-badge-width, 170px);
   height: 32px;
   border-radius: 5px;
   background: rgba(0,0,0,0.06);
