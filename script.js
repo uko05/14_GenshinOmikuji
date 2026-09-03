@@ -66,7 +66,7 @@ let shuffleOrientations = [];
 let captureCard       = null;
 let captureIsReversed = false;
 const CARD_W = 60;
-const CARD_H = 90;
+const CARD_H = 101; // .scatter-card の高さと同じ値にすること(裏面画像の実比率912:1536に合わせた値)
 
 // ===== 言語再描画用キャッシュ =====
 let lastFortuneBirthday    = null;
