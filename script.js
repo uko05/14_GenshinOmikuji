@@ -1364,7 +1364,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const isReversed = isRare ? false : (shuffleOrientations[effectiveCardIndex] ?? Math.random() < 0.5);
 
     saveResult(birthday, effectiveCardIndex, isReversed);
-    const streakResult = !debug ? updateStreak() : { count: 0, isReturn: false };
+    // updateStreak()は同じ日に何度呼んでもcountを増やさない(冪等)ので、
+    // デバッガーが1日に何度引き直しても連続日数を汚さない。以前はdebug中
+    // 丸ごとスキップしていたが、そのせいで管理者アカウントの連続日数が
+    // 実質ずっと更新されなくなっていたため、常に呼ぶように変更した。
+    const streakResult = updateStreak();
     scheduleSync(); // name, birthday, result, streak を Firestore へ同期
     renderStreak();
     runFortune(birthday, name, effectiveCardIndex, isReversed);
