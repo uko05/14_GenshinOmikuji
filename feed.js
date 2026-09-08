@@ -520,6 +520,18 @@ function renderFeedList(entries) {
 
     const row1 = document.createElement('span');
     row1.className = 'feed-item-row1';
+    if (entry.type === 'gacha' && entry.cardBackUrl) {
+      const thumb = document.createElement('img');
+      thumb.className = 'feed-gacha-thumb-inline';
+      thumb.src = entry.cardBackUrl;
+      thumb.alt = entry.cardBackName || '';
+      thumb.loading = 'lazy';
+      thumb.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        openGachaLightbox(entry.cardBackUrl);
+      });
+      row1.appendChild(thumb);
+    }
     row1.appendChild(lineEl);
     row1.appendChild(timeEl);
     body.appendChild(row1);
@@ -530,19 +542,6 @@ function renderFeedList(entries) {
       badgeRow.className = 'feed-badge-row';
       badgeRow.appendChild(badgeEl);
       body.appendChild(badgeRow);
-    }
-
-    if (entry.type === 'gacha' && entry.cardBackUrl) {
-      const thumbRow = document.createElement('div');
-      thumbRow.className = 'feed-gacha-thumb-row';
-      const thumb = document.createElement('img');
-      thumb.className = 'feed-gacha-thumb';
-      thumb.src = entry.cardBackUrl;
-      thumb.alt = entry.cardBackName || '';
-      thumb.loading = 'lazy';
-      thumb.addEventListener('click', () => openGachaLightbox(entry.cardBackUrl));
-      thumbRow.appendChild(thumb);
-      body.appendChild(thumbRow);
     }
 
     item.appendChild(body);
@@ -970,6 +969,7 @@ async function handleGachaDraw() {
   }
 
   const els = getGachaEls();
+  const ticketsBeforeDraw = latestGachaTickets; // onSnapshotの反映タイミングに左右されないよう、抽選前の枚数を確保しておく
   gachaBusy = true;
   els.drawBtn.disabled = true;
   els.resultLbl.textContent = '';
@@ -982,10 +982,10 @@ async function handleGachaDraw() {
 
     await playGachaReveal(design);
 
-    // 次に引ける枚数を券の表示に反映しておく(latestGachaTicketsはonSnapshotの
-    // 反映を待つとラグがあるため、消費した1枚分をここで先に差し引いておく)
-    els.before.textContent = Math.max(0, latestGachaTickets - 1);
-    els.after.textContent = Math.max(0, latestGachaTickets - 2);
+    // 次に引ける枚数を券の表示に反映しておく(確保しておいた抽選前の枚数から計算する)
+    const remaining = Math.max(0, ticketsBeforeDraw - 1);
+    els.before.textContent = remaining;
+    els.after.textContent = Math.max(0, remaining - 1);
 
     if (isNew) {
       submitGachaFeedEntry({
