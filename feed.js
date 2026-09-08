@@ -30,7 +30,6 @@ const STR = {
     achLine:    (ach)   => `さんが「${ach}」を取得しました！`,
     statsUpInfo: (given, received) => `「UP（うーこポイント）」は、他の人の結果にいいねする（アゲいいね：あなたは今${given}回、1回で1UP）、または自分の結果にいいねをもらう（モラいいね：あなたは今${received}回、1回で2UP）と貯まるポイントです。今後は他のサイトでミッションをクリアしてももらえるようになる予定です。貯めたUPは引き換え専用サイトで、色々なサイトのちょっとした特典と交換できます！`,
     gachaNoTicketInfo:   '現在ガチャ券は0枚です。ガチャ券を持っていると、ここから裏面デザインガチャを引けるようになります。',
-    gachaComingSoonInfo: 'ガチャ機能は近日公開予定です。もうしばらくお待ちください。',
     mailEmpty: '届いているメールはありません',
     mailClaimBtn: '受け取る',
     mailClaimedBtn: '受取済み',
@@ -52,7 +51,6 @@ const STR = {
     achLine:    (ach)   => ` unlocked "${ach}"!`,
     statsUpInfo: (given, received) => `"UP" (Uko Points) are earned by liking other people's results (Given: ${given} so far, 1 UP each) or having your own results liked (Received: ${received} so far, 2 UP each). You'll also be able to earn them by completing missions on other sites in the future. Saved-up UP can be used on the dedicated redemption site to unlock small perks across various sites!`,
     gachaNoTicketInfo:   "You have 0 gacha tickets right now. Once you have some, you'll be able to draw a card-back gacha from here.",
-    gachaComingSoonInfo: 'The gacha feature is coming soon. Please check back later.',
     mailEmpty: 'No mail yet',
     mailClaimBtn: 'Claim',
     mailClaimedBtn: 'Claimed',
@@ -726,9 +724,25 @@ function startStatsFooterListener() {
   }, (err) => console.error('[feed] stats footer listen failed', err));
 }
 
-// ===== ガチャ券0枚の案内（実際の抽選演出は券が用意でき次第、別途実装） =====
+// ===== ガチャ確認ポップ（見た目・文言は本番想定。中の「ガチャを引く」ボタンは
+//       あえて何も起きないようにしてあり、抽選処理・画像参照は一切ここに置かない） =====
 function openGachaInfo() {
-  openStatsInfoModal(latestGachaTickets > 0 ? s().gachaComingSoonInfo : s().gachaNoTicketInfo);
+  if (latestGachaTickets <= 0) {
+    openStatsInfoModal(s().gachaNoTicketInfo);
+    return;
+  }
+  const modal = document.getElementById('gacha-confirm-modal');
+  const beforeEl = document.getElementById('gacha-confirm-before');
+  const afterEl = document.getElementById('gacha-confirm-after');
+  if (!modal) return;
+  if (beforeEl) beforeEl.textContent = latestGachaTickets;
+  if (afterEl) afterEl.textContent = latestGachaTickets - 1;
+  modal.style.display = 'flex';
+}
+
+function closeGachaConfirmModal() {
+  const modal = document.getElementById('gacha-confirm-modal');
+  if (modal) modal.style.display = 'none';
 }
 
 // ===== メールボックス（運営からのプレゼント配布） =====
@@ -876,6 +890,12 @@ export async function initFeed() {
 
   const gachaBtn = document.getElementById('gacha-btn');
   if (gachaBtn) gachaBtn.addEventListener('click', openGachaInfo);
+  const gachaConfirmClose = document.getElementById('gacha-confirm-close');
+  if (gachaConfirmClose) gachaConfirmClose.addEventListener('click', closeGachaConfirmModal);
+  const gachaConfirmBackdrop = document.querySelector('#gacha-confirm-modal .col-modal-backdrop');
+  if (gachaConfirmBackdrop) gachaConfirmBackdrop.addEventListener('click', closeGachaConfirmModal);
+  // #gacha-confirm-draw-btn には意図的にイベントリスナーを付けていない
+  // (抽選処理・画像参照はまだ本番に置かない。押しても何も起きないのは仕様)
 
   const mailBtn = document.getElementById('mail-btn');
   if (mailBtn) mailBtn.addEventListener('click', openMailPanel);
