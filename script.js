@@ -4,7 +4,7 @@ import { GACHA_DESIGNS } from './gachaBacks.js';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=15';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=16';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js';
 import { db } from './firebaseConfig.js';

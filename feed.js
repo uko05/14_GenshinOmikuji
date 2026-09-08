@@ -29,6 +29,7 @@ const STR = {
     normalLine: (level) => `さんが${level}を引きました`,
     rareLine:   (card)  => `さんが${card}を引き当てました！`,
     achLine:    (ach)   => `さんが「${ach}」を取得しました！`,
+    gachaGetLine: (name) => `さんがガチャで「${name}」を入手しました！`,
     statsUpInfo: (given, received) => `「UP（うーこポイント）」は、他の人の結果にいいねする（アゲいいね：あなたは今${given}回、1回で1UP）、または自分の結果にいいねをもらう（モラいいね：あなたは今${received}回、1回で2UP）と貯まるポイントです。今後は他のサイトでミッションをクリアしてももらえるようになる予定です。貯めたUPは引き換え専用サイトで、色々なサイトのちょっとした特典と交換できます！`,
     mailEmpty: '届いているメールはありません',
     mailClaimBtn: '受け取る',
@@ -52,6 +53,7 @@ const STR = {
     normalLine: (level) => ` got ${level}!`,
     rareLine:   (card)  => ` drew ${card}!!`,
     achLine:    (ach)   => ` unlocked "${ach}"!`,
+    gachaGetLine: (name) => ` got "${name}" from the gacha!`,
     statsUpInfo: (given, received) => `"UP" (Uko Points) are earned by liking other people's results (Given: ${given} so far, 1 UP each) or having your own results liked (Received: ${received} so far, 2 UP each). You'll also be able to earn them by completing missions on other sites in the future. Saved-up UP can be used on the dedicated redemption site to unlock small perks across various sites!`,
     mailEmpty: 'No mail yet',
     mailClaimBtn: 'Claim',
@@ -316,6 +318,30 @@ export async function submitAchievementFeedEntry({ name, achievementName, rarity
   }
 }
 
+// ===== ガチャNEW入手のフィード投稿(被りの時は呼ばない) =====
+export async function submitGachaFeedEntry({ name, cardBackId, cardBackName, cardBackUrl }) {
+  if (store.hideFromFeed) return;
+  try {
+    const userId = getUserId();
+    const avatar = await getMyAvatar(userId);
+    await addDoc(collection(db, 'omikujiFeed'), {
+      type: 'gacha',
+      userId,
+      name: name || '',
+      cardBackId: cardBackId || '',
+      cardBackName: cardBackName || '',
+      cardBackUrl: cardBackUrl || '',
+      avatarGame: avatar.game,
+      avatarIcon: avatar.icon,
+      likeCount: 0,
+      createdAt: serverTimestamp(),
+      ...getBadgeSnapshot(),
+    });
+  } catch (e) {
+    console.error('[feed] gacha submit failed', e);
+  }
+}
+
 // ===== いいね =====
 const myLikedIds = new Set();
 
@@ -458,6 +484,8 @@ function renderFeedList(entries) {
     item.className = 'feed-item';
     if (entry.type === 'achievement') {
       item.classList.add('feed-item-achievement', `rarity-${entry.rarity || 'bronze'}`);
+    } else if (entry.type === 'gacha') {
+      item.classList.add('feed-item-gacha');
     }
 
     const avatar = document.createElement('img');
@@ -475,6 +503,8 @@ function renderFeedList(entries) {
     lineEl.appendChild(document.createTextNode(name));
     if (entry.type === 'achievement') {
       lineEl.appendChild(document.createTextNode(s().achLine(entry.achievementName)));
+    } else if (entry.type === 'gacha') {
+      lineEl.appendChild(document.createTextNode(s().gachaGetLine(entry.cardBackName)));
     } else {
       lineEl.appendChild(document.createTextNode(
         entry.isRare
@@ -500,6 +530,19 @@ function renderFeedList(entries) {
       badgeRow.className = 'feed-badge-row';
       badgeRow.appendChild(badgeEl);
       body.appendChild(badgeRow);
+    }
+
+    if (entry.type === 'gacha' && entry.cardBackUrl) {
+      const thumbRow = document.createElement('div');
+      thumbRow.className = 'feed-gacha-thumb-row';
+      const thumb = document.createElement('img');
+      thumb.className = 'feed-gacha-thumb';
+      thumb.src = entry.cardBackUrl;
+      thumb.alt = entry.cardBackName || '';
+      thumb.loading = 'lazy';
+      thumb.addEventListener('click', () => openGachaLightbox(entry.cardBackUrl));
+      thumbRow.appendChild(thumb);
+      body.appendChild(thumbRow);
     }
 
     item.appendChild(body);
@@ -786,6 +829,14 @@ function getGachaEls() {
   return gachaEls;
 }
 
+// フィード上の裏面サムネイルなど、ガチャ演出モーダルの外からも呼べる拡大表示
+function openGachaLightbox(url) {
+  const els = getGachaEls();
+  if (!els.lightbox || !els.lightboxImg || !url) return;
+  els.lightboxImg.src = url;
+  els.lightbox.classList.add('visible');
+}
+
 // カードを裏向きに戻し、券枚数の表示を最新化する(初回オープン時・演出失敗時に呼ぶ)
 function resetGachaStage() {
   const els = getGachaEls();
@@ -843,7 +894,7 @@ async function drawGachaTransaction() {
 
   store.cardBacks.add(design.id);
   window.dispatchEvent(new CustomEvent('gachaCardBacksUpdated', { detail: { designId: design.id, isNew } }));
-  return design;
+  return { design, isNew };
 }
 
 function spawnGachaSparkles(container, n) {
@@ -924,7 +975,7 @@ async function handleGachaDraw() {
   els.resultLbl.textContent = '';
 
   try {
-    const design = await drawGachaTransaction();
+    const { design, isNew } = await drawGachaTransaction();
 
     const preload = new Image();
     preload.src = design.url;
@@ -935,6 +986,15 @@ async function handleGachaDraw() {
     // 反映を待つとラグがあるため、消費した1枚分をここで先に差し引いておく)
     els.before.textContent = Math.max(0, latestGachaTickets - 1);
     els.after.textContent = Math.max(0, latestGachaTickets - 2);
+
+    if (isNew) {
+      submitGachaFeedEntry({
+        name: store.name,
+        cardBackId: design.id,
+        cardBackName: design.name,
+        cardBackUrl: design.url,
+      });
+    }
   } catch (e) {
     console.error('[feed] gacha draw failed', e);
     alert(e.message === 'NO_TICKETS' ? s().gachaNoTicketAlert : s().gachaDrawFailedAlert);
@@ -1111,13 +1171,8 @@ export async function initFeed() {
 
   const gachaResultImg = document.getElementById('gacha-result-img');
   const gachaLightbox = document.getElementById('gacha-lightbox');
-  const gachaLightboxImg = document.getElementById('gacha-lightbox-img');
-  if (gachaResultImg && gachaLightbox && gachaLightboxImg) {
-    gachaResultImg.addEventListener('click', () => {
-      if (!gachaResultImg.src) return;
-      gachaLightboxImg.src = gachaResultImg.src;
-      gachaLightbox.classList.add('visible');
-    });
+  if (gachaResultImg && gachaLightbox) {
+    gachaResultImg.addEventListener('click', () => openGachaLightbox(gachaResultImg.src));
     gachaLightbox.addEventListener('click', () => gachaLightbox.classList.remove('visible'));
   }
 

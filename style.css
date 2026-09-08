@@ -1601,6 +1601,28 @@ footer {
 .feed-item-achievement.rarity-legend .feed-item-line { color: #ffffff; }
 .feed-item-achievement.rarity-legend .feed-item-time { color: rgba(255, 255, 255, 0.75); }
 
+/* ガチャNEW入手のフィード投稿（実績とは別の新色：ティール系） */
+.feed-item-gacha {
+  border: none;
+  background: linear-gradient(135deg, #0d9488 0%, #7dd8ce 50%, #0d9488 100%);
+}
+.feed-item-gacha .feed-item-line { font-weight: bold; color: #03302b; }
+.feed-item-gacha .feed-item-time { color: rgba(3, 48, 43, 0.65); }
+
+.feed-gacha-thumb-row {
+  display: flex;
+  align-items: center;
+  margin-top: 3px;
+}
+.feed-gacha-thumb {
+  width: 26px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  cursor: zoom-in;
+}
+
 .feed-item-time {
   font-size: 0.7rem;
   color: var(--muted);
