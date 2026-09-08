@@ -828,7 +828,7 @@ async function openMailPanel() {
 
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'notif-row-like-btn';
+      btn.className = 'mail-claim-btn';
       btn.textContent = claimed ? s().mailClaimedBtn : s().mailClaimBtn;
       btn.disabled = claimed;
       btn.addEventListener('click', async () => {

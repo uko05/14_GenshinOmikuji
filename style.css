@@ -1730,8 +1730,29 @@ footer {
   color: var(--muted);
 }
 
-.notif-row-like-btn {
-  padding: 5px 9px;
+.mail-claim-btn {
+  flex-shrink: 0;
+  background: linear-gradient(180deg, var(--accent), var(--gold));
+  border: none;
+  border-radius: 20px;
+  color: #3a2a00;
+  font-family: var(--font);
+  font-weight: bold;
+  font-size: 0.78rem;
+  padding: 8px 16px;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(170, 136, 0, 0.35);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s;
+}
+.mail-claim-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(170, 136, 0, 0.45); }
+.mail-claim-btn:active { transform: translateY(0); }
+.mail-claim-btn:disabled {
+  background: var(--surface2);
+  color: var(--muted);
+  font-weight: normal;
+  cursor: default;
+  box-shadow: none;
+  transform: none;
 }
 
 /* ===== アバター未登録ポップ ===== */
