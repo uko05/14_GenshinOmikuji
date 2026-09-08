@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>ガチャ演出プレビュー（管理者専用）</title>
+<style>
+@font-face {
+  font-family: 'MihoyoZenZero';
+  src: url('font/mihoyo-zenzero.ttf') format('truetype');
+}
+
+:root {
+  --bg: #12101c;
+  --surface: #1c1830;
+  --gold: #ffcc00;
+  --gold-soft: #ffe37a;
+  --text: #f0eeff;
+  --muted: #9891b8;
+  --border: #38315a;
+  --font: 'MihoyoZenZero', 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font);
+  background: radial-gradient(ellipse at 50% -10%, #2c2450 0%, var(--bg) 55%);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 60px;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+h1 {
+  font-size: 1.15rem;
+  color: var(--gold);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+/* ===== ロールゲート ===== */
+#gate-checking, #gate-denied {
+  margin-top: 40vh;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+#gate-denied strong { display: block; color: #ff8a8a; font-size: 1.1rem; margin-bottom: 8px; }
+
+#gacha-app { display: none; width: 100%; max-width: 480px; }
+#gacha-app.visible { display: flex; flex-direction: column; align-items: center; }
+
+/* ===== 演出ステージ ===== */
+.stage {
+  position: relative;
+  width: 210px;
+  height: 354px;
+  perspective: 1200px;
+  margin-bottom: 28px;
+}
+
+.glow-ring {
+  position: absolute;
+  inset: -40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,204,0,0.55) 0%, rgba(255,204,0,0) 70%);
+  opacity: 0;
+  transform: scale(0.6);
+  pointer-events: none;
+}
+
+.gacha-card {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.gacha-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: none;
+}
+.gacha-card-inner.flip { transform: rotateY(180deg); }
+
+.gacha-face {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+.gacha-face-back {
+  background:
+    repeating-linear-gradient(45deg, rgba(255,204,0,0.08) 0 10px, transparent 10px 20px),
+    linear-gradient(160deg, #241f42, #14112a);
+  font-size: 3rem;
+}
+.gacha-face-back::after { content: '?'; color: var(--gold-soft); font-size: 3.2rem; opacity: 0.85; }
+
+.gacha-face-front {
+  transform: rotateY(180deg);
+  overflow: hidden;
+  background: #14112a;
+}
+.gacha-face-front img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.gacha-face-front .caption {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 8px 10px 7px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  background: linear-gradient(0deg, rgba(0,0,0,0.75), rgba(0,0,0,0));
+  text-align: center;
+}
+
+.gacha-face-front.shine::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.55) 48%, transparent 66%);
+  background-size: 220% 220%;
+  animation: gacha-shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes gacha-shimmer {
+  0%   { background-position: 130% 0%; opacity: 0; }
+  15%  { opacity: 1; }
+  55%  { background-position: -30% 0%; opacity: 1; }
+  70%  { opacity: 0; }
+  100% { background-position: -30% 0%; opacity: 0; }
+}
+
+.result-label {
+  min-height: 1.4em;
+  font-size: 0.85rem;
+  color: var(--gold-soft);
+  margin-bottom: 18px;
+  letter-spacing: 0.03em;
+}
+
+.draw-btn {
+  font-family: var(--font);
+  font-size: 1rem;
+  font-weight: bold;
+  color: #241f42;
+  background: linear-gradient(180deg, var(--gold-soft), var(--gold));
+  border: none;
+  border-radius: 999px;
+  padding: 14px 42px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(255,204,0,0.35);
+  transition: transform 0.15s ease, opacity 0.2s ease;
+}
+.draw-btn:active { transform: scale(0.96); }
+.draw-btn:disabled { opacity: 0.5; cursor: default; }
+
+.history-title {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 30px 0 10px;
+  align-self: flex-start;
+}
+
+.history-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.history-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px 5px 8px;
+  font-size: 0.72rem;
+  color: var(--text);
+  animation: chip-in 0.35s ease both;
+}
+.history-chip img { width: 22px; height: 37px; object-fit: cover; border-radius: 4px; }
+@keyframes chip-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.notice {
+  margin-top: 34px;
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+  max-width: 380px;
+}
+</style>
+</head>
+<body>
+
+<h1>🎴 裏面デザインガチャ — 演出プレビュー</h1>
+<p class="subtitle">管理者/デバッガーロール専用（未リリース機能）</p>
+
+<div id="gate-checking">権限を確認しています…</div>
+<div id="gate-denied" style="display:none;">
+  <strong>アクセス権がありません</strong>
+  このページは管理者・デバッガーロール専用です。
+</div>
+
+<div id="gacha-app">
+  <div class="stage">
+    <div class="glow-ring" id="glow-ring"></div>
+    <div class="gacha-card" id="gacha-card">
+      <div class="gacha-card-inner" id="gacha-card-inner">
+        <div class="gacha-face gacha-face-back"></div>
+        <div class="gacha-face gacha-face-front" id="gacha-face-front">
+          <img id="result-img" alt="">
+          <div class="caption" id="result-name"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="result-label" id="result-label"></p>
+  <button class="draw-btn" id="draw-btn">ガチャを引く</button>
+
+  <p class="history-title">このセッションで引いた履歴</p>
+  <div class="history-strip" id="history-strip"></div>
+
+  <p class="notice">※ これは演出テスト用ページです。裏面デザイン画像は本番想定の素材ですが、チケット消費・所持データの保存・被り集計などは未実装です。</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
+<script type="module">
+import { db } from './firebaseConfig.js';
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getUserId } from './userData.js';
+
+// 99_SharedImage/01_Genshin/Omikuji/GachaBacks に置いた実素材(back_Custom_001〜207、018は欠番)
+const GACHA_IMG_BASE = 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/Omikuji/GachaBacks/';
+const DESIGN_IDS = Array.from({ length: 207 }, (_, i) => i + 1).filter((n) => n !== 18);
+const DESIGNS = DESIGN_IDS.map((n) => {
+  const num = String(n).padStart(3, '0');
+  return {
+    id: `custom_${num}`,
+    name: `裏面デザイン No.${num}`,
+    url: `${GACHA_IMG_BASE}back_Custom_${num}.png`,
+  };
+});
+
+const gateChecking = document.getElementById('gate-checking');
+const gateDenied   = document.getElementById('gate-denied');
+const app          = document.getElementById('gacha-app');
+
+async function checkAdminRole() {
+  try {
+    const snap = await getDoc(doc(db, 'sharedUserRoles', getUserId()));
+    if (!snap.exists()) return false;
+    const d = snap.data();
+    return d.role === 'admin' || d.role === 'debugger' || !!d.debugOmikuji;
+  } catch (e) {
+    console.warn('[gacha-preview] role check failed', e);
+    return false;
+  }
+}
+
+async function init() {
+  const isAdmin = await checkAdminRole();
+  gateChecking.style.display = 'none';
+  if (!isAdmin) {
+    gateDenied.style.display = 'block';
+    return;
+  }
+  app.classList.add('visible');
+  setupGacha();
+}
+
+function setupGacha() {
+  const card       = document.getElementById('gacha-card');
+  const inner      = document.getElementById('gacha-card-inner');
+  const glowRing   = document.getElementById('glow-ring');
+  const drawBtn    = document.getElementById('draw-btn');
+  const resultLbl  = document.getElementById('result-label');
+  const resultImg  = document.getElementById('result-img');
+  const resultName = document.getElementById('result-name');
+  const frontFace  = document.getElementById('gacha-face-front');
+  const historyStrip = document.getElementById('history-strip');
+
+  let busy = false;
+
+  function pickDesign() {
+    return DESIGNS[Math.floor(Math.random() * DESIGNS.length)];
+  }
+
+  function addHistory(design) {
+    const chip = document.createElement('div');
+    chip.className = 'history-chip';
+    chip.innerHTML = `<img src="${design.url}" alt=""><span>${design.name}</span>`;
+    historyStrip.prepend(chip);
+  }
+
+  function fireConfetti() {
+    if (typeof confetti !== 'function') return;
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      startVelocity: 42,
+      origin: { y: 0.55 },
+      colors: ['#ffcc00', '#ffe37a', '#ffffff', '#8a6bff'],
+    });
+  }
+
+  async function playGacha() {
+    if (busy) return;
+    busy = true;
+    drawBtn.disabled = true;
+    resultLbl.textContent = '';
+    inner.classList.remove('flip');
+    frontFace.classList.remove('shine');
+    void inner.offsetWidth; // reflow でアニメを確実にリセット
+
+    const design = pickDesign();
+    const preload = new Image();
+    preload.src = design.url; // 溜め演出の間に先読みしておく
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        drawBtn.disabled = false;
+        busy = false;
+      },
+    });
+
+    tl.set(glowRing, { opacity: 0, scale: 0.6 })
+      .to(card, { scale: 1.06, duration: 0.22, ease: 'power1.out' })
+      .to(card, { scale: 1, duration: 0.18, ease: 'power1.in' })
+      .to(card, { rotate: -4, duration: 0.07, repeat: 7, yoyo: true, ease: 'power1.inOut' }, '<')
+      .to(glowRing, { opacity: 1, scale: 1.5, duration: 1.0, ease: 'power2.out' }, '<')
+      .to(card, { scale: 1.14, duration: 0.32, ease: 'power3.in' }, '-=0.15')
+      .call(() => {
+        resultImg.src = design.url;
+        resultName.textContent = design.name;
+      })
+      .to(inner, { duration: 0.65, ease: 'back.out(1.6)', rotateY: 180 })
+      .call(() => {
+        fireConfetti();
+        resultLbl.textContent = `「${design.name}」を手に入れた！`;
+        frontFace.classList.add('shine');
+        addHistory(design);
+      })
+      .to(card, { scale: 1, duration: 0.3, ease: 'power2.out' })
+      .to(glowRing, { opacity: 0, duration: 0.5 }, '<');
+  }
+
+  drawBtn.addEventListener('click', playGacha);
+}
+
+init();
+</script>
+</body>
+</html>
