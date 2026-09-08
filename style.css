@@ -1030,6 +1030,72 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
 
 .col-item:not(.col-item-unknown) .col-scene { cursor: pointer; }
 
+/* ===== 裏面デザイン図鑑（ガチャ入手分。50件ずつグループ表示） ===== */
+.gacha-col-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.gacha-col-group-header {
+  cursor: pointer;
+  padding: 10px 14px;
+  background: var(--surface2);
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: var(--text);
+  list-style: none;
+}
+.gacha-col-group-header::-webkit-details-marker { display: none; }
+.gacha-col-group-header::before {
+  content: '▶';
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 0.7rem;
+  color: var(--muted);
+  transition: transform 0.2s;
+}
+.gacha-col-group[open] .gacha-col-group-header::before { transform: rotate(90deg); }
+
+.gacha-collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 60px);
+  gap: 8px;
+  justify-content: center;
+  padding: 12px;
+}
+
+.gacha-col-item { display: flex; }
+
+.gacha-col-scene {
+  width: 60px;
+  aspect-ratio: 912 / 1536;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface2);
+}
+
+.gacha-col-scene img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  cursor: pointer;
+}
+
+.gacha-col-item-unknown .gacha-col-scene {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gacha-col-unknown-mark {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: var(--border);
+}
+
 .col-label {
   font-size: 0.65rem;
   color: var(--muted);

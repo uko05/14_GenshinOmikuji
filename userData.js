@@ -57,6 +57,7 @@ export const store = {
   achievements: new Set(),
   achStats:     null,
   hideFromFeed: false,
+  cardBacks:    new Set(), // ガチャで入手済みの裏面デザインID一覧
   // sitePerks/equippedBadge は08_UPoint/24_AccountCenterが直接書き込む値の
   // 読み取り専用キャッシュ。syncUserDataToFirestoreの書き戻し対象には含めない
   // (含めると、他タブでの更新をこちらの古いローカル値で上書きしてしまうため)。
@@ -83,6 +84,7 @@ export async function loadUserDataFromFirestore() {
       if (d.achievements != null) store.achievements = new Set(d.achievements);
       if (d.achStats     != null) store.achStats = d.achStats;
       if (d.hideFromFeed != null) store.hideFromFeed = d.hideFromFeed;
+      if (d.cardBacks    != null) store.cardBacks    = new Set(d.cardBacks);
       if (d.sitePerks    != null) store.sitePerks    = d.sitePerks;
       if (d.equippedBadge != null) store.equippedBadge = d.equippedBadge;
       console.log('[userData] Loaded from Firestore:', userId);
@@ -151,6 +153,7 @@ export async function syncUserDataToFirestore() {
       achievements: [...store.achievements],
       achStats:     store.achStats,
       hideFromFeed: store.hideFromFeed,
+      cardBacks:    [...store.cardBacks],
       updatedAt:    serverTimestamp(),
     };
     await setDoc(doc(db, 'omikujiUsers', userId), payload, { merge: true });

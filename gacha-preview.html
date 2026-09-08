@@ -267,18 +267,7 @@ h1 {
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getUserId } from './userData.js';
-
-// 99_SharedImage/01_Genshin/Omikuji/GachaBacks に置いた実素材(back_Custom_001〜206、連番)
-const GACHA_IMG_BASE = 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/Omikuji/GachaBacks/';
-const DESIGN_IDS = Array.from({ length: 206 }, (_, i) => i + 1);
-const DESIGNS = DESIGN_IDS.map((n) => {
-  const num = String(n).padStart(3, '0');
-  return {
-    id: `custom_${num}`,
-    name: `裏面デザイン No.${num}`,
-    url: `${GACHA_IMG_BASE}back_Custom_${num}.png`,
-  };
-});
+import { GACHA_DESIGNS as DESIGNS } from './gachaBacks.js';
 
 const gateChecking = document.getElementById('gate-checking');
 const gateDenied   = document.getElementById('gate-denied');

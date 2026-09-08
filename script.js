@@ -1,5 +1,6 @@
 // script.js
 import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
+import { GACHA_DESIGNS } from './gachaBacks.js';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
@@ -132,6 +133,8 @@ const i18n = {
     captureTitle:       '✦ 原神おみくじ ✦',
     sectionCollection:   'アルカナ図鑑',
     collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} 収録`,
+    sectionGachaCollection:  '裏面デザイン図鑑',
+    gachaCollectionProgress: (n, total) => `${n} / ${total} 収録`,
     colPosUpright:       '正',
     colPosReversed:      '逆',
     sectionAchievement:  'アチーブメント',
@@ -217,6 +220,8 @@ const i18n = {
     captureTitle:       '✦ Genshin Omikuji ✦',
     sectionCollection:   'Arcana Collection',
     collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} collected`,
+    sectionGachaCollection:  'Card-Back Gallery',
+    gachaCollectionProgress: (n, total) => `${n} / ${total} collected`,
     colPosUpright:       'U',
     colPosReversed:      'R',
     sectionAchievement:  'Achievements',
@@ -703,6 +708,7 @@ function applyLang(lang) {
                lastFortuneIsReversed, lastFortuneCardFlipped, true);
   }
   renderCollection();
+  renderGachaCollection();
   renderStreak();
   renderAchievements();
   refreshFeedLang();
@@ -857,6 +863,88 @@ function openCollectionModal(card, isReversed) {
   document.getElementById('col-modal-name').textContent    = `${card.number} ${cardName} ${posLabel}`;
   document.getElementById('col-modal-keyword').textContent = cardData.keyword;
   document.getElementById('col-modal').style.display       = 'flex';
+}
+
+// ===== 裏面デザイン図鑑（ガチャで入手した裏面デザイン。50件ずつグループ表示） =====
+const GACHA_COLLECTION_GROUP_SIZE = 50;
+// グループの開閉状態(再描画のたびに<details>を作り直すため、ここで覚えておく)。
+// 初期状態は先頭グループだけ開いておく。
+const gachaCollectionOpenGroups = new Set([0]);
+
+function renderGachaCollection() {
+  const countEl  = document.getElementById('gacha-collection-count');
+  const groupsEl = document.getElementById('gacha-collection-groups');
+  if (!groupsEl) return;
+
+  const owned = store.cardBacks;
+  if (countEl) {
+    countEl.textContent = i18n[currentLang].gachaCollectionProgress(owned.size, GACHA_DESIGNS.length);
+  }
+
+  groupsEl.innerHTML = '';
+
+  for (let start = 0; start < GACHA_DESIGNS.length; start += GACHA_COLLECTION_GROUP_SIZE) {
+    const groupIndex = start / GACHA_COLLECTION_GROUP_SIZE;
+    const end = Math.min(start + GACHA_COLLECTION_GROUP_SIZE, GACHA_DESIGNS.length);
+    const groupDesigns = GACHA_DESIGNS.slice(start, end);
+
+    const details = document.createElement('details');
+    details.className = 'gacha-col-group';
+    details.open = gachaCollectionOpenGroups.has(groupIndex);
+    details.addEventListener('toggle', () => {
+      if (details.open) gachaCollectionOpenGroups.add(groupIndex);
+      else gachaCollectionOpenGroups.delete(groupIndex);
+    });
+
+    const groupOwnedCount = groupDesigns.reduce((n, d) => n + (owned.has(d.id) ? 1 : 0), 0);
+    const summary = document.createElement('summary');
+    summary.className = 'gacha-col-group-header';
+    summary.textContent = `No.${String(start + 1).padStart(3, '0')} - ${String(end).padStart(3, '0')} （${groupOwnedCount}/${groupDesigns.length}）`;
+    details.appendChild(summary);
+
+    const grid = document.createElement('div');
+    grid.className = 'gacha-collection-grid';
+
+    groupDesigns.forEach((design) => {
+      const isOwned = owned.has(design.id);
+
+      const item = document.createElement('div');
+      item.className = 'gacha-col-item' + (isOwned ? '' : ' gacha-col-item-unknown');
+
+      const scene = document.createElement('div');
+      scene.className = 'gacha-col-scene';
+
+      if (isOwned) {
+        const img = document.createElement('img');
+        img.src = design.url;
+        img.alt = design.name;
+        img.loading = 'lazy';
+        scene.appendChild(img);
+        scene.addEventListener('click', () => openGachaCollectionModal(design));
+      } else {
+        const unknown = document.createElement('div');
+        unknown.className = 'gacha-col-unknown-mark';
+        unknown.textContent = '?';
+        scene.appendChild(unknown);
+      }
+
+      item.appendChild(scene);
+      grid.appendChild(item);
+    });
+
+    details.appendChild(grid);
+    groupsEl.appendChild(details);
+  }
+}
+
+function openGachaCollectionModal(design) {
+  document.getElementById('gacha-collection-modal-img').src = design.url;
+  document.getElementById('gacha-collection-modal-name').textContent = design.name;
+  document.getElementById('gacha-collection-modal').style.display = 'flex';
+}
+
+function closeGachaCollectionModal() {
+  document.getElementById('gacha-collection-modal').style.display = 'none';
 }
 
 function initLangSwitch() {
@@ -1334,6 +1422,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelector('.col-modal-close').addEventListener('click', () => {
     document.getElementById('col-modal').style.display = 'none';
   });
+
+  document.querySelector('#gacha-collection-modal .col-modal-backdrop').addEventListener('click', closeGachaCollectionModal);
+  document.getElementById('gacha-collection-modal-close').addEventListener('click', closeGachaCollectionModal);
 
   shuffleBtn.addEventListener('click', shuffleCards);
   document.getElementById('save-img-btn').addEventListener('click', captureResult);
