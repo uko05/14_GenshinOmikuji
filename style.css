@@ -1194,6 +1194,12 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   margin-top: 16px;
 }
 
+.gacha-col-modal-actions .avatar-nudge-btn {
+  width: 150px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
 .gacha-col-equip-btn-active {
   background: var(--surface2);
   color: var(--muted);
