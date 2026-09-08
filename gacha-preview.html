@@ -229,21 +229,30 @@ h1 {
   text-align: center;
 }
 
-.gacha-face-front.shine::before {
-  content: '';
+/* カードの周りにきらめく星（結果表示中ずっとランダムに明滅する） */
+.sparkle-container {
   position: absolute;
   inset: 0;
-  border-radius: var(--radius);
-  background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.55) 48%, transparent 66%);
-  background-size: 220% 220%;
-  animation: gacha-shimmer 1.6s linear infinite;
+  pointer-events: none;
+  overflow: visible;
 }
 
-@keyframes gacha-shimmer {
-  0%   { background-position: 140% 0%; opacity: 0; }
-  10%  { opacity: 1; }
-  90%  { opacity: 1; }
-  100% { background-position: -40% 0%; opacity: 0; }
+.sparkle {
+  position: absolute;
+  background: radial-gradient(circle, #fffdf4 0%, #ffe066 45%, rgba(255,224,102,0) 75%);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+  opacity: 0;
+  filter: drop-shadow(0 0 3px rgba(255,224,102,0.85));
+}
+.sparkle.twinkle {
+  animation-name: sparkle-twinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes sparkle-twinkle {
+  0%, 100% { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  50%      { opacity: 1; transform: scale(1) rotate(45deg); }
 }
 
 .result-label {
@@ -348,6 +357,7 @@ h1 {
         </div>
       </div>
     </div>
+    <div class="sparkle-container" id="sparkle-container"></div>
   </div>
 
   <p class="result-label" id="result-label"></p>
@@ -401,6 +411,7 @@ function setupGacha() {
   const glowRing   = document.getElementById('glow-ring');
   const rays       = document.getElementById('light-rays');
   const motesBox   = document.getElementById('motes-container');
+  const sparkleBox = document.getElementById('sparkle-container');
   const frame      = document.getElementById('ornate-frame');
   const flash      = document.getElementById('flash-overlay');
   const letterTop  = document.getElementById('letterbox-top');
@@ -409,7 +420,6 @@ function setupGacha() {
   const resultLbl  = document.getElementById('result-label');
   const resultImg  = document.getElementById('result-img');
   const resultName = document.getElementById('result-name');
-  const frontFace  = document.getElementById('gacha-face-front');
   const historyStrip = document.getElementById('history-strip');
 
   let busy = false;
@@ -454,8 +464,31 @@ function setupGacha() {
   function finishResult(design, confettiOpts) {
     fireConfetti(confettiOpts);
     resultLbl.textContent = `「${design.name}」を手に入れた！`;
-    frontFace.classList.add('shine');
+    spawnSparkles(10);
     addHistory(design);
+  }
+
+  // カードの縁のすぐ外側にランダムな位置・タイミングできらめく星を配置する
+  function spawnSparkles(n) {
+    sparkleBox.innerHTML = '';
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement('div');
+      s.className = 'sparkle twinkle';
+      const edge = Math.floor(Math.random() * 4); // 0:上 1:右 2:下 3:左
+      let x, y;
+      if (edge === 0)      { x = Math.random() * 100; y = -6 - Math.random() * 6; }
+      else if (edge === 1) { x = 100 + Math.random() * 6; y = Math.random() * 100; }
+      else if (edge === 2) { x = Math.random() * 100; y = 100 + Math.random() * 6; }
+      else                 { x = -6 - Math.random() * 6; y = Math.random() * 100; }
+      s.style.left = `${x}%`;
+      s.style.top = `${y}%`;
+      const size = 8 + Math.random() * 8;
+      s.style.width = `${size}px`;
+      s.style.height = `${size}px`;
+      s.style.animationDuration = `${1.0 + Math.random() * 0.9}s`;
+      s.style.animationDelay = `${-Math.random() * 1.9}s`; // マイナス遅延で最初からバラバラの位相にする
+      sparkleBox.appendChild(s);
+    }
   }
 
   function spawnMotes(n) {
@@ -477,6 +510,7 @@ function setupGacha() {
     gsap.set([letterTop, letterBtm], { scaleY: 0 });
     gsap.set(stage, { scale: 1 });
     motesBox.innerHTML = '';
+    sparkleBox.innerHTML = '';
   }
 
   // ① 光の爆発：勢いよく弾ける、派手でにぎやかな演出
@@ -560,7 +594,6 @@ function setupGacha() {
     drawBtn.disabled = true;
     resultLbl.textContent = '';
     inner.classList.remove('flip');
-    frontFace.classList.remove('shine');
     resetFx();
     void inner.offsetWidth; // reflow でアニメを確実にリセット
 
