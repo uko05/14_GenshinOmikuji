@@ -4,7 +4,7 @@ import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js';
 import {
   collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
-  query, where, orderBy, limit, serverTimestamp, increment, Timestamp,
+  query, where, orderBy, limit, serverTimestamp, increment, arrayUnion, runTransaction, Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { genshinChars } from 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/chara_data/genshin_chars.js';
@@ -28,9 +28,13 @@ const STR = {
     normalLine: (level) => `さんが${level}を引きました`,
     rareLine:   (card)  => `さんが${card}を引き当てました！`,
     achLine:    (ach)   => `さんが「${ach}」を取得しました！`,
-    statsGivenInfo:    '「アゲいいね！」は、あなたが他の人の結果にいいねした回数です。今後実装予定のゲームで使えるポイントになる予定なので、コツコツ貯めておこう！',
-    statsReceivedInfo: '「モラいいね！」は、あなたの結果に他の人からもらったいいねの回数です。こちらも今後実装予定のゲームで使えるポイントになる予定です！',
-    statsUpInfo:       '「UP（うーこポイント）」は、アゲいいね・モラいいねをすると貯まるポイントです（アゲいいね1回で1UP、モラいいね1回で2UP）。今後は他のサイトでミッションをクリアしてももらえるようになる予定です。貯めたUPは引き換え専用サイトで、色々なサイトのちょっとした特典と交換できます！',
+    statsUpInfo: (given, received) => `「UP（うーこポイント）」は、他の人の結果にいいねする（アゲいいね：あなたは今${given}回、1回で1UP）、または自分の結果にいいねをもらう（モラいいね：あなたは今${received}回、1回で2UP）と貯まるポイントです。今後は他のサイトでミッションをクリアしてももらえるようになる予定です。貯めたUPは引き換え専用サイトで、色々なサイトのちょっとした特典と交換できます！`,
+    gachaNoTicketInfo:   '現在ガチャ券は0枚です。ガチャ券を持っていると、ここから裏面デザインガチャを引けるようになります。',
+    gachaComingSoonInfo: 'ガチャ機能は近日公開予定です。もうしばらくお待ちください。',
+    mailEmpty: '届いているメールはありません',
+    mailClaimBtn: '受け取る',
+    mailClaimedBtn: '受取済み',
+    mailClaimFailed: '受け取りに失敗しました。時間をおいて再度お試しください。',
     deleteBtnTitle: 'この投稿をフィードから削除(管理者/デバッガー専用)',
     deleteConfirm:  'この投稿をみんなの結果から削除しますか？（他の人からも見えなくなります）',
     deleteFailed:   '削除に失敗しました。',
@@ -46,9 +50,13 @@ const STR = {
     normalLine: (level) => ` got ${level}!`,
     rareLine:   (card)  => ` drew ${card}!!`,
     achLine:    (ach)   => ` unlocked "${ach}"!`,
-    statsGivenInfo:    '"Given" counts how many times you\'ve liked other people\'s results. It\'s planned to become usable points in a future game feature, so keep stacking them up!',
-    statsReceivedInfo: '"Received" counts how many times other people have liked your results. This will also become usable points in a future game feature!',
-    statsUpInfo:       '"UP" (Uko Points) are earned from Given/Received likes (1 UP per Given like, 2 UP per Received like). You\'ll also be able to earn them by completing missions on other sites in the future. Saved-up UP can be used on the dedicated redemption site to unlock small perks across various sites!',
+    statsUpInfo: (given, received) => `"UP" (Uko Points) are earned by liking other people's results (Given: ${given} so far, 1 UP each) or having your own results liked (Received: ${received} so far, 2 UP each). You'll also be able to earn them by completing missions on other sites in the future. Saved-up UP can be used on the dedicated redemption site to unlock small perks across various sites!`,
+    gachaNoTicketInfo:   "You have 0 gacha tickets right now. Once you have some, you'll be able to draw a card-back gacha from here.",
+    gachaComingSoonInfo: 'The gacha feature is coming soon. Please check back later.',
+    mailEmpty: 'No mail yet',
+    mailClaimBtn: 'Claim',
+    mailClaimedBtn: 'Claimed',
+    mailClaimFailed: 'Failed to claim. Please try again later.',
     deleteBtnTitle: 'Delete this post from the feed (admin/debugger only)',
     deleteConfirm:  'Delete this post from everyone\'s results? (Others will no longer see it either)',
     deleteFailed:   'Failed to delete.',
@@ -531,7 +539,7 @@ async function deleteFeedEntry(feedId) {
   }
 }
 
-const FEED_WINDOW_HOURS = 24;
+const FEED_WINDOW_HOURS = 48;
 // テスト期間中のデータを一覧から除外するための下限(2026-08-04 00:00 ローカル時刻以降のみ表示)
 const FEED_CUTOFF_MS = new Date(2026, 7, 4, 0, 0, 0).getTime();
 
@@ -697,18 +705,126 @@ function closeAvatarNudgeModal() {
 }
 
 // ===== 初期化 =====
-// ===== 固定フッターのアゲ/モラいいねカウント（リアルタイム） =====
+// ===== 固定フッターの各種カウント（リアルタイム） =====
+// アゲ/モラいいねはフッターには出さず、UPをタップした時の説明ポップにだけ数値を出す
+let latestLikesGiven    = 0;
+let latestLikesReceived = 0;
+let latestGachaTickets  = 0;
+
 function startStatsFooterListener() {
-  const givenEl    = document.getElementById('stats-given-count');
-  const receivedEl = document.getElementById('stats-received-count');
-  const upEl       = document.getElementById('stats-up-count');
-  if (!givenEl && !receivedEl && !upEl) return;
+  const upEl    = document.getElementById('stats-up-count');
+  const gachaEl = document.getElementById('gacha-ticket-count');
   onSnapshot(doc(db, 'omikujiUsers', getUserId()), (snap) => {
     const d = snap.exists() ? snap.data() : {};
-    if (givenEl) givenEl.textContent = d.totalLikesGiven || 0;
-    if (receivedEl) receivedEl.textContent = d.totalLikesReceived || 0;
-    if (upEl) upEl.textContent = d.ukoPoints || 0;
+    latestLikesGiven    = d.totalLikesGiven || 0;
+    latestLikesReceived = d.totalLikesReceived || 0;
+    latestGachaTickets  = d.sitePerks?.omikuji?.gachaTickets || 0;
+    if (upEl)    upEl.textContent    = d.ukoPoints || 0;
+    if (gachaEl) gachaEl.textContent = latestGachaTickets;
   }, (err) => console.error('[feed] stats footer listen failed', err));
+}
+
+// ===== ガチャ券0枚の案内（実際の抽選演出は券が用意でき次第、別途実装） =====
+function openGachaInfo() {
+  openStatsInfoModal(latestGachaTickets > 0 ? s().gachaComingSoonInfo : s().gachaNoTicketInfo);
+}
+
+// ===== メールボックス（運営からのプレゼント配布） =====
+async function openMailPanel() {
+  const modal  = document.getElementById('mail-panel');
+  const listEl = document.getElementById('mail-panel-list');
+  if (!modal || !listEl) return;
+  modal.style.display = 'flex';
+  listEl.innerHTML = '';
+
+  try {
+    const [mailSnap, userSnap] = await Promise.all([
+      getDocs(query(collection(db, 'omikujiMailBroadcasts'), orderBy('createdAt', 'desc'), limit(50))),
+      getDoc(doc(db, 'omikujiUsers', getUserId())),
+    ]);
+
+    if (mailSnap.empty) {
+      const p = document.createElement('p');
+      p.className = 'notif-empty';
+      p.textContent = s().mailEmpty;
+      listEl.appendChild(p);
+      return;
+    }
+
+    const claimedIds = new Set((userSnap.exists() ? userSnap.data().claimedMailIds : null) || []);
+
+    mailSnap.forEach((docSnap) => {
+      const d = docSnap.data();
+      const claimed = claimedIds.has(docSnap.id);
+
+      const row = document.createElement('div');
+      row.className = 'notif-row';
+
+      const col = document.createElement('div');
+      col.className = 'notif-row-col';
+      const title = document.createElement('div');
+      title.className = 'notif-row-text';
+      title.textContent = d.title || '';
+      const msg = document.createElement('div');
+      msg.className = 'notif-row-text';
+      msg.textContent = d.message || '';
+      const time = document.createElement('div');
+      time.className = 'notif-row-time';
+      time.textContent = relTime(d.createdAt);
+      col.appendChild(title);
+      if (d.message) col.appendChild(msg);
+      col.appendChild(time);
+      row.appendChild(col);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'notif-row-like-btn';
+      btn.textContent = claimed ? s().mailClaimedBtn : s().mailClaimBtn;
+      btn.disabled = claimed;
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          await claimMail(docSnap.id, d.rewards);
+          btn.textContent = s().mailClaimedBtn;
+        } catch (e) {
+          console.error('[feed] mail claim failed', e);
+          btn.disabled = false;
+          alert(s().mailClaimFailed);
+        }
+      });
+      row.appendChild(btn);
+
+      listEl.appendChild(row);
+    });
+  } catch (e) {
+    console.error('[feed] mail list load failed', e);
+  }
+}
+
+function closeMailPanel() {
+  const modal = document.getElementById('mail-panel');
+  if (modal) modal.style.display = 'none';
+}
+
+// rewards: [{ field: 'sitePerks.omikuji.gachaTickets', amount: 1 }, ...]（省略可）
+async function claimMail(mailId, rewards) {
+  const ref = doc(db, 'omikujiUsers', getUserId());
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('NO_USER_DOC');
+    const claimed = snap.data().claimedMailIds || [];
+    if (claimed.includes(mailId)) return;
+
+    // ドットを含むキー(例: 'sitePerks.omikuji.gachaTickets')をネストしたフィールドとして
+    // 更新するため、set(merge)ではなくupdate()を使う(setだとキー文字列そのままになってしまう)
+    const update = { claimedMailIds: arrayUnion(mailId) };
+    (rewards || []).forEach((r) => {
+      if (r && typeof r.field === 'string' && typeof r.amount === 'number') {
+        update[r.field] = increment(r.amount);
+      }
+    });
+    tx.update(ref, update);
+  });
 }
 
 export async function initFeed() {
@@ -738,16 +854,22 @@ export async function initFeed() {
   const pickerBackdrop = document.querySelector('#avatar-picker-modal .col-modal-backdrop');
   if (pickerBackdrop) pickerBackdrop.addEventListener('click', closeAvatarPicker);
 
-  const givenItem = document.getElementById('stats-given-item');
-  if (givenItem) givenItem.addEventListener('click', () => openStatsInfoModal(s().statsGivenInfo));
-  const receivedItem = document.getElementById('stats-received-item');
-  if (receivedItem) receivedItem.addEventListener('click', () => openStatsInfoModal(s().statsReceivedInfo));
   const upItem = document.getElementById('stats-up-item');
-  if (upItem) upItem.addEventListener('click', () => openStatsInfoModal(s().statsUpInfo));
+  if (upItem) upItem.addEventListener('click', () => openStatsInfoModal(s().statsUpInfo(latestLikesGiven, latestLikesReceived)));
   const statsInfoClose = document.getElementById('stats-info-close');
   if (statsInfoClose) statsInfoClose.addEventListener('click', closeStatsInfoModal);
   const statsInfoBackdrop = document.querySelector('#stats-info-modal .col-modal-backdrop');
   if (statsInfoBackdrop) statsInfoBackdrop.addEventListener('click', closeStatsInfoModal);
+
+  const gachaBtn = document.getElementById('gacha-btn');
+  if (gachaBtn) gachaBtn.addEventListener('click', openGachaInfo);
+
+  const mailBtn = document.getElementById('mail-btn');
+  if (mailBtn) mailBtn.addEventListener('click', openMailPanel);
+  const mailClose = document.getElementById('mail-panel-close');
+  if (mailClose) mailClose.addEventListener('click', closeMailPanel);
+  const mailBackdrop = document.querySelector('#mail-panel .col-modal-backdrop');
+  if (mailBackdrop) mailBackdrop.addEventListener('click', closeMailPanel);
 }
 
 function openStatsInfoModal(text) {

@@ -74,7 +74,7 @@
 
   <!-- みんなの結果フィード -->
   <section id="feed-section" class="section">
-    <div class="section-title" data-i18n="feedTitle">みんなの結果（24時間以内）</div>
+    <div class="section-title" data-i18n="feedTitle">みんなの結果（48時間以内）</div>
     <div id="feed-list" class="feed-list"></div>
   </section>
 
@@ -250,19 +250,19 @@
   <div id="like-toast-text" class="like-toast-text"></div>
 </div>
 
-<!-- 固定フッター（アゲいいね／モラいいね／通知） -->
+<!-- 固定フッター（うーこポイント／ガチャを引く／メール／通知） -->
 <div class="stats-footer">
-  <button type="button" class="stats-footer-item" id="stats-given-item">
-    <span class="stats-footer-count" id="stats-given-count">0</span>
-    <span class="stats-footer-label" data-i18n="statsGivenLabel">アゲいいね！</span>
-  </button>
-  <button type="button" class="stats-footer-item" id="stats-received-item">
-    <span class="stats-footer-count" id="stats-received-count">0</span>
-    <span class="stats-footer-label" data-i18n="statsReceivedLabel">モラいいね！</span>
-  </button>
   <button type="button" class="stats-footer-item" id="stats-up-item">
     <span class="stats-footer-count"><span id="stats-up-count">0</span><span class="stats-up-unit">UP</span></span>
     <span class="stats-footer-label" data-i18n="statsUpLabel">うーこポイント</span>
+  </button>
+  <button type="button" class="stats-footer-item" id="gacha-btn">
+    <span class="stats-footer-count"><span id="gacha-ticket-count">0</span><span class="stats-up-unit">枚</span></span>
+    <span class="stats-footer-label" data-i18n="statsGachaLabel">ガチャを引く</span>
+  </button>
+  <button type="button" class="stats-footer-item stats-footer-notif" id="mail-btn" aria-label="メール" title="メール">
+    <span class="stats-footer-icon">✉️</span>
+    <span class="stats-footer-label" data-i18n="statsMailLabel">メール</span>
   </button>
   <button type="button" class="stats-footer-item stats-footer-notif" id="notif-bell" aria-label="いいね通知" title="いいね通知">
     <span class="stats-footer-icon">🔔</span>
@@ -280,6 +280,16 @@
   </div>
 </div>
 
+<!-- メールボックス（運営からのプレゼント） -->
+<div id="mail-panel" class="col-modal" style="display:none;">
+  <div class="col-modal-backdrop"></div>
+  <div class="col-modal-content notif-panel-content">
+    <button id="mail-panel-close" class="col-modal-close" aria-label="close">×</button>
+    <div class="notif-panel-title" data-i18n="mailPanelTitle">メールボックス</div>
+    <div id="mail-panel-list" class="notif-panel-list"></div>
+  </div>
+</div>
+
 <!-- アバター未設定時の登録導線ポップ -->
 <div id="avatar-nudge-modal" class="col-modal" style="display:none;">
   <div class="col-modal-backdrop"></div>
@@ -290,7 +300,7 @@
   </div>
 </div>
 
-<!-- アゲ/モラいいね 説明ポップ -->
+<!-- 汎用の説明ポップ（UP内訳・ガチャ券情報などを表示） -->
 <div id="stats-info-modal" class="col-modal" style="display:none;">
   <div class="col-modal-backdrop"></div>
   <div class="col-modal-content avatar-nudge-content">
