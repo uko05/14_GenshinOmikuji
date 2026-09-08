@@ -708,18 +708,47 @@ function closeAvatarNudgeModal() {
 let latestLikesGiven    = 0;
 let latestLikesReceived = 0;
 let latestGachaTickets  = 0;
+let latestClaimedMailIds = new Set();
+let latestMailDocs = []; // omikujiMailBroadcastsのdocSnap配列(未読バッジ集計用)
 
 function startStatsFooterListener() {
   const upEl    = document.getElementById('stats-up-count');
   const gachaEl = document.getElementById('gacha-ticket-count');
   onSnapshot(doc(db, 'omikujiUsers', getUserId()), (snap) => {
     const d = snap.exists() ? snap.data() : {};
-    latestLikesGiven    = d.totalLikesGiven || 0;
-    latestLikesReceived = d.totalLikesReceived || 0;
-    latestGachaTickets  = d.sitePerks?.omikuji?.gachaTickets || 0;
+    latestLikesGiven     = d.totalLikesGiven || 0;
+    latestLikesReceived  = d.totalLikesReceived || 0;
+    latestGachaTickets   = d.sitePerks?.omikuji?.gachaTickets || 0;
+    latestClaimedMailIds = new Set(d.claimedMailIds || []);
     if (upEl)    upEl.textContent    = d.ukoPoints || 0;
     if (gachaEl) gachaEl.textContent = latestGachaTickets;
+    updateMailBadge();
   }, (err) => console.error('[feed] stats footer listen failed', err));
+}
+
+// ===== メール未読バッジ（リアルタイム） =====
+function startMailBadgeListener() {
+  const q = query(collection(db, 'omikujiMailBroadcasts'), orderBy('createdAt', 'desc'), limit(50));
+  onSnapshot(q, (snap) => {
+    latestMailDocs = snap.docs;
+    updateMailBadge();
+  }, (err) => console.error('[feed] mail badge listen failed', err));
+}
+
+function updateMailBadge() {
+  const badgeEl = document.getElementById('mail-badge');
+  if (!badgeEl) return;
+  const myUserId = getUserId();
+  const unclaimedCount = latestMailDocs.filter((docSnap) => (
+    mailMatchesTarget(docSnap.data().target, myUserId) && !latestClaimedMailIds.has(docSnap.id)
+  )).length;
+
+  if (unclaimedCount > 0) {
+    badgeEl.textContent = unclaimedCount > 9 ? '9+' : String(unclaimedCount);
+    badgeEl.style.display = 'flex';
+  } else {
+    badgeEl.style.display = 'none';
+  }
 }
 
 // ===== ガチャポップ（見た目・文言は本番想定。中の「ガチャをひく」ボタンと引き換え
@@ -856,6 +885,7 @@ export async function initFeed() {
   startMyLikesListener();
   startNotifListener();
   startStatsFooterListener();
+  startMailBadgeListener();
 
   const bell = document.getElementById('notif-bell');
   if (bell) bell.addEventListener('click', openNotifPanel);

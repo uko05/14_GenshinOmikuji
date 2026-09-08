@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="生年月日から今日の運勢を占う原神テーマのおみくじサイト。星座占い・バイオリズム・原神アルカナタロットで今日の運勢をチェック！">
   <title>原神おみくじ - うーこの部屋</title>
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=21">
 
   <!-- Favicon -->
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/favicon.ico" type="image/x-icon">
@@ -261,7 +261,10 @@
     <span class="stats-footer-label" data-i18n="statsGachaLabel">ガチャを引く</span>
   </button>
   <button type="button" class="stats-footer-item stats-footer-notif" id="mail-btn" aria-label="メール" title="メール">
-    <span class="stats-footer-icon">✉️</span>
+    <span class="stats-footer-icon-wrap">
+      <span class="stats-footer-icon">✉️</span>
+      <span id="mail-badge" class="footer-badge" style="display:none;">0</span>
+    </span>
     <span class="stats-footer-label" data-i18n="statsMailLabel">メール</span>
   </button>
   <button type="button" class="stats-footer-item stats-footer-notif" id="notif-bell" aria-label="いいね通知" title="いいね通知">
@@ -335,7 +338,7 @@
   </div>
 </div>
 
-<span id="site-version" class="site-version">v1.9</span>
+<span id="site-version" class="site-version">v2.0</span>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script type="module" src="script.js?v=14"></script>
