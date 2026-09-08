@@ -166,6 +166,7 @@ const i18n = {
     gachaTicketLabel:        'ガチャ券：',
     gachaTicketUnit:         '枚',
     gachaExchangeLinkText:   'ガチャ券の引き換えはこちら',
+    gachaDrawAgainBtn:       'もう一度引く',
     statsMailLabel:     'メール',
     statsNotifLabel:    '通知',
     feedEmpty:       'まだ結果がありません',
@@ -253,6 +254,7 @@ const i18n = {
     gachaTicketLabel:        'Tickets: ',
     gachaTicketUnit:         '',
     gachaExchangeLinkText:   'Get gacha tickets here',
+    gachaDrawAgainBtn:       'Draw Again',
     statsMailLabel:     'Mail',
     statsNotifLabel:    'Alerts',
     feedEmpty:       'No results yet',
@@ -1344,6 +1346,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // みんなの結果フィード・いいね通知・アバター初期化
   initFeed();
+
+  // ガチャで裏面デザインを入手したら図鑑を即座に再描画する(feed.jsから発火)
+  window.addEventListener('gachaCardBacksUpdated', () => renderGachaCollection());
 
   // 「自分の占いを公開しない」チェックボックス
   const hideFeedCheckbox = document.getElementById('hide-feed-checkbox');

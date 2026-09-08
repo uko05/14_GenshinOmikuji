@@ -2,6 +2,7 @@
 // みんなの結果フィード・いいね・いいね通知・アバター表示
 import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js';
+import { GACHA_DESIGNS } from './gachaBacks.js';
 import {
   collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
   query, where, orderBy, limit, serverTimestamp, increment, arrayUnion, runTransaction, Timestamp,
@@ -33,6 +34,9 @@ const STR = {
     mailClaimBtn: '受け取る',
     mailClaimedBtn: '受取済み',
     mailClaimFailed: '受け取りに失敗しました。時間をおいて再度お試しください。',
+    gachaResultToast: (name) => `「${name}」を手に入れた！`,
+    gachaNoTicketAlert: 'ガチャ券がありません。',
+    gachaDrawFailedAlert: 'ガチャの抽選に失敗しました。時間をおいて再度お試しください。',
     deleteBtnTitle: 'この投稿をフィードから削除(管理者/デバッガー専用)',
     deleteConfirm:  'この投稿をみんなの結果から削除しますか？（他の人からも見えなくなります）',
     deleteFailed:   '削除に失敗しました。',
@@ -53,6 +57,9 @@ const STR = {
     mailClaimBtn: 'Claim',
     mailClaimedBtn: 'Claimed',
     mailClaimFailed: 'Failed to claim. Please try again later.',
+    gachaResultToast: (name) => `You got "${name}"!`,
+    gachaNoTicketAlert: 'You have no gacha tickets.',
+    gachaDrawFailedAlert: 'The gacha draw failed. Please try again later.',
     deleteBtnTitle: 'Delete this post from the feed (admin/debugger only)',
     deleteConfirm:  'Delete this post from everyone\'s results? (Others will no longer see it either)',
     deleteFailed:   'Failed to delete.',
@@ -751,21 +758,181 @@ function updateMailBadge() {
   }
 }
 
-// ===== ガチャポップ（見た目・文言は本番想定。中の「ガチャをひく」ボタンと引き換え
-//       リンクはあえて何も起きないようにしてあり、抽選処理・画像参照は一切ここに置かない） =====
+// ===== ガチャポップ（確認ビュー ⇔ 演出ステージの2ビュー構成） =====
+let gachaBusy = false;
+let gachaEls = null;
+
+function getGachaEls() {
+  if (gachaEls) return gachaEls;
+  gachaEls = {
+    modal: document.getElementById('gacha-confirm-modal'),
+    viewConfirm: document.getElementById('gacha-view-confirm'),
+    viewStage: document.getElementById('gacha-view-stage'),
+    before: document.getElementById('gacha-confirm-before'),
+    after: document.getElementById('gacha-confirm-after'),
+    drawBtn: document.getElementById('gacha-confirm-draw-btn'),
+    drawAgainBtn: document.getElementById('gacha-draw-again-btn'),
+    stage: document.getElementById('gacha-stage'),
+    rays: document.getElementById('gacha-light-rays'),
+    glowRing: document.getElementById('gacha-glow-ring'),
+    card: document.getElementById('gacha-card'),
+    inner: document.getElementById('gacha-card-inner'),
+    flash: document.getElementById('gacha-flash-overlay'),
+    sparkleBox: document.getElementById('gacha-sparkle-container'),
+    resultImg: document.getElementById('gacha-result-img'),
+    resultName: document.getElementById('gacha-result-name'),
+    resultLbl: document.getElementById('gacha-result-label'),
+    lightbox: document.getElementById('gacha-lightbox'),
+    lightboxImg: document.getElementById('gacha-lightbox-img'),
+  };
+  return gachaEls;
+}
+
+function showGachaConfirmView() {
+  const els = getGachaEls();
+  if (!els.modal) return;
+  els.viewConfirm.classList.remove('hidden');
+  els.viewStage.classList.add('hidden');
+  els.drawAgainBtn.classList.add('hidden');
+  els.drawBtn.disabled = false;
+  els.before.textContent = latestGachaTickets;
+  els.after.textContent = Math.max(0, latestGachaTickets - 1);
+}
+
 function openGachaInfo() {
-  const modal = document.getElementById('gacha-confirm-modal');
-  const beforeEl = document.getElementById('gacha-confirm-before');
-  const afterEl = document.getElementById('gacha-confirm-after');
-  if (!modal) return;
-  if (beforeEl) beforeEl.textContent = latestGachaTickets;
-  if (afterEl) afterEl.textContent = Math.max(0, latestGachaTickets - 1);
-  modal.style.display = 'flex';
+  const els = getGachaEls();
+  if (!els.modal) return;
+  if (!gachaBusy) showGachaConfirmView();
+  els.modal.style.display = 'flex';
 }
 
 function closeGachaConfirmModal() {
-  const modal = document.getElementById('gacha-confirm-modal');
-  if (modal) modal.style.display = 'none';
+  const els = getGachaEls();
+  if (els.modal) els.modal.style.display = 'none';
+}
+
+// rewards/claimMailと同じ発想: サーバー側の関数を持たないため、抽選と消費は
+// クライアントのトランザクションで一体化して行う(不正防止はomikujiUsersが
+// 元々「本人が誰でも読み書き可」という信頼モデルのため、他機能と同水準)
+async function drawGachaTransaction() {
+  const userId = getUserId();
+  const ref = doc(db, 'omikujiUsers', userId);
+  const design = GACHA_DESIGNS[Math.floor(Math.random() * GACHA_DESIGNS.length)];
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error('NO_USER_DOC');
+    const tickets = snap.data().sitePerks?.omikuji?.gachaTickets || 0;
+    if (tickets < 1) throw new Error('NO_TICKETS');
+    tx.update(ref, {
+      'sitePerks.omikuji.gachaTickets': increment(-1),
+      cardBacks: arrayUnion(design.id),
+    });
+  });
+
+  store.cardBacks.add(design.id);
+  window.dispatchEvent(new CustomEvent('gachaCardBacksUpdated'));
+  return design;
+}
+
+function spawnGachaSparkles(container, n) {
+  container.innerHTML = '';
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('div');
+    s.className = 'sparkle twinkle';
+    const x = -8 + Math.random() * 116;
+    const y = -8 + Math.random() * 116;
+    s.style.left = `${x}%`;
+    s.style.top = `${y}%`;
+    const size = 6 + Math.random() * 10;
+    s.style.width = `${size}px`;
+    s.style.height = `${size}px`;
+    s.style.animationDuration = `${0.9 + Math.random() * 1.0}s`;
+    s.style.animationDelay = `${-Math.random() * 1.9}s`;
+    container.appendChild(s);
+  }
+}
+
+// gacha-preview.htmlで検証した「①光の爆発」演出をそのまま移植
+function playGachaReveal(design) {
+  const els = getGachaEls();
+  return new Promise((resolve) => {
+    if (typeof gsap === 'undefined') {
+      els.resultImg.src = design.url;
+      els.resultName.textContent = design.name;
+      resolve();
+      return;
+    }
+    gsap.set(els.inner, { rotateY: 0 });
+    gsap.set(els.rays, { opacity: 0, scale: 0.5, rotate: 0 });
+    gsap.set(els.glowRing, { opacity: 0, scale: 0.6 });
+    gsap.set(els.flash, { opacity: 0 });
+    els.sparkleBox.innerHTML = '';
+
+    const tl = gsap.timeline({ onComplete: resolve });
+    tl.to(els.card, { scale: 1.06, duration: 0.2, ease: 'power1.out' })
+      .to(els.card, { scale: 1, duration: 0.16, ease: 'power1.in' })
+      .to(els.card, { rotate: -5, duration: 0.06, repeat: 9, yoyo: true, ease: 'power1.inOut' }, '<')
+      .to(els.rays, { opacity: 0.9, scale: 1.5, rotate: 140, duration: 1.0, ease: 'power2.out' }, '<')
+      .to(els.glowRing, { opacity: 1, scale: 1.6, duration: 1.0, ease: 'power2.out' }, '<')
+      .to(els.card, { scale: 1.18, duration: 0.3, ease: 'power3.in' }, '-=0.15')
+      .to(els.flash, { opacity: 0.85, duration: 0.08 })
+      .call(() => {
+        els.resultImg.src = design.url;
+        els.resultName.textContent = design.name;
+      })
+      .to(els.flash, { opacity: 0, duration: 0.35 }, '<')
+      .to(els.inner, { duration: 0.55, ease: 'back.out(2)', rotateY: 180 }, '<')
+      .call(() => {
+        if (typeof confetti === 'function') {
+          confetti({
+            particleCount: 150, spread: 95, startVelocity: 55,
+            origin: { y: 0.55 },
+            colors: ['#ffcc00', '#ff5a5a', '#ffffff', '#8a6bff'],
+          });
+        }
+        els.resultLbl.textContent = s().gachaResultToast(design.name);
+        spawnGachaSparkles(els.sparkleBox, 36);
+      })
+      .to(els.rays, { opacity: 0, duration: 0.5 }, '<')
+      .to(els.card, { scale: 1, duration: 0.3, ease: 'power2.out' })
+      .to(els.glowRing, { opacity: 0, duration: 0.5 }, '<');
+  });
+}
+
+async function handleGachaDraw() {
+  if (gachaBusy) return;
+  if (latestGachaTickets < 1) {
+    alert(s().gachaNoTicketAlert);
+    return;
+  }
+
+  const els = getGachaEls();
+  const ticketsBeforeDraw = latestGachaTickets;
+  gachaBusy = true;
+  els.drawBtn.disabled = true;
+
+  try {
+    const design = await drawGachaTransaction();
+
+    els.viewConfirm.classList.add('hidden');
+    els.viewStage.classList.remove('hidden');
+    els.resultLbl.textContent = '';
+
+    const preload = new Image();
+    preload.src = design.url;
+
+    await playGachaReveal(design);
+
+    if (ticketsBeforeDraw - 1 > 0) els.drawAgainBtn.classList.remove('hidden');
+  } catch (e) {
+    console.error('[feed] gacha draw failed', e);
+    alert(e.message === 'NO_TICKETS' ? s().gachaNoTicketAlert : s().gachaDrawFailedAlert);
+    showGachaConfirmView();
+  } finally {
+    gachaBusy = false;
+    els.drawBtn.disabled = false;
+  }
 }
 
 // ===== メールボックス（運営からのプレゼント配布） =====
@@ -928,8 +1095,23 @@ export async function initFeed() {
   if (gachaConfirmClose) gachaConfirmClose.addEventListener('click', closeGachaConfirmModal);
   const gachaConfirmBackdrop = document.querySelector('#gacha-confirm-modal .col-modal-backdrop');
   if (gachaConfirmBackdrop) gachaConfirmBackdrop.addEventListener('click', closeGachaConfirmModal);
-  // #gacha-confirm-draw-btn には意図的にイベントリスナーを付けていない
-  // (抽選処理・画像参照はまだ本番に置かない。押しても何も起きないのは仕様)
+
+  const gachaDrawBtn = document.getElementById('gacha-confirm-draw-btn');
+  if (gachaDrawBtn) gachaDrawBtn.addEventListener('click', handleGachaDraw);
+  const gachaDrawAgainBtn = document.getElementById('gacha-draw-again-btn');
+  if (gachaDrawAgainBtn) gachaDrawAgainBtn.addEventListener('click', handleGachaDraw);
+
+  const gachaResultImg = document.getElementById('gacha-result-img');
+  const gachaLightbox = document.getElementById('gacha-lightbox');
+  const gachaLightboxImg = document.getElementById('gacha-lightbox-img');
+  if (gachaResultImg && gachaLightbox && gachaLightboxImg) {
+    gachaResultImg.addEventListener('click', () => {
+      if (!gachaResultImg.src) return;
+      gachaLightboxImg.src = gachaResultImg.src;
+      gachaLightbox.classList.add('visible');
+    });
+    gachaLightbox.addEventListener('click', () => gachaLightbox.classList.remove('visible'));
+  }
 
   const mailBtn = document.getElementById('mail-btn');
   if (mailBtn) mailBtn.addEventListener('click', openMailPanel);
