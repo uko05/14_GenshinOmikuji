@@ -318,12 +318,14 @@ const myLikedIds = new Set();
 
 // デバッガー・管理者ロールは確認用に同じ投稿へ何度でもいいねできる
 let isFeedDebugger = false;
+let myRole = 'general'; // メールのロール指定配信の絞り込みに使う
 async function loadFeedDebuggerRole() {
   try {
     const snap = await getDoc(doc(db, 'sharedUserRoles', getUserId()));
     if (snap.exists()) {
       const d = snap.data();
       isFeedDebugger = d.role === 'admin' || d.role === 'debugger' || !!d.debugOmikuji;
+      myRole = d.role || 'general';
     }
   } catch (e) {
     console.warn('[feed] role fetch failed', e);
@@ -730,6 +732,14 @@ function openGachaInfo() {
 }
 
 // ===== メールボックス（運営からのプレゼント配布） =====
+// target未設定(旧データ)は全員向けとして扱う
+function mailMatchesTarget(target, myUserId) {
+  if (!target || target.type === 'all') return true;
+  if (target.type === 'role') return target.role === myRole;
+  if (target.type === 'users') return Array.isArray(target.userIds) && target.userIds.includes(myUserId);
+  return false;
+}
+
 async function openMailPanel() {
   const modal  = document.getElementById('mail-panel');
   const listEl = document.getElementById('mail-panel-list');
@@ -738,12 +748,15 @@ async function openMailPanel() {
   listEl.innerHTML = '';
 
   try {
+    const myUserId = getUserId();
     const [mailSnap, userSnap] = await Promise.all([
       getDocs(query(collection(db, 'omikujiMailBroadcasts'), orderBy('createdAt', 'desc'), limit(50))),
-      getDoc(doc(db, 'omikujiUsers', getUserId())),
+      getDoc(doc(db, 'omikujiUsers', myUserId)),
     ]);
 
-    if (mailSnap.empty) {
+    const visibleDocs = mailSnap.docs.filter((docSnap) => mailMatchesTarget(docSnap.data().target, myUserId));
+
+    if (visibleDocs.length === 0) {
       const p = document.createElement('p');
       p.className = 'notif-empty';
       p.textContent = s().mailEmpty;
@@ -753,7 +766,7 @@ async function openMailPanel() {
 
     const claimedIds = new Set((userSnap.exists() ? userSnap.data().claimedMailIds : null) || []);
 
-    mailSnap.forEach((docSnap) => {
+    visibleDocs.forEach((docSnap) => {
       const d = docSnap.data();
       const claimed = claimedIds.has(docSnap.id);
 
