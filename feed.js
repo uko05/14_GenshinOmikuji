@@ -1,7 +1,7 @@
 // feed.js
 // みんなの結果フィード・いいね・いいね通知・アバター表示
 import { app, db } from './firebaseConfig.js';
-import { getUserId, store } from './userData.js?v=2';
+import { getUserId, store } from './userData.js?v=3';
 import { GACHA_DESIGNS } from './gachaBacks.js?v=2';
 import {
   collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
@@ -884,14 +884,25 @@ async function drawGachaTransaction() {
     const data = snap.data();
     const tickets = data.sitePerks?.omikuji?.gachaTickets || 0;
     if (tickets < 1) throw new Error('NO_TICKETS');
-    isNew = !(data.cardBacks || []).includes(design.id);
+
+    // cardBacksは { デザインID: 所持数 } 形式。旧データ(所持デザインIDの配列)が
+    // 残っている場合はここで新形式に丸ごと変換してから書き込む(ドットパスでの
+    // 部分更新だと、既存フィールドが配列型の場合にFirestore側でエラーになるため)。
+    const rawCardBacks = data.cardBacks;
+    const cardBacksMap = Array.isArray(rawCardBacks)
+      ? Object.fromEntries(rawCardBacks.map((id) => [id, 1]))
+      : { ...(rawCardBacks || {}) };
+    const currentCount = cardBacksMap[design.id] || 0;
+    isNew = currentCount === 0;
+    cardBacksMap[design.id] = currentCount + 1;
+
     tx.update(ref, {
       'sitePerks.omikuji.gachaTickets': increment(-1),
-      cardBacks: arrayUnion(design.id),
+      cardBacks: cardBacksMap,
     });
   });
 
-  store.cardBacks.add(design.id);
+  store.cardBacks[design.id] = (store.cardBacks[design.id] || 0) + 1;
   window.dispatchEvent(new CustomEvent('gachaCardBacksUpdated', { detail: { designId: design.id, isNew } }));
   return { design, isNew };
 }

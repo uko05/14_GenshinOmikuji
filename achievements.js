@@ -1,5 +1,11 @@
 // achievements.js
 
+// cardBacks({ デザインID: 所持数 })のうち、所持数1以上のID(種類)の数を返す
+function ownedDesignCount(cardBacks) {
+  if (!cardBacks) return 0;
+  return Object.values(cardBacks).filter((n) => n > 0).length;
+}
+
 const CARD_IDS = [
   'fool','magician','high_priestess','empress','emperor','hierophant',
   'lovers','chariot','strength','hermit','wheel_of_fortune','justice',
@@ -128,13 +134,15 @@ export const ACHIEVEMENT_GROUPS = [
   {
     // check(stats, col, cardBacks, equippedCardBackId) の第3・第4引数だけを使う
     // (他グループはcardBacks/equippedCardBackIdを渡されても単に無視するだけなので影響なし)
+    // cardBacksは { デザインID: 所持数 } の形(オークション出品で数が減っても実績は取り消さない、
+    // 種類数(所持数>=1のID数)だけで判定する)
     id: 'gacha', name: 'ガチャ', nameEn: 'Gacha',
     items: [
-      { id:'gacha_first',   rarity:'bronze', name:'スキンガチャ入門',       nameEn:'Gacha Novice',            condition:'裏面デザインを1種入手する',   conditionEn:'Obtain your first card-back design',   check:(s,c,cardBacks)=>(cardBacks?.size||0)>=1 },
+      { id:'gacha_first',   rarity:'bronze', name:'スキンガチャ入門',       nameEn:'Gacha Novice',            condition:'裏面デザインを1種入手する',   conditionEn:'Obtain your first card-back design',   check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=1 },
       { id:'gacha_equip',   rarity:'bronze', name:'裏の顔を知る',           nameEn:'Know the Hidden Face',    condition:'裏面デザインを設定する',       conditionEn:'Equip a card-back design',              check:(s,c,cardBacks,equippedId)=>!!equippedId },
-      { id:'gacha_col_10',  rarity:'bronze', name:'スキンコレクター見習い', nameEn:'Apprentice Skin Collector', condition:'裏面デザインを10種収集する', conditionEn:'Collect 10 card-back designs',          check:(s,c,cardBacks)=>(cardBacks?.size||0)>=10 },
-      { id:'gacha_col_50',  rarity:'gold',   name:'スキンコレクター上級者', nameEn:'Master Skin Collector',   condition:'裏面デザインを50種収集する',  conditionEn:'Collect 50 card-back designs',          check:(s,c,cardBacks)=>(cardBacks?.size||0)>=50 },
-      { id:'gacha_col_100', rarity:'legend', name:'グランドスキンコレクター', nameEn:'Grand Skin Collector',  condition:'裏面デザインを100種収集する', conditionEn:'Collect 100 card-back designs',         check:(s,c,cardBacks)=>(cardBacks?.size||0)>=100 },
+      { id:'gacha_col_10',  rarity:'bronze', name:'スキンコレクター見習い', nameEn:'Apprentice Skin Collector', condition:'裏面デザインを10種収集する', conditionEn:'Collect 10 card-back designs',          check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=10 },
+      { id:'gacha_col_50',  rarity:'gold',   name:'スキンコレクター上級者', nameEn:'Master Skin Collector',   condition:'裏面デザインを50種収集する',  conditionEn:'Collect 50 card-back designs',          check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=50 },
+      { id:'gacha_col_100', rarity:'legend', name:'グランドスキンコレクター', nameEn:'Grand Skin Collector',  condition:'裏面デザインを100種収集する', conditionEn:'Collect 100 card-back designs',         check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=100 },
     ],
   },
   {

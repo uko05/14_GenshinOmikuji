@@ -4,9 +4,9 @@ import { GACHA_DESIGNS } from './gachaBacks.js?v=2';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=17';
-import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=2';
-import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=2';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=18';
+import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=3';
+import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
@@ -908,8 +908,9 @@ function renderGachaCollection(newDesignId = null) {
   }
 
   const owned = store.cardBacks;
+  const ownedCount = Object.values(owned).filter((n) => n > 0).length;
   if (countEl) {
-    countEl.textContent = i18n[currentLang].gachaCollectionProgress(owned.size, GACHA_DESIGNS.length);
+    countEl.textContent = i18n[currentLang].gachaCollectionProgress(ownedCount, GACHA_DESIGNS.length);
   }
 
   groupsEl.innerHTML = '';
@@ -927,7 +928,7 @@ function renderGachaCollection(newDesignId = null) {
       else gachaCollectionOpenGroups.delete(groupIndex);
     });
 
-    const groupOwnedCount = groupDesigns.reduce((n, d) => n + (owned.has(d.id) ? 1 : 0), 0);
+    const groupOwnedCount = groupDesigns.reduce((n, d) => n + ((owned[d.id] || 0) > 0 ? 1 : 0), 0);
     const summary = document.createElement('summary');
     summary.className = 'gacha-col-group-header';
     summary.textContent = `No.${String(start + 1).padStart(3, '0')} - ${String(end).padStart(3, '0')} （${groupOwnedCount}/${groupDesigns.length}）`;
@@ -937,7 +938,7 @@ function renderGachaCollection(newDesignId = null) {
     grid.className = 'gacha-collection-grid';
 
     groupDesigns.forEach((design) => {
-      const isOwned = owned.has(design.id);
+      const isOwned = (owned[design.id] || 0) > 0;
 
       const item = document.createElement('div');
       item.className = 'gacha-col-item' + (isOwned ? '' : ' gacha-col-item-unknown');

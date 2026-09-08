@@ -57,7 +57,7 @@ export const store = {
   achievements: new Set(),
   achStats:     null,
   hideFromFeed: false,
-  cardBacks:    new Set(), // ガチャで入手済みの裏面デザインID一覧
+  cardBacks:    {}, // ガチャで入手済みの裏面デザイン所持数 { デザインID: 所持数 }
   equippedCardBackId: null, // 現在使用中の裏面デザインID(未設定なら通常のback.png)
   // sitePerks/equippedBadge は08_UPoint/24_AccountCenterが直接書き込む値の
   // 読み取り専用キャッシュ。syncUserDataToFirestoreの書き戻し対象には含めない
@@ -85,7 +85,15 @@ export async function loadUserDataFromFirestore() {
       if (d.achievements != null) store.achievements = new Set(d.achievements);
       if (d.achStats     != null) store.achStats = d.achStats;
       if (d.hideFromFeed != null) store.hideFromFeed = d.hideFromFeed;
-      if (d.cardBacks    != null) store.cardBacks    = new Set(d.cardBacks);
+      if (d.cardBacks    != null) {
+        // 旧形式(所持デザインIDの配列)からの移行: 各IDを所持数1として読み込む
+        if (Array.isArray(d.cardBacks)) {
+          store.cardBacks = {};
+          d.cardBacks.forEach((id) => { store.cardBacks[id] = 1; });
+        } else {
+          store.cardBacks = { ...d.cardBacks };
+        }
+      }
       if (d.equippedCardBackId !== undefined) store.equippedCardBackId = d.equippedCardBackId;
       if (d.sitePerks    != null) store.sitePerks    = d.sitePerks;
       if (d.equippedBadge != null) store.equippedBadge = d.equippedBadge;
@@ -155,7 +163,7 @@ export async function syncUserDataToFirestore() {
       achievements: [...store.achievements],
       achStats:     store.achStats,
       hideFromFeed: store.hideFromFeed,
-      cardBacks:    [...store.cardBacks],
+      cardBacks:    store.cardBacks,
       equippedCardBackId: store.equippedCardBackId,
       updatedAt:    serverTimestamp(),
     };
