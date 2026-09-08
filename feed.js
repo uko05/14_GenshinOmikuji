@@ -740,7 +740,7 @@ function updateMailBadge() {
   if (!badgeEl) return;
   const myUserId = getUserId();
   const unclaimedCount = latestMailDocs.filter((docSnap) => (
-    mailMatchesTarget(docSnap.data().target, myUserId) && !latestClaimedMailIds.has(docSnap.id)
+    mailIsVisible(docSnap, myUserId) && !latestClaimedMailIds.has(docSnap.id)
   )).length;
 
   if (unclaimedCount > 0) {
@@ -777,6 +777,16 @@ function mailMatchesTarget(target, myUserId) {
   return false;
 }
 
+// expiresAt未設定(null/なし)は無期限として扱う
+function mailIsExpired(d) {
+  return !!(d.expiresAt && d.expiresAt.toMillis() < Date.now());
+}
+
+function mailIsVisible(docSnap, myUserId) {
+  const d = docSnap.data();
+  return mailMatchesTarget(d.target, myUserId) && !mailIsExpired(d);
+}
+
 async function openMailPanel() {
   const modal  = document.getElementById('mail-panel');
   const listEl = document.getElementById('mail-panel-list');
@@ -791,7 +801,7 @@ async function openMailPanel() {
       getDoc(doc(db, 'omikujiUsers', myUserId)),
     ]);
 
-    const visibleDocs = mailSnap.docs.filter((docSnap) => mailMatchesTarget(docSnap.data().target, myUserId));
+    const visibleDocs = mailSnap.docs.filter((docSnap) => mailIsVisible(docSnap, myUserId));
 
     if (visibleDocs.length === 0) {
       const p = document.createElement('p');
