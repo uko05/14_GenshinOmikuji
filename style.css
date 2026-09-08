@@ -1739,7 +1739,7 @@ footer {
 .gacha-modal-title {
   font-size: 1.15rem;
   font-weight: bold;
-  color: var(--gold);
+  color: var(--text);
   margin-bottom: 16px;
 }
 
@@ -1751,6 +1751,8 @@ footer {
   color: var(--gold);
   margin-bottom: 14px;
 }
+
+.gacha-ticket-label { color: var(--text); }
 
 .gacha-exchange-link {
   display: inline-block;
