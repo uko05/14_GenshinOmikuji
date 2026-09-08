@@ -1186,6 +1186,20 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   color: var(--muted);
 }
 
+.gacha-col-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.gacha-col-equip-btn-active {
+  background: var(--surface2);
+  color: var(--muted);
+  cursor: default;
+}
+
 /* フッター */
 footer {
   text-align: center;

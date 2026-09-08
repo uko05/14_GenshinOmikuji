@@ -826,12 +826,15 @@ async function drawGachaTransaction() {
   const userId = getUserId();
   const ref = doc(db, 'omikujiUsers', userId);
   const design = GACHA_DESIGNS[Math.floor(Math.random() * GACHA_DESIGNS.length)];
+  let isNew = false;
 
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists()) throw new Error('NO_USER_DOC');
-    const tickets = snap.data().sitePerks?.omikuji?.gachaTickets || 0;
+    const data = snap.data();
+    const tickets = data.sitePerks?.omikuji?.gachaTickets || 0;
     if (tickets < 1) throw new Error('NO_TICKETS');
+    isNew = !(data.cardBacks || []).includes(design.id);
     tx.update(ref, {
       'sitePerks.omikuji.gachaTickets': increment(-1),
       cardBacks: arrayUnion(design.id),
@@ -839,7 +842,7 @@ async function drawGachaTransaction() {
   });
 
   store.cardBacks.add(design.id);
-  window.dispatchEvent(new CustomEvent('gachaCardBacksUpdated'));
+  window.dispatchEvent(new CustomEvent('gachaCardBacksUpdated', { detail: { designId: design.id, isNew } }));
   return design;
 }
 

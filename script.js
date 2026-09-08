@@ -4,11 +4,30 @@ import { GACHA_DESIGNS } from './gachaBacks.js';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=14';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=15';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+// ガチャで入手した裏面デザインを「使用中」に設定している場合はそちらを、
+// 未設定なら通常のback.pngを、カード裏面を表示する全箇所で使う
+function currentCardBackUrl() {
+  if (store.equippedCardBackId) {
+    const d = GACHA_DESIGNS.find((x) => x.id === store.equippedCardBackId);
+    if (d) return d.url;
+  }
+  return CARD_BACK;
+}
+
+// 裏面デザインの装備を切り替えた直後、既に描画済みの裏面画像をその場で差し替える
+// (シャッフル画面のカード山・アルカナ図鑑の裏面・選択中カードの裏面が対象)
+function refreshCardBackImages() {
+  const url = currentCardBackUrl();
+  document.querySelectorAll('.scatter-card img, .col-card-back img, #tarot-card .card-back img').forEach((img) => {
+    img.src = url;
+  });
+}
 
 // ===== 干支データ =====
 const ETO = [
@@ -135,6 +154,9 @@ const i18n = {
     collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} 収録`,
     sectionGachaCollection:  '裏面デザイン図鑑',
     gachaCollectionProgress: (n, total) => `${n} / ${total} 収録`,
+    gachaEquipBtn:       '裏面に設定する',
+    gachaEquippedLabel:  '設定中',
+    gachaSellBtn:        '出品する',
     colPosUpright:       '正',
     colPosReversed:      '逆',
     sectionAchievement:  'アチーブメント',
@@ -222,6 +244,9 @@ const i18n = {
     collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} collected`,
     sectionGachaCollection:  'Card-Back Gallery',
     gachaCollectionProgress: (n, total) => `${n} / ${total} collected`,
+    gachaEquipBtn:       'Set as Card Back',
+    gachaEquippedLabel:  'Equipped',
+    gachaSellBtn:        'List for Sale',
     colPosUpright:       'U',
     colPosReversed:      'R',
     sectionAchievement:  'Achievements',
@@ -781,7 +806,7 @@ function renderCollection(newKey = null) {
       const backFace = document.createElement('div');
       backFace.className = 'col-card-back';
       const backImg = document.createElement('img');
-      backImg.src = CARD_BACK;
+      backImg.src = currentCardBackUrl();
       backImg.alt = '';
       backFace.appendChild(backImg);
 
@@ -868,13 +893,19 @@ function openCollectionModal(card, isReversed) {
 // ===== 裏面デザイン図鑑（ガチャで入手した裏面デザイン。50件ずつグループ表示） =====
 const GACHA_COLLECTION_GROUP_SIZE = 50;
 // グループの開閉状態(再描画のたびに<details>を作り直すため、ここで覚えておく)。
-// 初期状態は先頭グループだけ開いておく。
-const gachaCollectionOpenGroups = new Set([0]);
+// 基本は全部閉じておき、ガチャでNEWの裏面を入手した時だけ該当グループを開く。
+const gachaCollectionOpenGroups = new Set();
 
-function renderGachaCollection() {
+// newDesignId: ガチャでNEW入手した直後だけ渡す。そのデザインが属するグループを自動的に開く。
+function renderGachaCollection(newDesignId = null) {
   const countEl  = document.getElementById('gacha-collection-count');
   const groupsEl = document.getElementById('gacha-collection-groups');
   if (!groupsEl) return;
+
+  if (newDesignId) {
+    const idx = GACHA_DESIGNS.findIndex((d) => d.id === newDesignId);
+    if (idx !== -1) gachaCollectionOpenGroups.add(Math.floor(idx / GACHA_COLLECTION_GROUP_SIZE));
+  }
 
   const owned = store.cardBacks;
   if (countEl) {
@@ -937,14 +968,35 @@ function renderGachaCollection() {
   }
 }
 
+let currentGachaCollectionDesign = null;
+
 function openGachaCollectionModal(design) {
+  currentGachaCollectionDesign = design;
   document.getElementById('gacha-collection-modal-img').src = design.url;
   document.getElementById('gacha-collection-modal-name').textContent = design.name;
+  updateGachaEquipBtn();
   document.getElementById('gacha-collection-modal').style.display = 'flex';
 }
 
 function closeGachaCollectionModal() {
   document.getElementById('gacha-collection-modal').style.display = 'none';
+}
+
+function updateGachaEquipBtn() {
+  const btn = document.getElementById('gacha-col-equip-btn');
+  if (!btn || !currentGachaCollectionDesign) return;
+  const isEquipped = store.equippedCardBackId === currentGachaCollectionDesign.id;
+  btn.textContent = isEquipped ? i18n[currentLang].gachaEquippedLabel : i18n[currentLang].gachaEquipBtn;
+  btn.classList.toggle('gacha-col-equip-btn-active', isEquipped);
+  btn.disabled = isEquipped;
+}
+
+function equipCurrentGachaCollectionDesign() {
+  if (!currentGachaCollectionDesign) return;
+  store.equippedCardBackId = currentGachaCollectionDesign.id;
+  scheduleSync();
+  updateGachaEquipBtn();
+  refreshCardBackImages();
 }
 
 function initLangSwitch() {
@@ -1072,7 +1124,7 @@ function initCardScatter() {
     const div = document.createElement('div');
     div.className = 'scatter-card';
     if (i === 22) div.style.display = 'none'; // 奈落は初期非表示
-    div.innerHTML = `<img src="${CARD_BACK}" alt="${card.name}" draggable="false">`;
+    div.innerHTML = `<img src="${currentCardBackUrl()}" alt="${card.name}" draggable="false">`;
 
     div.addEventListener('pointerdown', (e) => {
       if (!isShuffled) return;
@@ -1346,7 +1398,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   initFeed();
 
   // ガチャで裏面デザインを入手したら図鑑を即座に再描画する(feed.jsから発火)
-  window.addEventListener('gachaCardBacksUpdated', () => renderGachaCollection());
+  window.addEventListener('gachaCardBacksUpdated', (e) => {
+    renderGachaCollection(e.detail?.isNew ? e.detail.designId : null);
+  });
 
   // 「自分の占いを公開しない」チェックボックス
   const hideFeedCheckbox = document.getElementById('hide-feed-checkbox');
@@ -1428,6 +1482,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   document.querySelector('#gacha-collection-modal .col-modal-backdrop').addEventListener('click', closeGachaCollectionModal);
   document.getElementById('gacha-collection-modal-close').addEventListener('click', closeGachaCollectionModal);
+  document.getElementById('gacha-col-equip-btn').addEventListener('click', equipCurrentGachaCollectionDesign);
+  // #gacha-col-sell-btn には意図的にイベントリスナーを付けていない(出品機能は未実装)
 
   shuffleBtn.addEventListener('click', shuffleCards);
   document.getElementById('save-img-btn').addEventListener('click', captureResult);
@@ -1636,7 +1692,7 @@ function displayTarot(card, isReversed, isRestored = false) {
   const frontFace = cardEl.querySelector('.card-front');
   frontFace.querySelector('img').src             = card.filename;
   frontFace.querySelector('img').style.transform = isReversed ? 'rotate(180deg)' : '';
-  cardEl.querySelector('.card-back img').src      = CARD_BACK;
+  cardEl.querySelector('.card-back img').src      = currentCardBackUrl();
   cardEl.querySelector('.card-back').style.visibility = '';
 
   // NEW! バッジをリセット
