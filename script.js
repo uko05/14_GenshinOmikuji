@@ -406,7 +406,7 @@ function checkAndUnlockAchievements(silent = false, toastDelay = 0) {
     // (fortune_all実績の条件修正で、過去のデータだけで急に無言解除されると
     // 違和感があるため。実際に次に引いた時の判定でのみ解除させる。)
     if (silent && ach.retroactive === false) continue;
-    if (!unlocked.has(ach.id) && ach.check(stats, col)) {
+    if (!unlocked.has(ach.id) && ach.check(stats, col, store.cardBacks, store.equippedCardBackId)) {
       unlocked.add(ach.id);
       newIds.push(ach.id);
     }
@@ -997,6 +997,7 @@ function equipCurrentGachaCollectionDesign() {
   scheduleSync();
   updateGachaEquipBtn();
   refreshCardBackImages();
+  checkAndUnlockAchievements();
 }
 
 function initLangSwitch() {
@@ -1397,9 +1398,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // みんなの結果フィード・いいね通知・アバター初期化
   initFeed();
 
-  // ガチャで裏面デザインを入手したら図鑑を即座に再描画する(feed.jsから発火)
+  // ガチャで裏面デザインを入手したら図鑑を即座に再描画し、関連実績も判定する(feed.jsから発火)
   window.addEventListener('gachaCardBacksUpdated', (e) => {
     renderGachaCollection(e.detail?.isNew ? e.detail.designId : null);
+    checkAndUnlockAchievements();
   });
 
   // 「自分の占いを公開しない」チェックボックス
