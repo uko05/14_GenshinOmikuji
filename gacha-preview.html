@@ -464,7 +464,7 @@ function setupGacha() {
   function finishResult(design, confettiOpts) {
     fireConfetti(confettiOpts);
     resultLbl.textContent = `「${design.name}」を手に入れた！`;
-    spawnSparkles(10);
+    spawnSparkles(24);
     addHistory(design);
   }
 
@@ -474,18 +474,16 @@ function setupGacha() {
     for (let i = 0; i < n; i++) {
       const s = document.createElement('div');
       s.className = 'sparkle twinkle';
-      const edge = Math.floor(Math.random() * 4); // 0:上 1:右 2:下 3:左
-      let x, y;
-      if (edge === 0)      { x = Math.random() * 100; y = -6 - Math.random() * 6; }
-      else if (edge === 1) { x = 100 + Math.random() * 6; y = Math.random() * 100; }
-      else if (edge === 2) { x = Math.random() * 100; y = 100 + Math.random() * 6; }
-      else                 { x = -6 - Math.random() * 6; y = Math.random() * 100; }
+      // カード面(0〜100%)から縁の外側(-8〜108%)まで一様にランダム配置。
+      // 内側の面積の方が大きいので、自然とカードの上にも縁にもきらめきが乗る。
+      const x = -8 + Math.random() * 116;
+      const y = -8 + Math.random() * 116;
       s.style.left = `${x}%`;
       s.style.top = `${y}%`;
-      const size = 8 + Math.random() * 8;
+      const size = 6 + Math.random() * 10;
       s.style.width = `${size}px`;
       s.style.height = `${size}px`;
-      s.style.animationDuration = `${1.0 + Math.random() * 0.9}s`;
+      s.style.animationDuration = `${0.9 + Math.random() * 1.0}s`;
       s.style.animationDelay = `${-Math.random() * 1.9}s`; // マイナス遅延で最初からバラバラの位相にする
       sparkleBox.appendChild(s);
     }
