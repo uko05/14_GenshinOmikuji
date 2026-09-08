@@ -49,7 +49,7 @@ h1 {
 .subtitle {
   font-size: 0.75rem;
   color: var(--muted);
-  margin-bottom: 28px;
+  margin-bottom: 24px;
   text-align: center;
 }
 
@@ -64,6 +64,53 @@ h1 {
 
 #gacha-app { display: none; width: 100%; max-width: 480px; }
 #gacha-app.visible { display: flex; flex-direction: column; align-items: center; }
+
+/* ===== 演出パターン選択 ===== */
+.variant-picker {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 26px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.variant-btn {
+  font-family: var(--font);
+  font-size: 0.76rem;
+  font-weight: bold;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+}
+.variant-btn.active {
+  color: #241f42;
+  background: linear-gradient(180deg, var(--gold-soft), var(--gold));
+  border-color: transparent;
+}
+
+/* ===== 全画面演出レイヤー（stageの外、fixedで画面全体に効かせる） ===== */
+.flash-overlay {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+.letterbox {
+  position: fixed;
+  left: 0; right: 0;
+  height: 15vh;
+  background: #000;
+  z-index: 40;
+  transform: scaleY(0);
+  pointer-events: none;
+}
+.letterbox-top { top: 0; transform-origin: top; }
+.letterbox-bottom { bottom: 0; transform-origin: bottom; }
 
 /* ===== 演出ステージ ===== */
 .stage {
@@ -81,6 +128,40 @@ h1 {
   background: radial-gradient(circle, rgba(255,204,0,0.55) 0%, rgba(255,204,0,0) 70%);
   opacity: 0;
   transform: scale(0.6);
+  pointer-events: none;
+}
+
+/* 光の爆発：放射状の光条 */
+.light-rays {
+  position: absolute;
+  inset: -100px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255,204,0,0.4) 0deg 3deg, transparent 3deg 11deg);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 上品グロー：浮遊する光の粒 */
+.motes-container {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+  overflow: visible;
+}
+.mote {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,236,180,0.95), rgba(255,236,180,0));
+  opacity: 0;
+}
+.ornate-frame {
+  position: absolute;
+  inset: -9px;
+  border-radius: calc(var(--radius) + 6px);
+  box-shadow: 0 0 0 1px rgba(255,204,0,0.5), inset 0 0 22px rgba(255,204,0,0.18);
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -238,8 +319,21 @@ h1 {
   このページは管理者・デバッガーロール専用です。
 </div>
 
+<div id="flash-overlay" class="flash-overlay"></div>
+<div id="letterbox-top" class="letterbox letterbox-top"></div>
+<div id="letterbox-bottom" class="letterbox letterbox-bottom"></div>
+
 <div id="gacha-app">
-  <div class="stage">
+  <div class="variant-picker" id="variant-picker">
+    <button type="button" class="variant-btn active" data-variant="burst">① 光の爆発</button>
+    <button type="button" class="variant-btn" data-variant="elegant">② 上品グロー</button>
+    <button type="button" class="variant-btn" data-variant="cinema">③ シネマティック</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="light-rays" id="light-rays"></div>
+    <div class="ornate-frame" id="ornate-frame"></div>
+    <div class="motes-container" id="motes-container"></div>
     <div class="glow-ring" id="glow-ring"></div>
     <div class="gacha-card" id="gacha-card">
       <div class="gacha-card-inner" id="gacha-card-inner">
@@ -258,7 +352,7 @@ h1 {
   <p class="history-title">このセッションで引いた履歴</p>
   <div class="history-strip" id="history-strip"></div>
 
-  <p class="notice">※ これは演出テスト用ページです。裏面デザイン画像は本番想定の素材ですが、チケット消費・所持データの保存・被り集計などは未実装です。</p>
+  <p class="notice">※ これは演出テスト用ページです。裏面デザイン画像は本番想定の素材ですが、チケット消費・所持データの保存・被り集計などは未実装です。演出は3パターン試作中で、上のボタンで切り替えられます。</p>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -297,9 +391,16 @@ async function init() {
 }
 
 function setupGacha() {
+  const stage      = document.getElementById('stage');
   const card       = document.getElementById('gacha-card');
   const inner      = document.getElementById('gacha-card-inner');
   const glowRing   = document.getElementById('glow-ring');
+  const rays       = document.getElementById('light-rays');
+  const motesBox   = document.getElementById('motes-container');
+  const frame      = document.getElementById('ornate-frame');
+  const flash      = document.getElementById('flash-overlay');
+  const letterTop  = document.getElementById('letterbox-top');
+  const letterBtm  = document.getElementById('letterbox-bottom');
   const drawBtn    = document.getElementById('draw-btn');
   const resultLbl  = document.getElementById('result-label');
   const resultImg  = document.getElementById('result-img');
@@ -308,6 +409,16 @@ function setupGacha() {
   const historyStrip = document.getElementById('history-strip');
 
   let busy = false;
+  let currentVariant = 'burst';
+
+  document.querySelectorAll('.variant-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (busy) return;
+      document.querySelectorAll('.variant-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentVariant = btn.dataset.variant;
+    });
+  });
 
   function pickDesign() {
     return DESIGNS[Math.floor(Math.random() * DESIGNS.length)];
@@ -320,14 +431,122 @@ function setupGacha() {
     historyStrip.prepend(chip);
   }
 
-  function fireConfetti() {
+  function fireConfetti(opts) {
     if (typeof confetti !== 'function') return;
-    confetti({
+    confetti(Object.assign({
       particleCount: 100,
       spread: 70,
       startVelocity: 42,
       origin: { y: 0.55 },
       colors: ['#ffcc00', '#ffe37a', '#ffffff', '#8a6bff'],
+    }, opts));
+  }
+
+  function revealResult(design) {
+    resultImg.src = design.url;
+    resultName.textContent = design.name;
+  }
+
+  function finishResult(design, confettiOpts) {
+    fireConfetti(confettiOpts);
+    resultLbl.textContent = `「${design.name}」を手に入れた！`;
+    frontFace.classList.add('shine');
+    addHistory(design);
+  }
+
+  function spawnMotes(n) {
+    motesBox.innerHTML = '';
+    for (let i = 0; i < n; i++) {
+      const m = document.createElement('div');
+      m.className = 'mote';
+      m.style.left = `${Math.random() * 100}%`;
+      m.style.bottom = `${Math.random() * 15}%`;
+      motesBox.appendChild(m);
+    }
+    return motesBox.querySelectorAll('.mote');
+  }
+
+  function resetFx() {
+    gsap.set(rays, { opacity: 0, scale: 1, rotate: 0 });
+    gsap.set(frame, { opacity: 0 });
+    gsap.set(flash, { opacity: 0 });
+    gsap.set([letterTop, letterBtm], { scaleY: 0 });
+    gsap.set(stage, { scale: 1 });
+    motesBox.innerHTML = '';
+  }
+
+  // ① 光の爆発：勢いよく弾ける、派手でにぎやかな演出
+  function playBurst(design) {
+    return new Promise((resolve) => {
+      const tl = gsap.timeline({ onComplete: resolve });
+      tl.set(glowRing, { opacity: 0, scale: 0.6 })
+        .set(rays, { opacity: 0, scale: 0.5, rotate: 0 })
+        .to(card, { scale: 1.06, duration: 0.2, ease: 'power1.out' })
+        .to(card, { scale: 1, duration: 0.16, ease: 'power1.in' })
+        .to(card, { rotate: -5, duration: 0.06, repeat: 9, yoyo: true, ease: 'power1.inOut' }, '<')
+        .to(rays, { opacity: 0.9, scale: 1.5, rotate: 140, duration: 1.0, ease: 'power2.out' }, '<')
+        .to(glowRing, { opacity: 1, scale: 1.6, duration: 1.0, ease: 'power2.out' }, '<')
+        .to(card, { scale: 1.18, duration: 0.3, ease: 'power3.in' }, '-=0.15')
+        .to(flash, { opacity: 0.85, duration: 0.08 })
+        .call(() => revealResult(design))
+        .to(flash, { opacity: 0, duration: 0.35 }, '<')
+        .to(inner, { duration: 0.55, ease: 'back.out(2)', rotateY: 180 }, '<')
+        .call(() => finishResult(design, {
+          particleCount: 150, spread: 95, startVelocity: 55,
+          colors: ['#ffcc00', '#ff5a5a', '#ffffff', '#8a6bff'],
+        }))
+        .to(rays, { opacity: 0, duration: 0.5 }, '<')
+        .to(card, { scale: 1, duration: 0.3, ease: 'power2.out' })
+        .to(glowRing, { opacity: 0, duration: 0.5 }, '<');
+    });
+  }
+
+  // ② 上品グロー：ゆっくり丁寧に、光の粒が舞い上がる落ち着いた演出
+  function playElegant(design) {
+    return new Promise((resolve) => {
+      const motes = spawnMotes(16);
+      const tl = gsap.timeline({ onComplete: resolve });
+      tl.set(glowRing, { opacity: 0, scale: 0.7 })
+        .set(frame, { opacity: 0 })
+        .to(card, { scale: 1.03, duration: 0.6, ease: 'sine.inOut' })
+        .to(glowRing, { opacity: 0.8, scale: 1.3, duration: 1.4, ease: 'sine.inOut' }, '<')
+        .to(motes, { opacity: 1, y: -46, duration: 1.6, stagger: 0.06, ease: 'sine.out' }, '<')
+        .to(card, { scale: 1.1, duration: 0.5, ease: 'sine.inOut' })
+        .call(() => revealResult(design))
+        .to(inner, { duration: 1.1, ease: 'power2.inOut', rotateY: 180 })
+        .to(frame, { opacity: 1, duration: 0.6 }, '<+=0.3')
+        .call(() => finishResult(design, {
+          particleCount: 36, spread: 50, startVelocity: 18, gravity: 0.5,
+          colors: ['#ffe066', '#ffffff'],
+        }))
+        .to(motes, { opacity: 0, duration: 0.6 }, '<')
+        .to(card, { scale: 1, duration: 0.5, ease: 'sine.inOut' })
+        .to(glowRing, { opacity: 0, duration: 0.7 }, '<')
+        .to(frame, { opacity: 0, duration: 0.7 }, '<');
+    });
+  }
+
+  // ③ シネマティック：レターボックスとゆっくりズームで映画風に見せる演出
+  function playCinema(design) {
+    return new Promise((resolve) => {
+      const tl = gsap.timeline({ onComplete: resolve });
+      tl.to([letterTop, letterBtm], { scaleY: 1, duration: 0.4, ease: 'power2.out' })
+        .to(stage, { scale: 1.08, duration: 2.4, ease: 'sine.inOut' }, 0)
+        .to(card, { scale: 1.05, duration: 0.3, ease: 'power1.out' }, 0.45)
+        .to(card, { rotate: -3, duration: 0.08, repeat: 6, yoyo: true, ease: 'power1.inOut' }, '<')
+        .to(glowRing, { opacity: 1, scale: 1.4, duration: 1.2, ease: 'power2.out' }, '<')
+        .to(card, { scale: 1.15, duration: 0.4, ease: 'power3.in' })
+        .to({}, { duration: 0.35 }) // 溜めの間
+        .call(() => revealResult(design))
+        .to(inner, { duration: 0.8, ease: 'power4.out', rotateY: 180 })
+        .call(() => finishResult(design, {
+          particleCount: 60, spread: 100, startVelocity: 35, gravity: 0.3, ticks: 320,
+          colors: ['#ffcc00', '#ffffff'],
+        }))
+        .to(card, { scale: 1, duration: 0.3, ease: 'power2.out' })
+        .to(glowRing, { opacity: 0, duration: 0.5 }, '<')
+        .to(stage, { scale: 1, duration: 0.6, ease: 'sine.inOut' }, '<')
+        .to([letterTop, letterBtm], { scaleY: 0, duration: 0.5, ease: 'power2.in' }, '+=0.4');
     });
   }
 
@@ -338,38 +557,19 @@ function setupGacha() {
     resultLbl.textContent = '';
     inner.classList.remove('flip');
     frontFace.classList.remove('shine');
+    resetFx();
     void inner.offsetWidth; // reflow でアニメを確実にリセット
 
     const design = pickDesign();
     const preload = new Image();
     preload.src = design.url; // 溜め演出の間に先読みしておく
 
-    const tl = gsap.timeline({
-      onComplete: () => {
-        drawBtn.disabled = false;
-        busy = false;
-      },
-    });
+    if (currentVariant === 'elegant') await playElegant(design);
+    else if (currentVariant === 'cinema') await playCinema(design);
+    else await playBurst(design);
 
-    tl.set(glowRing, { opacity: 0, scale: 0.6 })
-      .to(card, { scale: 1.06, duration: 0.22, ease: 'power1.out' })
-      .to(card, { scale: 1, duration: 0.18, ease: 'power1.in' })
-      .to(card, { rotate: -4, duration: 0.07, repeat: 7, yoyo: true, ease: 'power1.inOut' }, '<')
-      .to(glowRing, { opacity: 1, scale: 1.5, duration: 1.0, ease: 'power2.out' }, '<')
-      .to(card, { scale: 1.14, duration: 0.32, ease: 'power3.in' }, '-=0.15')
-      .call(() => {
-        resultImg.src = design.url;
-        resultName.textContent = design.name;
-      })
-      .to(inner, { duration: 0.65, ease: 'back.out(1.6)', rotateY: 180 })
-      .call(() => {
-        fireConfetti();
-        resultLbl.textContent = `「${design.name}」を手に入れた！`;
-        frontFace.classList.add('shine');
-        addHistory(design);
-      })
-      .to(card, { scale: 1, duration: 0.3, ease: 'power2.out' })
-      .to(glowRing, { opacity: 0, duration: 0.5 }, '<');
+    drawBtn.disabled = false;
+    busy = false;
   }
 
   drawBtn.addEventListener('click', playGacha);
