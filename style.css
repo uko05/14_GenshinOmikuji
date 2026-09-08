@@ -1735,27 +1735,34 @@ footer {
 
 .mail-claim-btn {
   flex-shrink: 0;
-  background: linear-gradient(180deg, var(--accent), var(--gold));
+  background: linear-gradient(180deg, #ffe066, #ff9800);
   border: none;
   border-radius: 20px;
-  color: #3a2a00;
+  color: #4a2c00;
   font-family: var(--font);
   font-weight: bold;
-  font-size: 0.78rem;
-  padding: 8px 16px;
+  font-size: 0.85rem;
+  padding: 9px 20px;
   cursor: pointer;
-  box-shadow: 0 3px 8px rgba(170, 136, 0, 0.35);
-  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s;
+  box-shadow: 0 3px 10px rgba(255, 152, 0, 0.45);
+  animation: mail-claim-pulse 1.8s ease-in-out infinite;
+  transition: transform 0.15s ease;
 }
-.mail-claim-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(170, 136, 0, 0.45); }
-.mail-claim-btn:active { transform: translateY(0); }
+.mail-claim-btn:hover { transform: translateY(-1px) scale(1.05); }
+.mail-claim-btn:active { transform: translateY(0) scale(1); }
 .mail-claim-btn:disabled {
   background: var(--surface2);
   color: var(--muted);
   font-weight: normal;
   cursor: default;
   box-shadow: none;
+  animation: none;
   transform: none;
+}
+
+@keyframes mail-claim-pulse {
+  0%, 100% { box-shadow: 0 3px 10px rgba(255, 152, 0, 0.45); }
+  50%      { box-shadow: 0 3px 18px 4px rgba(255, 152, 0, 0.75); }
 }
 
 /* ===== アバター未登録ポップ ===== */
