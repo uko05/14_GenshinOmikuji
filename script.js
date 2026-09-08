@@ -6,6 +6,7 @@ import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en 
 import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=18';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=3';
+import { initAuction, createListing } from './auction.js?v=1';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -157,6 +158,7 @@ const i18n = {
     gachaEquipBtn:       '裏面に設定する',
     gachaEquippedLabel:  '設定中',
     gachaSellBtn:        '出品する',
+    sectionAuction:      'オークション',
     colPosUpright:       '正',
     colPosReversed:      '逆',
     sectionAchievement:  'アチーブメント',
@@ -247,6 +249,7 @@ const i18n = {
     gachaEquipBtn:       'Set as Card Back',
     gachaEquippedLabel:  'Equipped',
     gachaSellBtn:        'List for Sale',
+    sectionAuction:      'Auction',
     colPosUpright:       'U',
     colPosReversed:      'R',
     sectionAchievement:  'Achievements',
@@ -1001,6 +1004,16 @@ function equipCurrentGachaCollectionDesign() {
   checkAndUnlockAchievements();
 }
 
+async function sellCurrentGachaCollectionDesign() {
+  if (!currentGachaCollectionDesign) return;
+  const design = currentGachaCollectionDesign;
+  const ok = await createListing(design);
+  if (ok) {
+    closeGachaCollectionModal();
+    renderGachaCollection();
+  }
+}
+
 function initLangSwitch() {
   currentLang = store.lang || 'ja';
   document.querySelectorAll('input[name="lang"]').forEach(r => {
@@ -1399,6 +1412,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // みんなの結果フィード・いいね通知・アバター初期化
   initFeed();
 
+  // オークション（出品一覧のリアルタイム表示・入札ポップ）
+  initAuction();
+
   // ガチャで裏面デザインを入手したら図鑑を即座に再描画し、関連実績も判定する(feed.jsから発火)
   window.addEventListener('gachaCardBacksUpdated', (e) => {
     renderGachaCollection(e.detail?.isNew ? e.detail.designId : null);
@@ -1486,7 +1502,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.querySelector('#gacha-collection-modal .col-modal-backdrop').addEventListener('click', closeGachaCollectionModal);
   document.getElementById('gacha-collection-modal-close').addEventListener('click', closeGachaCollectionModal);
   document.getElementById('gacha-col-equip-btn').addEventListener('click', equipCurrentGachaCollectionDesign);
-  // #gacha-col-sell-btn には意図的にイベントリスナーを付けていない(出品機能は未実装)
+  document.getElementById('gacha-col-sell-btn').addEventListener('click', sellCurrentGachaCollectionDesign);
 
   shuffleBtn.addEventListener('click', shuffleCards);
   document.getElementById('save-img-btn').addEventListener('click', captureResult);
