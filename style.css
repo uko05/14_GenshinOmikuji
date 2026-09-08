@@ -1634,21 +1634,24 @@ footer {
   cursor: pointer;
 }
 
+#gacha-btn { background: rgba(255, 204, 0, 0.14); }
+
 .stats-footer-icon { font-size: 1.15rem; line-height: 1; }
 
 .stats-footer-icon-wrap { position: relative; display: inline-block; }
 
 .footer-badge {
   position: absolute;
-  top: -5px;
-  right: -9px;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 3px;
+  top: -8px;
+  right: -13px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
   border-radius: 999px;
   background: #d32f2f;
   color: #fff;
-  font-size: 0.62rem;
+  font-family: Arial, 'Hiragino Kaku Gothic ProN', sans-serif;
+  font-size: 0.92rem;
   font-weight: bold;
   line-height: 1;
   display: flex;
