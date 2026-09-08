@@ -29,7 +29,6 @@ const STR = {
     rareLine:   (card)  => `さんが${card}を引き当てました！`,
     achLine:    (ach)   => `さんが「${ach}」を取得しました！`,
     statsUpInfo: (given, received) => `「UP（うーこポイント）」は、他の人の結果にいいねする（アゲいいね：あなたは今${given}回、1回で1UP）、または自分の結果にいいねをもらう（モラいいね：あなたは今${received}回、1回で2UP）と貯まるポイントです。今後は他のサイトでミッションをクリアしてももらえるようになる予定です。貯めたUPは引き換え専用サイトで、色々なサイトのちょっとした特典と交換できます！`,
-    gachaNoTicketInfo:   '現在ガチャ券は0枚です。ガチャ券を持っていると、ここから裏面デザインガチャを引けるようになります。',
     mailEmpty: '届いているメールはありません',
     mailClaimBtn: '受け取る',
     mailClaimedBtn: '受取済み',
@@ -50,7 +49,6 @@ const STR = {
     rareLine:   (card)  => ` drew ${card}!!`,
     achLine:    (ach)   => ` unlocked "${ach}"!`,
     statsUpInfo: (given, received) => `"UP" (Uko Points) are earned by liking other people's results (Given: ${given} so far, 1 UP each) or having your own results liked (Received: ${received} so far, 2 UP each). You'll also be able to earn them by completing missions on other sites in the future. Saved-up UP can be used on the dedicated redemption site to unlock small perks across various sites!`,
-    gachaNoTicketInfo:   "You have 0 gacha tickets right now. Once you have some, you'll be able to draw a card-back gacha from here.",
     mailEmpty: 'No mail yet',
     mailClaimBtn: 'Claim',
     mailClaimedBtn: 'Claimed',
@@ -724,19 +722,15 @@ function startStatsFooterListener() {
   }, (err) => console.error('[feed] stats footer listen failed', err));
 }
 
-// ===== ガチャ確認ポップ（見た目・文言は本番想定。中の「ガチャを引く」ボタンは
-//       あえて何も起きないようにしてあり、抽選処理・画像参照は一切ここに置かない） =====
+// ===== ガチャポップ（見た目・文言は本番想定。中の「ガチャをひく」ボタンと引き換え
+//       リンクはあえて何も起きないようにしてあり、抽選処理・画像参照は一切ここに置かない） =====
 function openGachaInfo() {
-  if (latestGachaTickets <= 0) {
-    openStatsInfoModal(s().gachaNoTicketInfo);
-    return;
-  }
   const modal = document.getElementById('gacha-confirm-modal');
   const beforeEl = document.getElementById('gacha-confirm-before');
   const afterEl = document.getElementById('gacha-confirm-after');
   if (!modal) return;
   if (beforeEl) beforeEl.textContent = latestGachaTickets;
-  if (afterEl) afterEl.textContent = latestGachaTickets - 1;
+  if (afterEl) afterEl.textContent = Math.max(0, latestGachaTickets - 1);
   modal.style.display = 'flex';
 }
 

@@ -1736,11 +1736,28 @@ footer {
   cursor: pointer;
 }
 
+.gacha-modal-title {
+  font-size: 1.15rem;
+  font-weight: bold;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+
+#gacha-confirm-modal .avatar-nudge-btn { margin-bottom: 16px; }
+
 .gacha-ticket-transition {
   font-size: 1.05rem;
   font-weight: bold;
   color: var(--gold);
-  margin-bottom: 18px;
+  margin-bottom: 14px;
+}
+
+.gacha-exchange-link {
+  display: inline-block;
+  color: #d32f2f;
+  text-decoration: underline;
+  font-size: 0.8rem;
+  cursor: pointer;
 }
 
 .gacha-ticket-arrow {

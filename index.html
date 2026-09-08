@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="生年月日から今日の運勢を占う原神テーマのおみくじサイト。星座占い・バイオリズム・原神アルカナタロットで今日の運勢をチェック！">
   <title>原神おみくじ - うーこの部屋</title>
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
 
   <!-- Favicon -->
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/favicon.ico" type="image/x-icon">
@@ -290,18 +290,18 @@
   </div>
 </div>
 
-<!-- ガチャ確認ポップ（券消費前の確認。中の「ガチャを引く」ボタンは見た目のみ、抽選処理は未実装） -->
+<!-- ガチャポップ（見た目のみの本番想定モックアップ。ガチャを引くボタンと引き換えリンクは
+     あえてどちらも無反応にしてある。抽選処理・引き換え導線ともにまだ実装しない） -->
 <div id="gacha-confirm-modal" class="col-modal" style="display:none;">
   <div class="col-modal-backdrop"></div>
   <div class="col-modal-content avatar-nudge-content">
     <button id="gacha-confirm-close" class="col-modal-close" aria-label="close">×</button>
-    <p class="avatar-nudge-text" data-i18n="gachaConfirmText">ガチャ券を1枚消費してガチャを引きますか？</p>
+    <p class="gacha-modal-title" data-i18n="gachaModalTitle">タロットデザインガチャ</p>
+    <button type="button" id="gacha-confirm-draw-btn" class="avatar-nudge-btn" data-i18n="gachaDrawBtn">ガチャをひく</button>
     <p class="gacha-ticket-transition">
-      <span id="gacha-confirm-before">0</span><span class="stats-up-unit">枚</span>
-      <span class="gacha-ticket-arrow">→</span>
-      <span id="gacha-confirm-after">0</span><span class="stats-up-unit">枚</span>
+      <span data-i18n="gachaTicketLabel">ガチャ券：</span><span id="gacha-confirm-before">0</span><span class="gacha-ticket-arrow">→</span><span id="gacha-confirm-after">0</span><span data-i18n="gachaTicketUnit">枚</span>
     </p>
-    <button type="button" id="gacha-confirm-draw-btn" class="avatar-nudge-btn" data-i18n="gachaDrawBtn">ガチャを引く</button>
+    <span id="gacha-exchange-link" class="gacha-exchange-link" data-i18n="gachaExchangeLinkText">ガチャ券の引き換えはこちら</span>
   </div>
 </div>
 
