@@ -310,40 +310,38 @@
   </div>
 </div>
 
-<!-- ガチャポップ（確認画面 ⇔ 演出ステージの2ビュー構成。引き換えリンクはまだ導線を作っていないため無反応） -->
+<!-- ガチャポップ（カードは最初から裏向きで表示しておき、その場で演出が始まる1画面構成。
+     引き換えリンクはまだ導線を作っていないため無反応） -->
 <div id="gacha-confirm-modal" class="col-modal" style="display:none;">
   <div class="col-modal-backdrop"></div>
   <div class="col-modal-content avatar-nudge-content">
     <button id="gacha-confirm-close" class="col-modal-close" aria-label="close">×</button>
 
-    <div id="gacha-view-confirm">
-      <p class="gacha-modal-title" data-i18n="gachaModalTitle">タロットスキンガチャ</p>
-      <button type="button" id="gacha-confirm-draw-btn" class="avatar-nudge-btn" data-i18n="gachaDrawBtn">ガチャをひく</button>
-      <p class="gacha-ticket-transition">
-        <span class="gacha-ticket-label" data-i18n="gachaTicketLabel">ガチャ券：</span><span id="gacha-confirm-before">0</span><span class="gacha-ticket-arrow">→</span><span id="gacha-confirm-after">0</span><span data-i18n="gachaTicketUnit">枚</span>
-      </p>
-      <span id="gacha-exchange-link" class="gacha-exchange-link" data-i18n="gachaExchangeLinkText">ガチャ券の引き換えはこちら</span>
-    </div>
+    <p class="gacha-modal-title" data-i18n="gachaModalTitle">タロットスキンガチャ</p>
 
-    <div id="gacha-view-stage" class="hidden">
-      <div class="gacha-stage" id="gacha-stage">
-        <div class="gacha-light-rays" id="gacha-light-rays"></div>
-        <div class="gacha-glow-ring" id="gacha-glow-ring"></div>
-        <div class="gacha-card" id="gacha-card">
-          <div class="gacha-card-inner" id="gacha-card-inner">
-            <div class="gacha-face gacha-face-back"></div>
-            <div class="gacha-face gacha-face-front" id="gacha-face-front">
-              <img id="gacha-result-img" alt="">
-              <div class="gacha-caption" id="gacha-result-name"></div>
-            </div>
+    <div class="gacha-stage" id="gacha-stage">
+      <div class="gacha-light-rays" id="gacha-light-rays"></div>
+      <div class="gacha-glow-ring" id="gacha-glow-ring"></div>
+      <div class="gacha-card" id="gacha-card">
+        <div class="gacha-card-inner" id="gacha-card-inner">
+          <div class="gacha-face gacha-face-back"></div>
+          <div class="gacha-face gacha-face-front" id="gacha-face-front">
+            <img id="gacha-result-img" alt="">
+            <div class="gacha-caption" id="gacha-result-name"></div>
           </div>
         </div>
-        <div class="gacha-sparkle-container" id="gacha-sparkle-container"></div>
-        <div class="gacha-flash-overlay" id="gacha-flash-overlay"></div>
       </div>
-      <p class="gacha-result-label" id="gacha-result-label"></p>
-      <button type="button" id="gacha-draw-again-btn" class="avatar-nudge-btn hidden" data-i18n="gachaDrawAgainBtn">もう一度引く</button>
+      <div class="gacha-sparkle-container" id="gacha-sparkle-container"></div>
+      <div class="gacha-flash-overlay" id="gacha-flash-overlay"></div>
     </div>
+
+    <p class="gacha-result-label" id="gacha-result-label"></p>
+
+    <button type="button" id="gacha-confirm-draw-btn" class="avatar-nudge-btn" data-i18n="gachaDrawBtn">ガチャをひく</button>
+    <p class="gacha-ticket-transition">
+      <span class="gacha-ticket-label" data-i18n="gachaTicketLabel">ガチャ券：</span><span id="gacha-confirm-before">0</span><span class="gacha-ticket-arrow">→</span><span id="gacha-confirm-after">0</span><span data-i18n="gachaTicketUnit">枚</span>
+    </p>
+    <span id="gacha-exchange-link" class="gacha-exchange-link" data-i18n="gachaExchangeLinkText">ガチャ券の引き換えはこちら</span>
   </div>
 </div>
 
@@ -382,7 +380,7 @@
   </div>
 </div>
 
-<span id="site-version" class="site-version">v3.0</span>
+<span id="site-version" class="site-version">v3.1</span>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>

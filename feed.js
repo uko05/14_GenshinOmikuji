@@ -758,7 +758,8 @@ function updateMailBadge() {
   }
 }
 
-// ===== ガチャポップ（確認ビュー ⇔ 演出ステージの2ビュー構成） =====
+// ===== ガチャポップ（カードは最初から裏向きで表示しておき、ボタンを押すとその場で
+//       演出が始まる1画面構成。別ポップへの切り替えは行わない） =====
 let gachaBusy = false;
 let gachaEls = null;
 
@@ -766,12 +767,9 @@ function getGachaEls() {
   if (gachaEls) return gachaEls;
   gachaEls = {
     modal: document.getElementById('gacha-confirm-modal'),
-    viewConfirm: document.getElementById('gacha-view-confirm'),
-    viewStage: document.getElementById('gacha-view-stage'),
     before: document.getElementById('gacha-confirm-before'),
     after: document.getElementById('gacha-confirm-after'),
     drawBtn: document.getElementById('gacha-confirm-draw-btn'),
-    drawAgainBtn: document.getElementById('gacha-draw-again-btn'),
     stage: document.getElementById('gacha-stage'),
     rays: document.getElementById('gacha-light-rays'),
     glowRing: document.getElementById('gacha-glow-ring'),
@@ -788,12 +786,22 @@ function getGachaEls() {
   return gachaEls;
 }
 
-function showGachaConfirmView() {
+// カードを裏向きに戻し、券枚数の表示を最新化する(初回オープン時・演出失敗時に呼ぶ)
+function resetGachaStage() {
   const els = getGachaEls();
   if (!els.modal) return;
-  els.viewConfirm.classList.remove('hidden');
-  els.viewStage.classList.add('hidden');
-  els.drawAgainBtn.classList.add('hidden');
+  if (typeof gsap !== 'undefined') {
+    gsap.killTweensOf([els.card, els.inner, els.rays, els.glowRing, els.flash]);
+    gsap.set(els.inner, { rotateY: 0 });
+    gsap.set(els.card, { scale: 1, rotate: 0 });
+    gsap.set(els.rays, { opacity: 0, scale: 0.5, rotate: 0 });
+    gsap.set(els.glowRing, { opacity: 0, scale: 0.6 });
+    gsap.set(els.flash, { opacity: 0 });
+  }
+  els.resultImg.removeAttribute('src');
+  els.resultName.textContent = '';
+  els.resultLbl.textContent = '';
+  els.sparkleBox.innerHTML = '';
   els.drawBtn.disabled = false;
   els.before.textContent = latestGachaTickets;
   els.after.textContent = Math.max(0, latestGachaTickets - 1);
@@ -802,7 +810,7 @@ function showGachaConfirmView() {
 function openGachaInfo() {
   const els = getGachaEls();
   if (!els.modal) return;
-  if (!gachaBusy) showGachaConfirmView();
+  if (!gachaBusy) resetGachaStage();
   els.modal.style.display = 'flex';
 }
 
@@ -908,27 +916,26 @@ async function handleGachaDraw() {
   }
 
   const els = getGachaEls();
-  const ticketsBeforeDraw = latestGachaTickets;
   gachaBusy = true;
   els.drawBtn.disabled = true;
+  els.resultLbl.textContent = '';
 
   try {
     const design = await drawGachaTransaction();
-
-    els.viewConfirm.classList.add('hidden');
-    els.viewStage.classList.remove('hidden');
-    els.resultLbl.textContent = '';
 
     const preload = new Image();
     preload.src = design.url;
 
     await playGachaReveal(design);
 
-    if (ticketsBeforeDraw - 1 > 0) els.drawAgainBtn.classList.remove('hidden');
+    // 次に引ける枚数を券の表示に反映しておく(latestGachaTicketsはonSnapshotの
+    // 反映を待つとラグがあるため、消費した1枚分をここで先に差し引いておく)
+    els.before.textContent = Math.max(0, latestGachaTickets - 1);
+    els.after.textContent = Math.max(0, latestGachaTickets - 2);
   } catch (e) {
     console.error('[feed] gacha draw failed', e);
     alert(e.message === 'NO_TICKETS' ? s().gachaNoTicketAlert : s().gachaDrawFailedAlert);
-    showGachaConfirmView();
+    resetGachaStage();
   } finally {
     gachaBusy = false;
     els.drawBtn.disabled = false;
@@ -1098,8 +1105,6 @@ export async function initFeed() {
 
   const gachaDrawBtn = document.getElementById('gacha-confirm-draw-btn');
   if (gachaDrawBtn) gachaDrawBtn.addEventListener('click', handleGachaDraw);
-  const gachaDrawAgainBtn = document.getElementById('gacha-draw-again-btn');
-  if (gachaDrawAgainBtn) gachaDrawAgainBtn.addEventListener('click', handleGachaDraw);
 
   const gachaResultImg = document.getElementById('gacha-result-img');
   const gachaLightbox = document.getElementById('gacha-lightbox');
