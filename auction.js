@@ -12,8 +12,8 @@ import {
 // 比率で運用する方針のため、ここは連動する自動計算ではなく固定値。券の価格を
 // 変更したらここも手動で合わせること。閲覧側(26_UkoAuction)にも同じ値を持たせているので
 // 変更時はそちらも合わせること。
-export const AUCTION_START_PRICE   = 10;
-export const AUCTION_BUY_NOW_PRICE = 250;
+export const AUCTION_START_PRICE   = 25;
+export const AUCTION_BUY_NOW_PRICE = 500;
 const AUCTION_DURATION_MS = 48 * 60 * 60 * 1000; // 48時間
 
 const STR = {
