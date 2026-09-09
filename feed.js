@@ -14,6 +14,7 @@ import { starrailChars } from 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@
 const GENSHIN_ICON_BASE  = 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/chara_icon/';
 const STARRAIL_ICON_BASE = 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/02_Starrail/chara_icon/';
 const DEFAULT_AVATAR_URL = 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/image/sonota.png';
+const UKO_AUCTION_URL = 'https://uko05.github.io/26_UkoAuction/';
 
 const STR = {
   ja: {
@@ -30,6 +31,8 @@ const STR = {
     rareLine:   (card)  => `さんが${card}を引き当てました！`,
     achLine:    (ach)   => `さんが「${ach}」を取得しました！`,
     gachaGetLine: (name) => `さんがガチャで「${name}」を入手しました！`,
+    listingLine:  (name) => `さんが「${name}」を出品しました`,
+    auctionBtnLabel: 'オークションへ',
     statsUpInfo: (given, received) => `「UP（うーこポイント）」は、他の人の結果にいいねする（アゲいいね：あなたは今${given}回、1回で1UP）、または自分の結果にいいねをもらう（モラいいね：あなたは今${received}回、1回で2UP）と貯まるポイントです。今後は他のサイトでミッションをクリアしてももらえるようになる予定です。貯めたUPは引き換え専用サイトで、色々なサイトのちょっとした特典と交換できます！`,
     mailEmpty: '届いているメールはありません',
     mailClaimBtn: '受け取る',
@@ -54,6 +57,8 @@ const STR = {
     rareLine:   (card)  => ` drew ${card}!!`,
     achLine:    (ach)   => ` unlocked "${ach}"!`,
     gachaGetLine: (name) => ` got "${name}" from the gacha!`,
+    listingLine:  (name) => ` listed "${name}" for auction`,
+    auctionBtnLabel: 'To Auction',
     statsUpInfo: (given, received) => `"UP" (Uko Points) are earned by liking other people's results (Given: ${given} so far, 1 UP each) or having your own results liked (Received: ${received} so far, 2 UP each). You'll also be able to earn them by completing missions on other sites in the future. Saved-up UP can be used on the dedicated redemption site to unlock small perks across various sites!`,
     mailEmpty: 'No mail yet',
     mailClaimBtn: 'Claim',
@@ -342,6 +347,31 @@ export async function submitGachaFeedEntry({ name, cardBackId, cardBackName, car
   }
 }
 
+// ===== 出品のフィード投稿(26_UkoAuctionへのディープリンク付き) =====
+export async function submitListingFeedEntry({ name, itemId, itemName, itemImageUrl, listingId }) {
+  if (store.hideFromFeed) return;
+  try {
+    const userId = getUserId();
+    const avatar = await getMyAvatar(userId);
+    await addDoc(collection(db, 'omikujiFeed'), {
+      type: 'listing',
+      userId,
+      name: name || '',
+      itemId: itemId || '',
+      itemName: itemName || '',
+      itemImageUrl: itemImageUrl || '',
+      listingId: listingId || '',
+      avatarGame: avatar.game,
+      avatarIcon: avatar.icon,
+      likeCount: 0,
+      createdAt: serverTimestamp(),
+      ...getBadgeSnapshot(),
+    });
+  } catch (e) {
+    console.error('[feed] listing submit failed', e);
+  }
+}
+
 // ===== いいね =====
 const myLikedIds = new Set();
 
@@ -471,7 +501,11 @@ function renderFeedList(entries) {
   const myUserId = getUserId();
   list.innerHTML = '';
 
-  if (!entries.length) {
+  // 出品(type:'listing')は26_UkoAuctionが動作確認中(管理者/デバッガー限定)のため、
+  // 一般ユーザーには見せない(押しても何も見られないリンクを出さないため)。
+  const visibleEntries = entries.filter((e) => e.type !== 'listing' || isFeedDebugger);
+
+  if (!visibleEntries.length) {
     const p = document.createElement('p');
     p.className = 'feed-empty';
     p.textContent = s().feedEmpty;
@@ -479,13 +513,15 @@ function renderFeedList(entries) {
     return;
   }
 
-  entries.forEach((entry) => {
+  visibleEntries.forEach((entry) => {
     const item = document.createElement('div');
     item.className = 'feed-item';
     if (entry.type === 'achievement') {
       item.classList.add('feed-item-achievement', `rarity-${entry.rarity || 'bronze'}`);
     } else if (entry.type === 'gacha') {
       item.classList.add('feed-item-gacha');
+    } else if (entry.type === 'listing') {
+      item.classList.add('feed-item-listing');
     }
 
     const avatar = document.createElement('img');
@@ -505,6 +541,8 @@ function renderFeedList(entries) {
       lineEl.appendChild(document.createTextNode(s().achLine(entry.achievementName)));
     } else if (entry.type === 'gacha') {
       lineEl.appendChild(document.createTextNode(s().gachaGetLine(entry.cardBackName)));
+    } else if (entry.type === 'listing') {
+      lineEl.appendChild(document.createTextNode(s().listingLine(entry.itemName)));
     } else {
       lineEl.appendChild(document.createTextNode(
         entry.isRare
@@ -531,6 +569,17 @@ function renderFeedList(entries) {
         openGachaLightbox(entry.cardBackUrl);
       });
       row1.appendChild(thumb);
+    } else if (entry.type === 'listing' && entry.itemImageUrl) {
+      const thumb = document.createElement('img');
+      thumb.className = 'feed-gacha-thumb-inline';
+      thumb.src = entry.itemImageUrl;
+      thumb.alt = entry.itemName || '';
+      thumb.loading = 'lazy';
+      thumb.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        openGachaLightbox(entry.itemImageUrl);
+      });
+      row1.appendChild(thumb);
     }
     row1.appendChild(lineEl);
     row1.appendChild(timeEl);
@@ -546,19 +595,29 @@ function renderFeedList(entries) {
 
     item.appendChild(body);
 
-    const likeBtn = document.createElement('button');
-    likeBtn.className = 'feed-like-btn';
-    likeBtn.innerHTML = `<span class="feed-like-icon">👍</span><span class="feed-like-count">${entry.likeCount || 0}</span>`;
-    const isMine  = entry.userId === myUserId;
-    const isLiked = myLikedIds.has(entry.id);
-    if (!isFeedDebugger && (isMine || isLiked)) {
-      likeBtn.disabled = true;
-      if (isLiked) likeBtn.classList.add('liked');
+    const isMine = entry.userId === myUserId;
+
+    if (entry.type === 'listing') {
+      // いいねボタンの代わりに、出品されたアイテムの入札画面へ直接飛べるリンクを置く
+      const auctionLink = document.createElement('a');
+      auctionLink.className = 'feed-like-btn feed-auction-btn';
+      auctionLink.href = `${UKO_AUCTION_URL}?listing=${encodeURIComponent(entry.listingId || '')}`;
+      auctionLink.textContent = s().auctionBtnLabel;
+      item.appendChild(auctionLink);
     } else {
-      if (isLiked) likeBtn.classList.add('liked');
-      likeBtn.addEventListener('click', () => toggleLike(entry, likeBtn));
+      const likeBtn = document.createElement('button');
+      likeBtn.className = 'feed-like-btn';
+      likeBtn.innerHTML = `<span class="feed-like-icon">👍</span><span class="feed-like-count">${entry.likeCount || 0}</span>`;
+      const isLiked = myLikedIds.has(entry.id);
+      if (!isFeedDebugger && (isMine || isLiked)) {
+        likeBtn.disabled = true;
+        if (isLiked) likeBtn.classList.add('liked');
+      } else {
+        if (isLiked) likeBtn.classList.add('liked');
+        likeBtn.addEventListener('click', () => toggleLike(entry, likeBtn));
+      }
+      item.appendChild(likeBtn);
     }
-    item.appendChild(likeBtn);
 
     // 管理者・デバッガーは検証で自分の投稿を量産しがちなので、自分の投稿だけ
     // フィードから削除できるボタンを出す(他人の投稿は消せない)。

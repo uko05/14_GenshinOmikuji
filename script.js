@@ -4,9 +4,9 @@ import { GACHA_DESIGNS } from './gachaBacks.js?v=2';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=18';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=19';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=3';
-import { initAuction, createListing } from './auction.js?v=2';
+import { createListing } from './auction.js?v=3';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -158,7 +158,6 @@ const i18n = {
     gachaEquipBtn:       '裏面に設定する',
     gachaEquippedLabel:  '設定中',
     gachaSellBtn:        '出品する',
-    sectionAuction:      'オークション',
     colPosUpright:       '正',
     colPosReversed:      '逆',
     sectionAchievement:  'アチーブメント',
@@ -249,7 +248,6 @@ const i18n = {
     gachaEquipBtn:       'Set as Card Back',
     gachaEquippedLabel:  'Equipped',
     gachaSellBtn:        'List for Sale',
-    sectionAuction:      'Auction',
     colPosUpright:       'U',
     colPosReversed:      'R',
     sectionAchievement:  'Achievements',
@@ -1411,9 +1409,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // みんなの結果フィード・いいね通知・アバター初期化
   initFeed();
-
-  // オークション（出品一覧のリアルタイム表示・入札ポップ）
-  initAuction();
 
   // ガチャで裏面デザインを入手したら図鑑を即座に再描画し、関連実績も判定する(feed.jsから発火)
   window.addEventListener('gachaCardBacksUpdated', (e) => {

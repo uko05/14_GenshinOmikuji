@@ -1621,6 +1621,23 @@ footer {
   cursor: zoom-in;
 }
 
+/* 出品のフィード投稿（実績・ガチャとは別の新色：コーラル/オレンジ系） */
+.feed-item-listing {
+  border: none;
+  background: linear-gradient(135deg, #e0562f 0%, #ffb199 50%, #e0562f 100%);
+}
+.feed-item-listing .feed-item-line { font-weight: bold; color: #4a1500; }
+.feed-item-listing .feed-item-time { color: rgba(74, 21, 0, 0.65); }
+
+.feed-auction-btn {
+  text-decoration: none;
+  background: #ffffff;
+  color: #e0562f;
+  font-weight: bold;
+  border-color: #e0562f;
+}
+.feed-auction-btn:hover { background: rgba(255, 255, 255, 0.85); }
+
 .feed-item-time {
   font-size: 0.7rem;
   color: var(--muted);
@@ -1871,108 +1888,6 @@ footer {
 @keyframes mail-claim-pulse {
   0%, 100% { box-shadow: 0 3px 10px rgba(255, 152, 0, 0.45); }
   50%      { box-shadow: 0 3px 18px 4px rgba(255, 152, 0, 0.75); }
-}
-
-/* ===== オークション ===== */
-.auction-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.auction-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px;
-}
-
-.auction-card-img {
-  width: 50px;
-  height: 84px;
-  object-fit: cover;
-  border-radius: 4px;
-  flex-shrink: 0;
-  cursor: zoom-in;
-}
-
-.auction-card-info { flex: 1; min-width: 0; }
-
-.auction-card-name {
-  font-size: 0.85rem;
-  font-weight: bold;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.auction-card-price {
-  font-size: 0.8rem;
-  color: var(--gold);
-  font-weight: bold;
-}
-
-.auction-card-buynow {
-  font-size: 0.72rem;
-  color: #e0562f;
-  font-weight: bold;
-}
-
-.auction-card-time {
-  font-size: 0.7rem;
-  color: var(--muted);
-}
-
-.auction-card-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.auction-card-mine {
-  font-size: 0.72rem;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.auction-action-btn {
-  width: 92px;
-  padding: 7px 8px;
-  border: none;
-  border-radius: 16px;
-  font-family: var(--font);
-  font-weight: bold;
-  font-size: 0.72rem;
-  cursor: pointer;
-  color: #4a2c00;
-  background: linear-gradient(180deg, #ffe066, #ff9800);
-  box-shadow: 0 2px 6px rgba(255, 152, 0, 0.35);
-  transition: transform 0.15s ease;
-}
-.auction-action-btn:hover { transform: translateY(-1px); }
-.auction-action-btn:active { transform: translateY(0); }
-
-.auction-buynow-btn {
-  color: #fff;
-  background: linear-gradient(180deg, #ff9472, #e0562f);
-  box-shadow: 0 2px 6px rgba(224, 86, 47, 0.4);
-}
-
-.auction-bid-input {
-  width: 100%;
-  padding: 10px;
-  font-size: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  text-align: center;
-  margin-top: 10px;
-  font-family: var(--font);
-  box-sizing: border-box;
 }
 
 /* ===== アバター未登録ポップ ===== */
