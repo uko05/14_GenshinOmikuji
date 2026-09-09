@@ -17,14 +17,12 @@ const AUCTION_DURATION_MS = 48 * 60 * 60 * 1000; // 48時間
 
 const STR = {
   ja: {
-    listConfirm: (name) => `「${name}」を1枚オークションに出品します（開始${AUCTION_START_PRICE}UP・即決${AUCTION_BUY_NOW_PRICE}UP・48時間）。よろしいですか？`,
     listLoginRequired: '出品にはアカウント登録（無料）が必要です。登録・ログインしてから出品してください。',
     listNoStock: '出品できる在庫がありません。',
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
   },
   en: {
-    listConfirm: (name) => `List 1x "${name}" for auction (start ${AUCTION_START_PRICE}UP, buy-now ${AUCTION_BUY_NOW_PRICE}UP, 48h)?`,
     listLoginRequired: 'Listing requires a free account. Please register and log in first.',
     listNoStock: "You don't have any to list.",
     listFailed: 'Failed to list. Please try again later.',
@@ -33,6 +31,46 @@ const STR = {
 };
 function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
 
+// ===== 出品の確認ポップ(ブラウザ標準confirm()の代わりに、うーこの部屋のデザインに合わせた
+// 独自ポップでサムネ・開始価格・即決価格・出品期間を見せてから確認する) =====
+function openListingConfirmModal(design) {
+  const modal = document.getElementById('auction-listing-confirm-modal');
+  if (!modal) return Promise.resolve(true); // 万一要素が無ければ素通りさせる
+
+  const img = document.getElementById('auction-listing-confirm-img');
+  const nameEl = document.getElementById('auction-listing-confirm-name');
+  const startEl = document.getElementById('auction-listing-confirm-start');
+  const buyNowEl = document.getElementById('auction-listing-confirm-buynow');
+  if (img) { img.src = design.url; img.alt = design.name; }
+  if (nameEl) nameEl.textContent = design.name;
+  if (startEl) startEl.textContent = `${AUCTION_START_PRICE}UP`;
+  if (buyNowEl) buyNowEl.textContent = `${AUCTION_BUY_NOW_PRICE}UP`;
+  modal.style.display = 'flex';
+
+  return new Promise((resolve) => {
+    const okBtn = document.getElementById('auction-listing-confirm-ok');
+    const cancelBtn = document.getElementById('auction-listing-confirm-cancel');
+    const closeBtn = document.getElementById('auction-listing-confirm-close');
+    const backdrop = modal.querySelector('.col-modal-backdrop');
+
+    const finish = (result) => {
+      modal.style.display = 'none';
+      okBtn?.removeEventListener('click', onOk);
+      cancelBtn?.removeEventListener('click', onCancel);
+      closeBtn?.removeEventListener('click', onCancel);
+      backdrop?.removeEventListener('click', onCancel);
+      resolve(result);
+    };
+    const onOk = () => finish(true);
+    const onCancel = () => finish(false);
+
+    okBtn?.addEventListener('click', onOk);
+    cancelBtn?.addEventListener('click', onCancel);
+    closeBtn?.addEventListener('click', onCancel);
+    backdrop?.addEventListener('click', onCancel);
+  });
+}
+
 // ===== 出品（自分のドキュメントだけで完結する単純なトランザクション） =====
 // うーこの部屋 横断マーケット(ukoMarketListings)への出品。閲覧・入札・即決購入・精算は
 // 26_UkoAuctionが担当するため、ここでは出品して終わり(returnFieldに落札/流札時の
@@ -40,7 +78,7 @@ function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
 export async function createListing(design) {
   if (!design) return;
   if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
-  if (!confirm(s().listConfirm(design.name))) return;
+  if (!(await openListingConfirmModal(design))) return;
 
   const userId = getUserId();
   const userRef = doc(db, 'omikujiUsers', userId);

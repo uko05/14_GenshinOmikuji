@@ -1206,6 +1206,51 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   cursor: default;
 }
 
+/* 出品の確認ポップ */
+.auction-listing-confirm-img {
+  height: 140px;
+  width: auto;
+  aspect-ratio: 912 / 1536;
+  object-fit: cover;
+  border-radius: 6px;
+  display: block;
+  margin: 4px auto 12px;
+}
+
+.auction-listing-confirm-info {
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 4px 0 16px;
+}
+
+.auction-listing-confirm-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--text);
+  padding: 4px 0;
+}
+.auction-listing-confirm-row span:first-child { color: var(--muted); }
+.auction-listing-confirm-row span:last-child { font-weight: bold; color: var(--gold); }
+
+.auction-listing-confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.auction-listing-confirm-actions .avatar-nudge-btn {
+  width: 130px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.auction-listing-confirm-cancel-btn {
+  background: var(--surface2);
+  color: var(--muted);
+}
+
 /* フッター */
 footer {
   text-align: center;

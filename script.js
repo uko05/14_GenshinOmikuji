@@ -6,7 +6,7 @@ import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en 
 import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=20';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=3';
-import { createListing } from './auction.js?v=4';
+import { createListing } from './auction.js?v=5';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -158,6 +158,13 @@ const i18n = {
     gachaEquipBtn:       '裏面に設定する',
     gachaEquippedLabel:  '設定中',
     gachaSellBtn:        '出品する',
+    listingConfirmTitle:   'オークションに出品しますか？',
+    auctionStartLabel:     '開始価格',
+    auctionBuyNowLabel:    '即決価格',
+    auctionDurationLabel:  '出品期間',
+    auctionDurationValue:  '48時間',
+    listingConfirmOkBtn:   '出品する',
+    listingConfirmCancelBtn: 'キャンセル',
     colPosUpright:       '正',
     colPosReversed:      '逆',
     sectionAchievement:  'アチーブメント',
@@ -248,6 +255,13 @@ const i18n = {
     gachaEquipBtn:       'Set as Card Back',
     gachaEquippedLabel:  'Equipped',
     gachaSellBtn:        'List for Sale',
+    listingConfirmTitle:   'List this for auction?',
+    auctionStartLabel:     'Start Price',
+    auctionBuyNowLabel:    'Buy Now Price',
+    auctionDurationLabel:  'Duration',
+    auctionDurationValue:  '48 hours',
+    listingConfirmOkBtn:   'List It',
+    listingConfirmCancelBtn: 'Cancel',
     colPosUpright:       'U',
     colPosReversed:      'R',
     sectionAchievement:  'Achievements',
