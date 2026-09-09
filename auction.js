@@ -2,7 +2,7 @@
 // 裏面デザインの出品（閲覧・入札・即決購入・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
-import { submitListingFeedEntry } from './feed.js?v=19';
+import { submitListingFeedEntry, isAccountLoggedIn } from './feed.js?v=20';
 import {
   collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -18,12 +18,14 @@ const AUCTION_DURATION_MS = 48 * 60 * 60 * 1000; // 48時間
 const STR = {
   ja: {
     listConfirm: (name) => `「${name}」を1枚オークションに出品します（開始${AUCTION_START_PRICE}UP・即決${AUCTION_BUY_NOW_PRICE}UP・48時間）。よろしいですか？`,
+    listLoginRequired: '出品にはアカウント登録（無料）が必要です。登録・ログインしてから出品してください。',
     listNoStock: '出品できる在庫がありません。',
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
   },
   en: {
     listConfirm: (name) => `List 1x "${name}" for auction (start ${AUCTION_START_PRICE}UP, buy-now ${AUCTION_BUY_NOW_PRICE}UP, 48h)?`,
+    listLoginRequired: 'Listing requires a free account. Please register and log in first.',
     listNoStock: "You don't have any to list.",
     listFailed: 'Failed to list. Please try again later.',
     listDone: 'Listed! You can check it on Uko Auction.',
@@ -37,6 +39,7 @@ function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
 // 返却先フィールドを書き込んでおくことで、26_UkoAuction側はサイト固有の知識なしに精算できる)。
 export async function createListing(design) {
   if (!design) return;
+  if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
   if (!confirm(s().listConfirm(design.name))) return;
 
   const userId = getUserId();

@@ -83,6 +83,13 @@ const authReady = new Promise((resolve) => {
   });
 });
 
+// 出品・入札などアカウント登録者限定にしたい機能から使う。
+// 見るだけ(一覧閲覧)は未登録でも可能にしたいので、そちらでは使わないこと。
+export async function isAccountLoggedIn() {
+  await authReady;
+  return !!authUid;
+}
+
 const ELEM_LABELS = {
   ja: { hi: '炎', mizu: '水', koori: '氷', kaminari: '雷', kusa: '草', kaze: '風', iwa: '岩', kyosuu: '虚数', ryoushi: '量子', butsuri: '物理' },
   en: { hi: 'Fire', mizu: 'Hydro', koori: 'Ice', kaminari: 'Lightning', kusa: 'Dendro', kaze: 'Wind', iwa: 'Geo', kyosuu: 'Imaginary', ryoushi: 'Quantum', butsuri: 'Physical' },
