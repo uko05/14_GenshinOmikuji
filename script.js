@@ -1434,6 +1434,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 言語切り替え初期化
   initLangSwitch();
 
+  // アルカナ図鑑の開閉状態(ブラウザに保存。デフォルトは開いた状態)
+  const LS_COLLECTION_OPEN = 'omikuji_collectionSectionOpen';
+  const collectionSection = document.getElementById('collection-section');
+  if (collectionSection) {
+    const saved = localStorage.getItem(LS_COLLECTION_OPEN);
+    if (saved !== null) collectionSection.open = saved === '1';
+    collectionSection.addEventListener('toggle', () => {
+      localStorage.setItem(LS_COLLECTION_OPEN, collectionSection.open ? '1' : '0');
+    });
+  }
+
   // みんなの結果フィード・いいね通知・アバター初期化
   initFeed();
 

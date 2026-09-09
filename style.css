@@ -223,6 +223,22 @@ main {
   background: var(--border);
 }
 
+/* アルカナ図鑑の開閉(details/summary) */
+#collection-section > summary.section-title {
+  cursor: pointer;
+  list-style: none;
+}
+#collection-section > summary.section-title::-webkit-details-marker { display: none; }
+
+.section-title-arrow {
+  font-size: 0.6rem;
+  color: var(--muted);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+#collection-section[open] .section-title-arrow { transform: rotate(90deg); }
+#collection-section:not([open]) > summary.section-title { margin-bottom: 0; }
+
 .section-desc {
   font-size: 0.75rem;
   color: var(--muted);
@@ -1105,19 +1121,21 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   outline-offset: 1px;
 }
 
-/* 出品中バッジ(オークションに出している間、カード上部に重ねて表示) */
+/* 出品中バッジ(オークションに出している間、カード中央に重ねて表示) */
 .gacha-col-listed-badge {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: rgba(224, 86, 47, 0.9);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(200, 30, 30, 0.9);
   color: #fff;
-  font-size: 0.55rem;
+  font-size: 0.6rem;
   font-weight: bold;
   text-align: center;
-  padding: 1px 0;
+  padding: 2px 6px;
+  border-radius: 3px;
   line-height: 1.3;
+  white-space: nowrap;
   pointer-events: none;
 }
 
