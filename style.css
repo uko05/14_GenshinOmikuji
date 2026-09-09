@@ -1076,6 +1076,7 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   border-radius: 6px;
   overflow: hidden;
   background: var(--surface2);
+  position: relative;
 }
 
 .gacha-col-scene img {
@@ -1096,6 +1097,28 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   font-size: 1.3rem;
   font-weight: bold;
   color: var(--border);
+}
+
+/* 裏面に設定中(装備中)のデザインを枠で強調 */
+.gacha-col-item-equipped .gacha-col-scene {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* 出品中バッジ(オークションに出している間、カード上部に重ねて表示) */
+.gacha-col-listed-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(224, 86, 47, 0.9);
+  color: #fff;
+  font-size: 0.55rem;
+  font-weight: bold;
+  text-align: center;
+  padding: 1px 0;
+  line-height: 1.3;
+  pointer-events: none;
 }
 
 .col-label {

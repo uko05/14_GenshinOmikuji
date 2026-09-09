@@ -6,7 +6,7 @@ import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en 
 import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=20';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=3';
-import { createListing } from './auction.js?v=5';
+import { createListing, watchMyListings, isItemListed } from './auction.js?v=6';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -157,6 +157,7 @@ const i18n = {
     gachaCollectionProgress: (n, total) => `${n} / ${total} 収録`,
     gachaEquipBtn:       '裏面に設定する',
     gachaEquippedLabel:  '設定中',
+    gachaListedBadge:    '出品中',
     gachaSellBtn:        '出品する',
     listingConfirmTitle:   'オークションに出品しますか？',
     auctionStartLabel:     '開始価格',
@@ -254,6 +255,7 @@ const i18n = {
     gachaCollectionProgress: (n, total) => `${n} / ${total} collected`,
     gachaEquipBtn:       'Set as Card Back',
     gachaEquippedLabel:  'Equipped',
+    gachaListedBadge:    'Listed',
     gachaSellBtn:        'List for Sale',
     listingConfirmTitle:   'List this for auction?',
     auctionStartLabel:     'Start Price',
@@ -953,10 +955,14 @@ function renderGachaCollection(newDesignId = null) {
     grid.className = 'gacha-collection-grid';
 
     groupDesigns.forEach((design) => {
-      const isOwned = (owned[design.id] || 0) > 0;
+      const isListed = isItemListed(design.id);
+      const isOwned = (owned[design.id] || 0) > 0 || isListed;
+      const isEquipped = store.equippedCardBackId === design.id;
 
       const item = document.createElement('div');
-      item.className = 'gacha-col-item' + (isOwned ? '' : ' gacha-col-item-unknown');
+      item.className = 'gacha-col-item'
+        + (isOwned ? '' : ' gacha-col-item-unknown')
+        + (isEquipped ? ' gacha-col-item-equipped' : '');
 
       const scene = document.createElement('div');
       scene.className = 'gacha-col-scene';
@@ -968,6 +974,12 @@ function renderGachaCollection(newDesignId = null) {
         img.loading = 'lazy';
         scene.appendChild(img);
         scene.addEventListener('click', () => openGachaCollectionModal(design));
+        if (isListed) {
+          const badge = document.createElement('span');
+          badge.className = 'gacha-col-listed-badge';
+          badge.textContent = i18n[currentLang].gachaListedBadge;
+          scene.appendChild(badge);
+        }
       } else {
         const unknown = document.createElement('div');
         unknown.className = 'gacha-col-unknown-mark';
@@ -1013,6 +1025,7 @@ function equipCurrentGachaCollectionDesign() {
   scheduleSync();
   updateGachaEquipBtn();
   refreshCardBackImages();
+  renderGachaCollection();
   checkAndUnlockAchievements();
 }
 
@@ -1423,6 +1436,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // みんなの結果フィード・いいね通知・アバター初期化
   initFeed();
+
+  // 自分の出品中アイテムを監視し、裏面図鑑に「出品中」バッジを反映する
+  watchMyListings(() => renderGachaCollection());
 
   // ガチャで裏面デザインを入手したら図鑑を即座に再描画し、関連実績も判定する(feed.jsから発火)
   window.addEventListener('gachaCardBacksUpdated', (e) => {

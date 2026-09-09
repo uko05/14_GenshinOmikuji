@@ -5,6 +5,7 @@ import { getUserId, store } from './userData.js?v=3';
 import { submitListingFeedEntry, isAccountLoggedIn } from './feed.js?v=20';
 import {
   collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
+  onSnapshot, query, where,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // ガチャ券は08_UPoint側で50UP固定(2026-09時点)。開始=券の5分の1、即決=券の5倍という
@@ -128,4 +129,23 @@ export async function createListing(design) {
     alert(e.message === 'NO_STOCK' ? s().listNoStock : s().listFailed);
     return false;
   }
+}
+
+// ===== 自分が現在出品中のアイテム一覧(裏面図鑑に「出品中」バッジを出すため) =====
+let myListedItemIds = new Set();
+
+export function watchMyListings(onChange) {
+  const q = query(
+    collection(db, 'ukoMarketListings'),
+    where('sellerId', '==', getUserId()),
+    where('status', '==', 'active'),
+  );
+  onSnapshot(q, (snap) => {
+    myListedItemIds = new Set(snap.docs.map((d) => d.data().itemId));
+    onChange();
+  }, (e) => console.error('[auction] my listings watch failed', e));
+}
+
+export function isItemListed(itemId) {
+  return myListedItemIds.has(itemId);
 }
