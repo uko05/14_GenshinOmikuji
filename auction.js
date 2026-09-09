@@ -7,6 +7,22 @@ import {
   query, where, orderBy, limit, serverTimestamp, increment, Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
+// 動作確認中はデバッガー/管理者ロールの人にだけ出品一覧を見せる(一般ユーザーには
+// 空の一覧のまま見せる)。script.jsのisDebugMode()と同じ判定だが、循環import回避のため
+// ここで独立して取得する。確認が終わったら削除してよい。
+let isAuctionDebugger = false;
+async function loadAuctionDebuggerRole() {
+  try {
+    const snap = await getDoc(doc(db, 'sharedUserRoles', getUserId()));
+    if (snap.exists()) {
+      const d = snap.data();
+      isAuctionDebugger = d.role === 'admin' || d.role === 'debugger' || !!d.debugOmikuji;
+    }
+  } catch (e) {
+    console.warn('[auction] ロール取得に失敗:', e);
+  }
+}
+
 // ガチャ券は08_UPoint側で50UP固定(2026-09時点)。開始=券の5分の1、即決=券の5倍という
 // 比率で運用する方針のため、ここは連動する自動計算ではなく固定値。券の価格を
 // 変更したらここも手動で合わせること。
@@ -404,6 +420,7 @@ function openAuctionLightbox(url) {
 
 // ===== 初期化 =====
 export function initAuction() {
+  let latestListings = [];
   const q = query(
     collection(db, 'omikujiListings'),
     where('status', '==', 'active'),
@@ -411,9 +428,14 @@ export function initAuction() {
     limit(100)
   );
   onSnapshot(q, (snap) => {
-    const listings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    renderAuctionList(listings);
+    latestListings = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderAuctionList(isAuctionDebugger ? latestListings : []);
   }, (err) => console.error('[auction] listen failed', err));
+
+  // ロール判定は非同期なので、判明した時点で改めて描画し直す
+  loadAuctionDebuggerRole().then(() => {
+    renderAuctionList(isAuctionDebugger ? latestListings : []);
+  });
 
   const bidClose = document.getElementById('auction-bid-close');
   if (bidClose) bidClose.addEventListener('click', closeBidModal);
