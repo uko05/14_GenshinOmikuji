@@ -402,7 +402,6 @@ async function toggleLike(entry, likeBtn) {
   const myUserId = getUserId();
   const privileged = isFeedDebugger;
 
-  if (!privileged && myUserId === entry.userId) return;
   if (!privileged && myLikedIds.has(entry.id)) return;
 
   likeBtn.disabled = true;
@@ -616,9 +615,9 @@ function renderFeedList(entries) {
       likeBtn.className = 'feed-like-btn';
       likeBtn.innerHTML = `<span class="feed-like-icon">👍</span><span class="feed-like-count">${entry.likeCount || 0}</span>`;
       const isLiked = myLikedIds.has(entry.id);
-      if (!isFeedDebugger && (isMine || isLiked)) {
+      if (!isFeedDebugger && isLiked) {
         likeBtn.disabled = true;
-        if (isLiked) likeBtn.classList.add('liked');
+        likeBtn.classList.add('liked');
       } else {
         if (isLiked) likeBtn.classList.add('liked');
         likeBtn.addEventListener('click', () => toggleLike(entry, likeBtn));
