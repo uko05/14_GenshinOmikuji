@@ -14,7 +14,8 @@ import {
 // 変更時はそちらも合わせること。
 export const AUCTION_START_PRICE   = 25;
 export const AUCTION_BUY_NOW_PRICE = 500;
-const AUCTION_DURATION_MS = 48 * 60 * 60 * 1000; // 48時間
+// テスト段階のため一時的に1時間にしている。本番運用では48時間に戻すこと。
+const AUCTION_DURATION_MS = 1 * 60 * 60 * 1000; // 1時間(テスト中)
 
 const STR = {
   ja: {
