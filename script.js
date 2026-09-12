@@ -4,7 +4,7 @@ import { GACHA_DESIGNS } from './gachaBacks.js?v=2';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang } from './feed.js?v=21';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, isFeedPrivileged } from './feed.js?v=21';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=3';
 import { createListing, watchMyListings, isItemListed } from './auction.js?v=9';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
@@ -166,6 +166,9 @@ const i18n = {
     auctionDurationValue:  '1時間',
     listingConfirmOkBtn:   '出品する',
     listingConfirmCancelBtn: 'キャンセル',
+    listingComingSoonTitle: '出品機能は準備中です',
+    listingComingSoonText:  'うーこオークションはただいま動作確認中です。リリースまで今しばらくお待ちください。',
+    listingComingSoonOkBtn: '閉じる',
     colPosUpright:       '正',
     colPosReversed:      '逆',
     sectionAchievement:  'アチーブメント',
@@ -264,6 +267,9 @@ const i18n = {
     auctionDurationValue:  '1 hour',
     listingConfirmOkBtn:   'List It',
     listingConfirmCancelBtn: 'Cancel',
+    listingComingSoonTitle: 'Listing is coming soon',
+    listingComingSoonText:  'Uko Auction is still being tested. Please wait a little longer for the release.',
+    listingComingSoonOkBtn: 'Close',
     colPosUpright:       'U',
     colPosReversed:      'R',
     sectionAchievement:  'Achievements',
@@ -1031,6 +1037,11 @@ function equipCurrentGachaCollectionDesign() {
 
 async function sellCurrentGachaCollectionDesign() {
   if (!currentGachaCollectionDesign) return;
+  // うーこオークションが動作確認中のため、一般ユーザーには準備中ポップだけ見せる
+  if (!isFeedPrivileged()) {
+    document.getElementById('auction-coming-soon-modal').style.display = 'flex';
+    return;
+  }
   const design = currentGachaCollectionDesign;
   const ok = await createListing(design);
   if (ok) {
@@ -1540,6 +1551,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('gacha-col-equip-btn').addEventListener('click', equipCurrentGachaCollectionDesign);
   document.getElementById('gacha-col-sell-btn').addEventListener('click', sellCurrentGachaCollectionDesign);
 
+  const closeAuctionComingSoon = () => { document.getElementById('auction-coming-soon-modal').style.display = 'none'; };
+  document.querySelector('#auction-coming-soon-modal .col-modal-backdrop').addEventListener('click', closeAuctionComingSoon);
+  document.getElementById('auction-coming-soon-close').addEventListener('click', closeAuctionComingSoon);
+  document.getElementById('auction-coming-soon-ok').addEventListener('click', closeAuctionComingSoon);
+
   shuffleBtn.addEventListener('click', shuffleCards);
   document.getElementById('save-img-btn').addEventListener('click', captureResult);
   birthdayInput.addEventListener('change', updateFortuneBtn);
@@ -1571,8 +1587,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const todayStr = getFortuneDate();
 
     // レアカード判定（シャッフル差し替え > 確率）
+    // 管理者/デバッガーも毎日通常運用で占いを引くため、デバッグ中でも抽選対象に含める
     let effectiveCardIndex = selectedCardIndex;
-    if (!debug && Math.random() < 0.005) {
+    if (Math.random() < 0.005) {
       effectiveCardIndex = 23; // rare_Good (tarotCards[23]) 0.5%
     }
 

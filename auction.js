@@ -2,7 +2,7 @@
 // 裏面デザインの出品（閲覧・入札・即決購入・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
-import { submitListingFeedEntry, isAccountLoggedIn } from './feed.js?v=21';
+import { submitListingFeedEntry, isAccountLoggedIn, isFeedPrivileged } from './feed.js?v=21';
 import {
   collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
   onSnapshot, query, where,
@@ -19,12 +19,14 @@ const AUCTION_DURATION_MS = 1 * 60 * 60 * 1000; // 1時間(テスト中)
 
 const STR = {
   ja: {
+    listNotAvailable: 'うーこオークションは現在準備中のため、出品機能はまだご利用いただけません。',
     listLoginRequired: '出品にはアカウント登録（無料）が必要です。登録・ログインしてから出品してください。',
     listNoStock: '出品できる在庫がありません。',
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
   },
   en: {
+    listNotAvailable: 'Uko Auction is still being prepared, so listing is not available yet.',
     listLoginRequired: 'Listing requires a free account. Please register and log in first.',
     listNoStock: "You don't have any to list.",
     listFailed: 'Failed to list. Please try again later.',
@@ -79,6 +81,8 @@ function openListingConfirmModal(design) {
 // 返却先フィールドを書き込んでおくことで、26_UkoAuction側はサイト固有の知識なしに精算できる)。
 export async function createListing(design) {
   if (!design) return;
+  // UI側(script.js)は準備中ポップで弾いているが、直接呼ばれた場合の保険として二重にガードする
+  if (!isFeedPrivileged()) { alert(s().listNotAvailable); return; }
   if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
   if (!(await openListingConfirmModal(design))) return;
 

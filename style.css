@@ -2008,6 +2008,13 @@ footer {
 
 #gacha-confirm-modal .avatar-nudge-btn { margin-bottom: 16px; }
 
+.auction-coming-soon-text {
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
 .gacha-ticket-transition {
   font-size: 1.05rem;
   font-weight: bold;

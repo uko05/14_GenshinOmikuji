@@ -398,6 +398,13 @@ async function loadFeedDebuggerRole() {
   }
 }
 
+// オークション(26_UkoAuction)が動作確認中のため、出品導線(裏面図鑑の「出品する」ボタン等)は
+// フィードの出品バッジ・出品リンクと同じく管理者/デバッガー限定にする。initFeed()内で
+// loadFeedDebuggerRole()を待ってから使うこと。
+export function isFeedPrivileged() {
+  return isFeedDebugger;
+}
+
 async function toggleLike(entry, likeBtn) {
   const myUserId = getUserId();
   const privileged = isFeedDebugger;
