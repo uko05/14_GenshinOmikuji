@@ -4,7 +4,7 @@ import { GACHA_DESIGNS } from './gachaBacks.js?v=2';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, isFeedPrivileged } from './feed.js?v=21';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, isFeedPrivileged, markMissionAchievedOnce } from './feed.js?v=22';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=3';
 import { createListing, watchMyListings, isItemListed } from './auction.js?v=9';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
@@ -1033,6 +1033,7 @@ function equipCurrentGachaCollectionDesign() {
   refreshCardBackImages();
   renderGachaCollection();
   checkAndUnlockAchievements();
+  markMissionAchievedOnce('omikujiGachaEquip');
 }
 
 async function sellCurrentGachaCollectionDesign() {

@@ -21,6 +21,32 @@
 
 .hidden { display: none !important; }
 
+/* うーこポイント交換所ミッション達成トースト(01_TiersList等、他サイトと共通デザイン) */
+.uko-mission-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%) translateY(10px);
+  max-width: 90%;
+  background: #ffffff;
+  border: 2px solid #ffcc00;
+  color: #333;
+  font-weight: bold;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  z-index: 3000;
+  text-align: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.uko-mission-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 body {
   -webkit-user-select: none;
   user-select: none;

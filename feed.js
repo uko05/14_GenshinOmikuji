@@ -44,6 +44,7 @@ const STR = {
     deleteBtnTitle: 'この投稿をフィードから削除(管理者/デバッガー専用)',
     deleteConfirm:  'この投稿をみんなの結果から削除しますか？（他の人からも見えなくなります）',
     deleteFailed:   '削除に失敗しました。',
+    missionAchievedToast: 'ミッション達成！うーこポイント交換所で受け取ろう',
   },
   en: {
     noName:    'Nameless Traveler',
@@ -70,6 +71,7 @@ const STR = {
     deleteBtnTitle: 'Delete this post from the feed (admin/debugger only)',
     deleteConfirm:  'Delete this post from everyone\'s results? (Others will no longer see it either)',
     deleteFailed:   'Failed to delete.',
+    missionAchievedToast: 'Mission complete! Claim it on the UPoint page.',
   },
 };
 function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
@@ -88,6 +90,44 @@ const authReady = new Promise((resolve) => {
 export async function isAccountLoggedIn() {
   await authReady;
   return !!authUid;
+}
+
+// ===== うーこポイント交換所(08_UPoint)の「1回限りミッション」達成フラグ =====
+// 01_TiersList等、他サイトの画像生成ミッションと同じ二段階方式(達成フラグを立てるだけで、
+// UP付与は08_UPoint側の「受け取る」操作で行う)。未ログイン(AccountCenter未連携)だと
+// localStorageの匿名IDをリセットして何度でも達成扱いにできてしまうため、ログイン中のみ立てる。
+function showMissionToast(text) {
+  let toast = document.getElementById('uko-mission-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'uko-mission-toast';
+    toast.className = 'uko-mission-toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = text;
+  toast.classList.remove('show');
+  void toast.offsetWidth; // reflow
+  toast.classList.add('show');
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => toast.classList.remove('show'), 3200);
+}
+
+export async function markMissionAchievedOnce(claimKey) {
+  if (!(await isAccountLoggedIn())) return;
+  const userId = getUserId();
+  const ref = doc(db, 'omikujiUsers', userId);
+  try {
+    const achieved = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(ref);
+      const data = snap.exists() ? snap.data() : {};
+      if (data.missionsAchieved?.[claimKey] || data.missionsClaimed?.[claimKey]) return false;
+      tx.set(ref, { missionsAchieved: { [claimKey]: true } }, { merge: true });
+      return true;
+    });
+    if (achieved) showMissionToast(s().missionAchievedToast);
+  } catch (e) {
+    console.error('[feed] mission mark failed', e);
+  }
 }
 
 const ELEM_LABELS = {
@@ -1078,6 +1118,8 @@ async function handleGachaDraw() {
         cardBackUrl: design.url,
       });
     }
+
+    markMissionAchievedOnce('omikujiGachaDraw');
   } catch (e) {
     console.error('[feed] gacha draw failed', e);
     alert(e.message === 'NO_TICKETS' ? s().gachaNoTicketAlert : s().gachaDrawFailedAlert);
