@@ -350,6 +350,7 @@ const ACH_STATS_DEFAULTS = {
   hadMidnight: false, hadEarlyMorning: false,
   hadOmisoka: false, hadNewYear: false, hadBirthday: false,
   hadRareGood: false, hadRareBad: false,
+  lastCountedDate: null, // 統計加算を1日1回に制限するための日付(下のupdateAchievementStats参照)
 };
 
 function loadAchStats() {
@@ -358,13 +359,20 @@ function loadAchStats() {
 
 function updateAchievementStats({ name, birthday, fortuneLevel, zodiacKey, bio, isDebug, streakCount }) {
   const stats = loadAchStats();
+  if (isDebug) stats.hadDebug = true;
 
-  if (isDebug) {
-    stats.hadDebug = true;
+  // 管理者/デバッガーは1日に何度でも引き直せるため、通常ユーザーと同じ「1日1回」に
+  // 統計への加算を制限する(updateStreak()と同じ、日付ベースの冪等化)。これが無いと
+  // 通常運用で毎日1回引いているだけの管理者アカウントでも、デバッグ中は判定的に
+  // 毎回ここへ来ないままtotalCount等が一切増えず、streak(連続日数)だけが伸びて
+  // 実績(「累計n回」「運勢系」等)がいつまでも解放されない不整合が起きる。
+  const today = getFortuneDate();
+  if (stats.lastCountedDate === today) {
     store.achStats = stats;
     scheduleSync();
     return;
   }
+  stats.lastCountedDate = today;
 
   stats.totalCount++;
   if (streakCount > stats.maxStreak) stats.maxStreak = streakCount;
@@ -1518,7 +1526,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => selectCard(savedResult.cardIndex), 400);
     if (!isDebugMode()) showDailyDoneOverlay();
     const name = nameInput.value.trim();
-    runFortune(savedBirthday, name, savedResult.cardIndex, savedResult.isReversed, true);
+    runFortune(savedBirthday, name, savedResult.cardIndex, savedResult.isReversed, true, true);
     document.getElementById('result').style.display = 'block';
   }
 
