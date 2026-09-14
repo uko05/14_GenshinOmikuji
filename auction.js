@@ -2,7 +2,7 @@
 // 裏面デザインの出品（閲覧・入札・即決購入・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
-import { submitListingFeedEntry, isAccountLoggedIn, isFeedPrivileged } from './feed.js?v=22';
+import { submitListingFeedEntry, isAccountLoggedIn, isFeedPrivileged, markMissionAchievedOnce } from './feed.js?v=22';
 import {
   collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
   onSnapshot, query, where,
@@ -126,6 +126,8 @@ export async function createListing(design) {
       itemImageUrl: design.url,
       listingId: listingRef.id,
     });
+
+    markMissionAchievedOnce('omikujiAuctionListing');
 
     alert(s().listDone);
     return true;
