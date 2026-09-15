@@ -438,13 +438,6 @@ async function loadFeedDebuggerRole() {
   }
 }
 
-// オークション(26_UkoAuction)が動作確認中のため、出品導線(裏面図鑑の「出品する」ボタン等)は
-// フィードの出品バッジ・出品リンクと同じく管理者/デバッガー限定にする。initFeed()内で
-// loadFeedDebuggerRole()を待ってから使うこと。
-export function isFeedPrivileged() {
-  return isFeedDebugger;
-}
-
 async function toggleLike(entry, likeBtn) {
   const myUserId = getUserId();
   const privileged = isFeedDebugger;
@@ -554,9 +547,7 @@ function renderFeedList(entries) {
   const myUserId = getUserId();
   list.innerHTML = '';
 
-  // 出品(type:'listing')は26_UkoAuctionが動作確認中(管理者/デバッガー限定)のため、
-  // 一般ユーザーには見せない(押しても何も見られないリンクを出さないため)。
-  const visibleEntries = entries.filter((e) => e.type !== 'listing' || isFeedDebugger);
+  const visibleEntries = entries;
 
   if (!visibleEntries.length) {
     const p = document.createElement('p');
