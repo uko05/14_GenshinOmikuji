@@ -593,8 +593,11 @@ async function captureSection(sectionId, btnId) {
 
   document.body.appendChild(wrapper);
   try {
+    // スマホの縦画面だとwrapperの実際の横幅(PC想定の固定700px)よりビューポートが狭いため、
+    // windowWidthを指定しないとhtml2canvasが右側を切り落として撮ってしまう。
     const canvas = await html2canvas(wrapper, {
       useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false,
+      windowWidth: wrapper.scrollWidth, windowHeight: wrapper.scrollHeight,
     });
     await saveOrShareImage(canvas, `genshin-collection-${getFortuneDate()}.png`);
   } catch {
@@ -662,7 +665,9 @@ async function captureAchievements(btnId) {
 
   document.body.appendChild(div);
   try {
-    const canvas = await html2canvas(div, { useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false });
+    // スマホの縦画面だとdivの実際の横幅(PC想定の固定700px)よりビューポートが狭いため、
+    // windowWidthを指定しないとhtml2canvasが右側を切り落として撮ってしまう。
+    const canvas = await html2canvas(div, { useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false, windowWidth: div.scrollWidth, windowHeight: div.scrollHeight });
     await saveOrShareImage(canvas, `genshin-achievements-${getFortuneDate()}.png`);
   } catch {
     alert(t('saveFail'));
@@ -1928,7 +1933,9 @@ async function captureResult() {
 
   document.body.appendChild(div);
   try {
-    const canvas = await html2canvas(div, { useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false });
+    // スマホの縦画面だとdivの実際の横幅(PC想定の固定700px)よりビューポートが狭いため、
+    // windowWidthを指定しないとhtml2canvasが右側を切り落として撮ってしまう。
+    const canvas = await html2canvas(div, { useCORS: true, backgroundColor: '#f4f4f9', scale: 2, logging: false, windowWidth: div.scrollWidth, windowHeight: div.scrollHeight });
     await saveOrShareImage(canvas, `genshin-omikuji-${getFortuneDate()}.png`);
   } catch (e) {
     alert(t('saveFail'));
