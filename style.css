@@ -1611,7 +1611,7 @@ footer {
    称号名がどれだけ長くても(コネクトバトル側の実績名を含め)省略せず出せる。
    デザインはコネクトバトルの称号バナー(title-slot-banner)・アカウント管理の
    アチーブバッジ(ach-badge)と同じグラデーション・シマーアニメーションを使う。 */
-.feed-badge-row { line-height: 1; }
+.feed-badge-row { line-height: 1; text-align: center; }
 
 @keyframes feed-badge-shimmer {
   0%   { background-position: 0% 50%; }
