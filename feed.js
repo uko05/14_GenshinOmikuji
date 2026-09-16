@@ -1285,6 +1285,15 @@ export async function initFeed() {
   const gachaDrawBtn = document.getElementById('gacha-confirm-draw-btn');
   if (gachaDrawBtn) gachaDrawBtn.addEventListener('click', handleGachaDraw);
 
+  // ガチャ券はUP(うーこポイント)で08_UPointから交換する(このサイト側では発行しない)ため、
+  // 交換所への導線をここに置く。別タブで開き、おみくじ側の状態は保持したままにする。
+  const gachaExchangeLink = document.getElementById('gacha-exchange-link');
+  if (gachaExchangeLink) {
+    gachaExchangeLink.addEventListener('click', () => {
+      window.open('https://uko05.github.io/08_UPoint/', '_blank', 'noopener');
+    });
+  }
+
   const gachaResultImg = document.getElementById('gacha-result-img');
   const gachaLightbox = document.getElementById('gacha-lightbox');
   if (gachaResultImg && gachaLightbox) {

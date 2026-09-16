@@ -275,9 +275,16 @@
       </div>
       <div class="auction-listing-confirm-row">
         <span data-i18n="auctionDurationLabel">出品期間</span>
-        <span data-i18n="auctionDurationValue">1時間</span>
+        <select id="auction-listing-confirm-duration" class="auction-listing-confirm-duration-select">
+          <option value="24" data-i18n="auctionDuration24" selected>24時間</option>
+          <option value="48" data-i18n="auctionDuration48">48時間</option>
+        </select>
       </div>
     </div>
+    <label class="auction-listing-confirm-nobuynow-row">
+      <input type="checkbox" id="auction-listing-confirm-nobuynow">
+      <span data-i18n="auctionNoBuyNowCheckbox">即決価格なしにする</span>
+    </label>
     <div class="auction-listing-confirm-actions">
       <button type="button" id="auction-listing-confirm-ok" class="avatar-nudge-btn" data-i18n="listingConfirmOkBtn">出品する</button>
       <button type="button" id="auction-listing-confirm-cancel" class="avatar-nudge-btn auction-listing-confirm-cancel-btn" data-i18n="listingConfirmCancelBtn">キャンセル</button>

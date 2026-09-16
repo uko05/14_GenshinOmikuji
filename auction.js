@@ -14,7 +14,7 @@ import {
 // 変更時はそちらも合わせること。
 export const AUCTION_START_PRICE   = 25;
 export const AUCTION_BUY_NOW_PRICE = 500;
-const AUCTION_DURATION_MS = 48 * 60 * 60 * 1000; // 48時間
+const AUCTION_DURATION_DEFAULT_HOURS = 24; // 出品期間の選択肢のデフォルト値(確認ポップのselectと合わせる)
 
 const STR = {
   ja: {
@@ -22,30 +22,45 @@ const STR = {
     listNoStock: '出品できる在庫がありません。',
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
+    buyNowNone: 'なし',
   },
   en: {
     listLoginRequired: 'Listing requires a free account. Please register and log in first.',
     listNoStock: "You don't have any to list.",
     listFailed: 'Failed to list. Please try again later.',
     listDone: 'Listed! You can check it on Uko Auction.',
+    buyNowNone: 'None',
   },
 };
 function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
 
 // ===== 出品の確認ポップ(ブラウザ標準confirm()の代わりに、うーこの部屋のデザインに合わせた
 // 独自ポップでサムネ・開始価格・即決価格・出品期間を見せてから確認する) =====
+// 戻り値: キャンセル時はfalse、出品確定時は{ buyNowPrice: number|null, durationHours: number }
+// (即決価格なしチェックがONならbuyNowPriceはnull、それ以外は固定のAUCTION_BUY_NOW_PRICE)。
 function openListingConfirmModal(design) {
   const modal = document.getElementById('auction-listing-confirm-modal');
-  if (!modal) return Promise.resolve(true); // 万一要素が無ければ素通りさせる
+  if (!modal) return Promise.resolve({ buyNowPrice: AUCTION_BUY_NOW_PRICE, durationHours: AUCTION_DURATION_DEFAULT_HOURS }); // 万一要素が無ければ素通りさせる
 
   const img = document.getElementById('auction-listing-confirm-img');
   const nameEl = document.getElementById('auction-listing-confirm-name');
   const startEl = document.getElementById('auction-listing-confirm-start');
   const buyNowEl = document.getElementById('auction-listing-confirm-buynow');
+  const noBuyNowInput = document.getElementById('auction-listing-confirm-nobuynow');
+  const durationSelect = document.getElementById('auction-listing-confirm-duration');
   if (img) { img.src = design.url; img.alt = design.name; }
   if (nameEl) nameEl.textContent = design.name;
   if (startEl) startEl.textContent = `${AUCTION_START_PRICE}UP`;
-  if (buyNowEl) buyNowEl.textContent = `${AUCTION_BUY_NOW_PRICE}UP`;
+  if (noBuyNowInput) noBuyNowInput.checked = false; // 再利用するDOMなので毎回リセット
+  if (durationSelect) durationSelect.value = String(AUCTION_DURATION_DEFAULT_HOURS);
+
+  const updateBuyNowDisplay = () => {
+    if (!buyNowEl) return;
+    buyNowEl.textContent = noBuyNowInput?.checked ? s().buyNowNone : `${AUCTION_BUY_NOW_PRICE}UP`;
+  };
+  updateBuyNowDisplay();
+  noBuyNowInput?.addEventListener('change', updateBuyNowDisplay);
+
   modal.style.display = 'flex';
 
   return new Promise((resolve) => {
@@ -60,9 +75,13 @@ function openListingConfirmModal(design) {
       cancelBtn?.removeEventListener('click', onCancel);
       closeBtn?.removeEventListener('click', onCancel);
       backdrop?.removeEventListener('click', onCancel);
+      noBuyNowInput?.removeEventListener('change', updateBuyNowDisplay);
       resolve(result);
     };
-    const onOk = () => finish(true);
+    const onOk = () => finish({
+      buyNowPrice: noBuyNowInput?.checked ? null : AUCTION_BUY_NOW_PRICE,
+      durationHours: Number(durationSelect?.value) || AUCTION_DURATION_DEFAULT_HOURS,
+    });
     const onCancel = () => finish(false);
 
     okBtn?.addEventListener('click', onOk);
@@ -79,7 +98,9 @@ function openListingConfirmModal(design) {
 export async function createListing(design) {
   if (!design) return;
   if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
-  if (!(await openListingConfirmModal(design))) return;
+  const confirmResult = await openListingConfirmModal(design);
+  if (!confirmResult) return;
+  const { buyNowPrice, durationHours } = confirmResult;
 
   const userId = getUserId();
   const userRef = doc(db, 'omikujiUsers', userId);
@@ -102,14 +123,14 @@ export async function createListing(design) {
       itemImageUrl: design.url,
       returnField: `cardBacks.${design.id}`,
       startPrice: AUCTION_START_PRICE,
-      buyNowPrice: AUCTION_BUY_NOW_PRICE,
+      buyNowPrice,
       currentBid: 0,
       currentBidderId: null,
       currentBidderName: '',
       bidCount: 0,
       status: 'active',
       createdAt: serverTimestamp(),
-      endsAt: Timestamp.fromMillis(Date.now() + AUCTION_DURATION_MS),
+      endsAt: Timestamp.fromMillis(Date.now() + durationHours * 60 * 60 * 1000),
       soldPrice: null,
       soldTo: null,
       soldVia: null,
