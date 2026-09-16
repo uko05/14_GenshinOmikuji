@@ -106,6 +106,7 @@ export async function createListing(design) {
       currentBid: 0,
       currentBidderId: null,
       currentBidderName: '',
+      bidCount: 0,
       status: 'active',
       createdAt: serverTimestamp(),
       endsAt: Timestamp.fromMillis(Date.now() + AUCTION_DURATION_MS),
