@@ -2,7 +2,7 @@
 // みんなの結果フィード・いいね・いいね通知・アバター表示
 import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
-import { GACHA_DESIGNS } from './gachaBacks.js?v=2';
+import { GACHA_DESIGNS } from './gachaBacks.js?v=3';
 import {
   collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
   query, where, orderBy, limit, serverTimestamp, increment, arrayUnion, runTransaction, Timestamp,

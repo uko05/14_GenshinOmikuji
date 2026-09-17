@@ -2,7 +2,7 @@
 // 裏面デザインの出品（閲覧・入札・即決購入・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
-import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=23';
+import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=24';
 import {
   collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
   onSnapshot, query, where,
@@ -16,12 +16,68 @@ export const AUCTION_START_PRICE   = 25;
 export const AUCTION_BUY_NOW_PRICE = 500;
 const AUCTION_DURATION_DEFAULT_HOURS = 24; // 出品期間の選択肢のデフォルト値(確認ポップのselectと合わせる)
 
+// ===== 期間限定キャンペーン(ukoAuctionCampaigns, 2026-09-18追加) =====
+// 26_UkoAuctionの管理者画面で作成する。出品時に効くのはlistingBonus(出品するたび
+// 定額UP)とlistingCountBonus(期間中の出品数が閾値を超えるたびボーナスUP)の2種類。
+// sellerBonus(落札額×倍率)は落札/即決時にしか効かないため、精算を担当する
+// 26_UkoAuction側だけで判定している。スキーマの詳細もそちら(script.js)のコメント参照。
+let latestAuctionCampaigns = [];
+onSnapshot(collection(db, 'ukoAuctionCampaigns'), (snap) => {
+  latestAuctionCampaigns = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}, (e) => console.error('[auction] campaigns listen failed', e));
+
+function isCampaignActiveNow(c) {
+  if (!c.enabled) return false;
+  const now = Date.now();
+  return c.startsAt?.toMillis() <= now && now <= c.endsAt?.toMillis();
+}
+
+// 出品1件につきもらえるボーナスUPの内訳を返す。
+// listingBonus: 有効な全キャンペーン分を合算(定額の重ね掛けは意図通り)。
+// listingCountBonus: userDataは出品トランザクション内で読んだ最新のomikujiUsersデータ
+//   (呼び出し側でtx.get済みのsnap.data())。キャンペーンごとに出品数を数え、新しく
+//   閾値を超えたtierのボーナスだけを加算する(同じtierを二重に払わないよう
+//   claimedTiersで管理)。progressUpdatesは呼び出し側がtx.update()に含めるための
+//   auctionCampaignProgress.{campaignId}の新しい値。
+function computeListingCampaignBonus(userData) {
+  let totalBonus = 0;
+  const progressUpdates = {};
+
+  activeCampaignsByType('listingBonus').forEach((c) => {
+    totalBonus += c.bonusAmount || 0;
+  });
+
+  activeCampaignsByType('listingCountBonus').forEach((c) => {
+    const progress = userData.auctionCampaignProgress?.[c.id] || { count: 0, claimedTiers: [] };
+    const newCount = progress.count + 1;
+    const claimedTiers = progress.claimedTiers || [];
+    const newlyClaimed = [];
+    (c.tiers || []).forEach((tier) => {
+      if (newCount >= tier.count && !claimedTiers.includes(tier.count)) {
+        totalBonus += tier.bonus || 0;
+        newlyClaimed.push(tier.count);
+      }
+    });
+    progressUpdates[`auctionCampaignProgress.${c.id}`] = {
+      count: newCount,
+      claimedTiers: [...claimedTiers, ...newlyClaimed],
+    };
+  });
+
+  return { totalBonus, progressUpdates };
+}
+
+function activeCampaignsByType(type) {
+  return latestAuctionCampaigns.filter((c) => c.type === type && isCampaignActiveNow(c));
+}
+
 const STR = {
   ja: {
     listLoginRequired: '出品にはアカウント登録（無料）が必要です。登録・ログインしてから出品してください。',
     listNoStock: '出品できる在庫がありません。',
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
+    listDoneWithBonus: (n) => `出品しました。キャンペーンで+${n}UPもらいました！うーこオークションで確認できます。`,
     buyNowNone: 'なし',
   },
   en: {
@@ -29,6 +85,7 @@ const STR = {
     listNoStock: "You don't have any to list.",
     listFailed: 'Failed to list. Please try again later.',
     listDone: 'Listed! You can check it on Uko Auction.',
+    listDoneWithBonus: (n) => `Listed! You earned +${n}UP from a campaign! You can check it on Uko Auction.`,
     buyNowNone: 'None',
   },
 };
@@ -104,14 +161,21 @@ export async function createListing(design) {
 
   const userId = getUserId();
   const userRef = doc(db, 'omikujiUsers', userId);
+  let campaignBonusEarned = 0;
 
   try {
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(userRef);
       if (!snap.exists()) throw new Error('NO_USER_DOC');
-      const owned = (snap.data().cardBacks || {})[design.id] || 0;
+      const data = snap.data();
+      const owned = (data.cardBacks || {})[design.id] || 0;
       if (owned < 1) throw new Error('NO_STOCK');
-      tx.update(userRef, { [`cardBacks.${design.id}`]: increment(-1) });
+
+      const { totalBonus, progressUpdates } = computeListingCampaignBonus(data);
+      campaignBonusEarned = totalBonus;
+      const updates = { [`cardBacks.${design.id}`]: increment(-1), ...progressUpdates };
+      if (totalBonus > 0) updates.ukoPoints = increment(totalBonus);
+      tx.update(userRef, updates);
     });
 
     const listingRef = await addDoc(collection(db, 'ukoMarketListings'), {
@@ -146,7 +210,7 @@ export async function createListing(design) {
 
     markMissionAchievedOnce('omikujiAuctionListing');
 
-    alert(s().listDone);
+    alert(campaignBonusEarned > 0 ? s().listDoneWithBonus(campaignBonusEarned) : s().listDone);
     return true;
   } catch (e) {
     console.error('[auction] listing failed', e);
