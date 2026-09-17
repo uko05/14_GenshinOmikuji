@@ -6,6 +6,17 @@ function ownedDesignCount(cardBacks) {
   return Object.values(cardBacks).filter((n) => n > 0).length;
 }
 
+// No.from〜toの裏面デザイン(custom_001〜custom_206, gachaBacks.js参照)を
+// 1種も欠けずに全部持っているかを判定する(「何種類か」ではなく「特定の番号帯を
+// 全部」なので、ownedDesignCountとは別の判定関数にしている)。
+function hasDesignRange(cardBacks, from, to) {
+  if (!cardBacks) return false;
+  for (let n = from; n <= to; n++) {
+    if (!(cardBacks[`custom_${String(n).padStart(3, '0')}`] > 0)) return false;
+  }
+  return true;
+}
+
 const CARD_IDS = [
   'fool','magician','high_priestess','empress','emperor','hierophant',
   'lovers','chariot','strength','hermit','wheel_of_fortune','justice',
@@ -143,7 +154,7 @@ export const ACHIEVEMENT_GROUPS = [
       { id:'gacha_col_10',  rarity:'bronze', name:'スキンコレクター見習い', nameEn:'Apprentice Skin Collector', condition:'裏面デザインを10種収集する', conditionEn:'Collect 10 card-back designs',          check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=10 },
       { id:'gacha_col_50',  rarity:'gold',   name:'スキンコレクター上級者', nameEn:'Master Skin Collector',   condition:'裏面デザインを50種収集する',  conditionEn:'Collect 50 card-back designs',          check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=50 },
       { id:'gacha_col_100', rarity:'legend', name:'グランドスキンコレクター', nameEn:'Grand Skin Collector',  condition:'裏面デザインを100種収集する', conditionEn:'Collect 100 card-back designs',         check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=100 },
-      { id:'gacha_col_200', rarity:'legend', name:'唯一無二のコレクター',   nameEn:'Peerless Collector',       condition:'裏面デザインを200種収集する', conditionEn:'Collect 200 card-back designs',         check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=200 },
+      { id:'gacha_col_200', rarity:'legend', name:'唯一無二のコレクター',   nameEn:'Peerless Collector',       condition:'裏面デザインNo.1〜200をすべて収集する', conditionEn:'Collect card-back designs No.1–200', check:(s,c,cardBacks)=>hasDesignRange(cardBacks,1,200) },
     ],
   },
   {
