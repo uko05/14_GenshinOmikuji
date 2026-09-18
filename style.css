@@ -1165,6 +1165,21 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   pointer-events: none;
 }
 
+/* 複数所持バッジ(2枚以上持っている場合だけ、カード右下に「×N」を重ねて表示) */
+.gacha-col-count-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: bold;
+  padding: 1px 4px;
+  border-radius: 3px;
+  line-height: 1.3;
+  pointer-events: none;
+}
+
 .col-label {
   font-size: 0.65rem;
   color: var(--muted);

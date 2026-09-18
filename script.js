@@ -153,7 +153,7 @@ const i18n = {
     captureTitle:       '✦ 原神おみくじ ✦',
     sectionCollection:   'アルカナ図鑑',
     collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} 収録`,
-    sectionGachaCollection:  '裏面デザイン図鑑',
+    sectionGachaCollection:  'スキンデザイン図鑑',
     gachaCollectionProgress: (n, total) => `${n} / ${total} 収録`,
     gachaEquipBtn:       '裏面に設定する',
     gachaEquippedLabel:  '設定中',
@@ -992,6 +992,15 @@ function renderGachaCollection(newDesignId = null) {
           badge.className = 'gacha-col-listed-badge';
           badge.textContent = i18n[currentLang].gachaListedBadge;
           scene.appendChild(badge);
+        }
+        // 手元に2枚以上ある場合だけ右下に「×N」を出す(出品中の1枚は既にcardBacksから
+        // 差し引かれているので、ここでのNはあくまで今すぐ使える手持ち分の枚数)。
+        const ownedCountHere = owned[design.id] || 0;
+        if (ownedCountHere >= 2) {
+          const countBadge = document.createElement('span');
+          countBadge.className = 'gacha-col-count-badge';
+          countBadge.textContent = `×${ownedCountHere}`;
+          scene.appendChild(countBadge);
         }
       } else {
         const unknown = document.createElement('div');
