@@ -6,7 +6,7 @@ import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en 
 import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=24';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=4';
-import { createListing, watchMyListings, isItemListed } from './auction.js?v=12';
+import { createListing, watchMyListings, isItemListed } from './auction.js?v=13';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -161,8 +161,6 @@ const i18n = {
     gachaSellBtn:        '出品する',
     listingConfirmTitle:   'オークションに出品しますか？',
     auctionStartLabel:     '開始価格',
-    auctionBuyNowLabel:    '即決価格',
-    auctionNoBuyNowCheckbox: '即決価格なしにする',
     auctionDurationLabel:  '出品期間',
     auctionDuration24:     '24時間',
     auctionDuration48:     '48時間',
@@ -261,8 +259,6 @@ const i18n = {
     gachaSellBtn:        'List for Sale',
     listingConfirmTitle:   'List this for auction?',
     auctionStartLabel:     'Start Price',
-    auctionBuyNowLabel:    'Buy Now Price',
-    auctionNoBuyNowCheckbox: 'No Buy Now price',
     auctionDurationLabel:  'Duration',
     auctionDuration24:     '24 hours',
     auctionDuration48:     '48 hours',

@@ -1,5 +1,5 @@
 // auction.js
-// 裏面デザインの出品（閲覧・入札・即決購入・精算は26_UkoAuctionへ分離した）
+// 裏面デザインの出品（閲覧・入札・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
 import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=24';
@@ -8,18 +8,19 @@ import {
   onSnapshot, query, where,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-// ガチャ券は08_UPoint側で50UP固定(2026-09時点)。開始=券の5分の1、即決=券の5倍という
-// 比率で運用する方針のため、ここは連動する自動計算ではなく固定値。券の価格を
-// 変更したらここも手動で合わせること。閲覧側(26_UkoAuction)にも同じ値を持たせているので
-// 変更時はそちらも合わせること。
+// ガチャ券は08_UPoint側で50UP固定(2026-09時点)。開始=券の5分の1という比率で運用する方針
+// のため、ここは連動する自動計算ではなく固定値。券の価格を変更したらここも手動で合わせること。
+// 閲覧側(26_UkoAuction)にも同じ値を持たせているので変更時はそちらも合わせること。
+// 即決(買い切り)機能は2026-09-19に廃止した。固定500UPの即決価格がガチャ券50UPを大きく
+// 上回っていたため、メイン垢で安くガチャを回して複製をサブ垢に即決購入させる自演両替の
+// 抜け道になっていた(実際の取引データから発覚)。抜け道自体を塞ぐため機能ごと削除する方針。
 export const AUCTION_START_PRICE   = 25;
-export const AUCTION_BUY_NOW_PRICE = 500;
 const AUCTION_DURATION_DEFAULT_HOURS = 24; // 出品期間の選択肢のデフォルト値(確認ポップのselectと合わせる)
 
 // ===== 期間限定キャンペーン(ukoAuctionCampaigns, 2026-09-18追加) =====
 // 26_UkoAuctionの管理者画面で作成する。出品時に効くのはlistingBonus(出品するたび
 // 定額UP)とlistingCountBonus(期間中の出品数が閾値を超えるたびボーナスUP)の2種類。
-// sellerBonus(落札額×倍率)は落札/即決時にしか効かないため、精算を担当する
+// sellerBonus(落札額×倍率)は落札時にしか効かないため、精算を担当する
 // 26_UkoAuction側だけで判定している。スキーマの詳細もそちら(script.js)のコメント参照。
 let latestAuctionCampaigns = [];
 onSnapshot(collection(db, 'ukoAuctionCampaigns'), (snap) => {
@@ -78,7 +79,6 @@ const STR = {
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
     listDoneWithBonus: (n) => `出品しました。キャンペーンで+${n}UPもらいました！うーこオークションで確認できます。`,
-    buyNowNone: 'なし',
   },
   en: {
     listLoginRequired: 'Listing requires a free account. Please register and log in first.',
@@ -86,37 +86,25 @@ const STR = {
     listFailed: 'Failed to list. Please try again later.',
     listDone: 'Listed! You can check it on Uko Auction.',
     listDoneWithBonus: (n) => `Listed! You earned +${n}UP from a campaign! You can check it on Uko Auction.`,
-    buyNowNone: 'None',
   },
 };
 function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
 
 // ===== 出品の確認ポップ(ブラウザ標準confirm()の代わりに、うーこの部屋のデザインに合わせた
-// 独自ポップでサムネ・開始価格・即決価格・出品期間を見せてから確認する) =====
-// 戻り値: キャンセル時はfalse、出品確定時は{ buyNowPrice: number|null, durationHours: number }
-// (即決価格なしチェックがONならbuyNowPriceはnull、それ以外は固定のAUCTION_BUY_NOW_PRICE)。
+// 独自ポップでサムネ・開始価格・出品期間を見せてから確認する) =====
+// 戻り値: キャンセル時はfalse、出品確定時は{ durationHours: number }
 function openListingConfirmModal(design) {
   const modal = document.getElementById('auction-listing-confirm-modal');
-  if (!modal) return Promise.resolve({ buyNowPrice: AUCTION_BUY_NOW_PRICE, durationHours: AUCTION_DURATION_DEFAULT_HOURS }); // 万一要素が無ければ素通りさせる
+  if (!modal) return Promise.resolve({ durationHours: AUCTION_DURATION_DEFAULT_HOURS }); // 万一要素が無ければ素通りさせる
 
   const img = document.getElementById('auction-listing-confirm-img');
   const nameEl = document.getElementById('auction-listing-confirm-name');
   const startEl = document.getElementById('auction-listing-confirm-start');
-  const buyNowEl = document.getElementById('auction-listing-confirm-buynow');
-  const noBuyNowInput = document.getElementById('auction-listing-confirm-nobuynow');
   const durationSelect = document.getElementById('auction-listing-confirm-duration');
   if (img) { img.src = design.url; img.alt = design.name; }
   if (nameEl) nameEl.textContent = design.name;
   if (startEl) startEl.textContent = `${AUCTION_START_PRICE}UP`;
-  if (noBuyNowInput) noBuyNowInput.checked = false; // 再利用するDOMなので毎回リセット
   if (durationSelect) durationSelect.value = String(AUCTION_DURATION_DEFAULT_HOURS);
-
-  const updateBuyNowDisplay = () => {
-    if (!buyNowEl) return;
-    buyNowEl.textContent = noBuyNowInput?.checked ? s().buyNowNone : `${AUCTION_BUY_NOW_PRICE}UP`;
-  };
-  updateBuyNowDisplay();
-  noBuyNowInput?.addEventListener('change', updateBuyNowDisplay);
 
   modal.style.display = 'flex';
 
@@ -132,11 +120,9 @@ function openListingConfirmModal(design) {
       cancelBtn?.removeEventListener('click', onCancel);
       closeBtn?.removeEventListener('click', onCancel);
       backdrop?.removeEventListener('click', onCancel);
-      noBuyNowInput?.removeEventListener('change', updateBuyNowDisplay);
       resolve(result);
     };
     const onOk = () => finish({
-      buyNowPrice: noBuyNowInput?.checked ? null : AUCTION_BUY_NOW_PRICE,
       durationHours: Number(durationSelect?.value) || AUCTION_DURATION_DEFAULT_HOURS,
     });
     const onCancel = () => finish(false);
@@ -149,7 +135,7 @@ function openListingConfirmModal(design) {
 }
 
 // ===== 出品（自分のドキュメントだけで完結する単純なトランザクション） =====
-// うーこの部屋 横断マーケット(ukoMarketListings)への出品。閲覧・入札・即決購入・精算は
+// うーこの部屋 横断マーケット(ukoMarketListings)への出品。閲覧・入札・精算は
 // 26_UkoAuctionが担当するため、ここでは出品して終わり(returnFieldに落札/流札時の
 // 返却先フィールドを書き込んでおくことで、26_UkoAuction側はサイト固有の知識なしに精算できる)。
 export async function createListing(design) {
@@ -157,7 +143,7 @@ export async function createListing(design) {
   if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
   const confirmResult = await openListingConfirmModal(design);
   if (!confirmResult) return;
-  const { buyNowPrice, durationHours } = confirmResult;
+  const { durationHours } = confirmResult;
 
   const userId = getUserId();
   const userRef = doc(db, 'omikujiUsers', userId);
@@ -187,7 +173,6 @@ export async function createListing(design) {
       itemImageUrl: design.url,
       returnField: `cardBacks.${design.id}`,
       startPrice: AUCTION_START_PRICE,
-      buyNowPrice,
       currentBid: 0,
       currentBidderId: null,
       currentBidderName: '',

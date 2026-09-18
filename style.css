@@ -1311,17 +1311,6 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   font-size: 0.85rem;
 }
 
-.auction-listing-confirm-nobuynow-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 0.82rem;
-  color: var(--text);
-  margin-bottom: 16px;
-  cursor: pointer;
-}
-
 .auction-listing-confirm-actions {
   display: flex;
   gap: 10px;
