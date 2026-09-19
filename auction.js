@@ -4,7 +4,7 @@ import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
 import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=29';
 import {
-  collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
+  collection, doc, getDoc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
   onSnapshot, query, where,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
@@ -27,8 +27,21 @@ onSnapshot(collection(db, 'ukoAuctionCampaigns'), (snap) => {
   latestAuctionCampaigns = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }, (e) => console.error('[auction] campaigns listen failed', e));
 
+// adminOnly(2026-09-20追加): テスト中のキャンペーンを一般ユーザーに適用しないためのフラグ。
+// 26_UkoAuction/script.jsと同じ仕組み(sharedUserRoles、匿名ID直接キー)で判定する。
+let isAdminRole = false;
+(async () => {
+  try {
+    const snap = await getDoc(doc(db, 'sharedUserRoles', getUserId()));
+    isAdminRole = snap.exists() && snap.data().role === 'admin';
+  } catch (e) {
+    console.error('[auction] role load failed', e);
+  }
+})();
+
 function isCampaignActiveNow(c) {
   if (!c.enabled) return false;
+  if (c.adminOnly && !isAdminRole) return false;
   const now = Date.now();
   return c.startsAt?.toMillis() <= now && now <= c.endsAt?.toMillis();
 }
