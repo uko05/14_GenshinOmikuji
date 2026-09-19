@@ -35,6 +35,7 @@ const STR = {
     auctionBtnLabel: 'オークションへ',
     statsUpInfo: (given, received) => `「UP（うーこポイント）」は、他の人の結果にいいねする（アゲいいね：あなたは今${given}回、1回で1UP）、または自分の結果にいいねをもらう（モラいいね：あなたは今${received}回、1回で2UP）と貯まるポイントです。今後は他のサイトでミッションをクリアしてももらえるようになる予定です。貯めたUPは引き換え専用サイトで、色々なサイトのちょっとした特典と交換できます！`,
     mailEmpty: '届いているメールはありません',
+    mailExpandBtn: '本文を表示する',
     mailClaimBtn: '受け取る',
     mailClaimedBtn: '受取済み',
     mailClaimFailed: '受け取りに失敗しました。時間をおいて再度お試しください。',
@@ -62,6 +63,7 @@ const STR = {
     auctionBtnLabel: 'To Auction',
     statsUpInfo: (given, received) => `"UP" (Uko Points) are earned by liking other people's results (Given: ${given} so far, 1 UP each) or having your own results liked (Received: ${received} so far, 2 UP each). You'll also be able to earn them by completing missions on other sites in the future. Saved-up UP can be used on the dedicated redemption site to unlock small perks across various sites!`,
     mailEmpty: 'No mail yet',
+    mailExpandBtn: 'Show full message',
     mailClaimBtn: 'Claim',
     mailClaimedBtn: 'Claimed',
     mailClaimFailed: 'Failed to claim. Please try again later.',
@@ -1205,20 +1207,49 @@ async function openMailPanel() {
       const title = document.createElement('div');
       title.className = 'notif-row-text';
       title.textContent = d.title || '';
-      const msg = document.createElement('div');
-      // 管理者画面で改行して書いた説明文がそのまま伝わるように、改行を保持して表示する
-      // (textContent自体は改行を含んだまま渡っているので、CSS側でwhite-space:pre-wrapに
-      // するだけでよい。innerHTML+<br>変換は使わない)。
-      msg.className = 'notif-row-text notif-row-text-message';
-      msg.textContent = d.message || '';
+      col.appendChild(title);
+
+      // 説明文が長いと受け取るボタンまでの距離が伸びて見にくいため、最初は1行分だけ
+      // プレビュー表示し、「本文を表示する」を押した時だけ全文(改行込み)に差し替える。
+      // 短い(改行なし・MAIL_PREVIEW_LENGTH文字以内)メールはそもそも省略の意味が無いので、
+      // 最初から全文を出しボタン自体を出さない。
+      const fullMessage = d.message || '';
+      if (fullMessage) {
+        const MAIL_PREVIEW_LENGTH = 50;
+        const firstLine = fullMessage.split('\n')[0];
+        const needsExpand = fullMessage.length > MAIL_PREVIEW_LENGTH || fullMessage.includes('\n');
+        const previewText = firstLine.length > MAIL_PREVIEW_LENGTH
+          ? `${firstLine.slice(0, MAIL_PREVIEW_LENGTH)}…`
+          : `${firstLine}…`;
+
+        const msg = document.createElement('div');
+        // 管理者画面で改行して書いた説明文がそのまま伝わるように、改行を保持して表示する
+        // (textContent自体は改行を含んだまま渡っているので、CSS側でwhite-space:pre-wrapに
+        // するだけでよい。innerHTML+<br>変換は使わない)。
+        msg.className = 'notif-row-text notif-row-text-message';
+        msg.textContent = needsExpand ? previewText : fullMessage;
+        col.appendChild(msg);
+
+        if (needsExpand) {
+          const expandBtn = document.createElement('button');
+          expandBtn.type = 'button';
+          expandBtn.className = 'mail-expand-btn';
+          expandBtn.textContent = s().mailExpandBtn;
+          expandBtn.addEventListener('click', () => {
+            msg.textContent = fullMessage;
+            expandBtn.remove();
+          });
+          col.appendChild(expandBtn);
+        }
+      }
+
       const time = document.createElement('div');
       time.className = 'notif-row-time';
       time.textContent = relTime(d.createdAt);
-      col.appendChild(title);
-      if (d.message) col.appendChild(msg);
       col.appendChild(time);
-      row.appendChild(col);
 
+      // 受け取るボタンは(横並びではなく)本文の下に来るよう、colの中に入れて
+      // 縦積みにする(colはflexコンテナではないので、通常のブロック要素として下に並ぶ)。
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'mail-claim-btn';
@@ -1235,7 +1266,8 @@ async function openMailPanel() {
           alert(s().mailClaimFailed);
         }
       });
-      row.appendChild(btn);
+      col.appendChild(btn);
+      row.appendChild(col);
 
       listEl.appendChild(row);
     });

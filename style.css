@@ -2000,8 +2000,24 @@ footer {
   color: var(--muted);
 }
 
+/* 説明文が長いメールで最初に出す「本文を表示する」リンク風ボタン */
+.mail-expand-btn {
+  display: inline-block;
+  margin-top: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: bold;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .mail-claim-btn {
-  flex-shrink: 0;
+  display: block;
+  margin-top: 8px;
   background: linear-gradient(180deg, #ffe066, #ff9800);
   border: none;
   border-radius: 20px;
