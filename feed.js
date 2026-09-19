@@ -1209,6 +1209,13 @@ async function openMailPanel() {
       title.textContent = d.title || '';
       col.appendChild(title);
 
+      // 受け取るボタンを常に本文の直下(一番下)に置きたいので、日時は本文より先
+      // (タイトルのすぐ下)に出しておく。
+      const time = document.createElement('div');
+      time.className = 'notif-row-time';
+      time.textContent = relTime(d.createdAt);
+      col.appendChild(time);
+
       // 説明文が長いと受け取るボタンまでの距離が伸びて見にくいため、最初は1行分だけ
       // プレビュー表示し、「本文を表示する」を押した時だけ全文(改行込み)に差し替える。
       // 短い(改行なし・MAIL_PREVIEW_LENGTH文字以内)メールはそもそも省略の意味が無いので、
@@ -1242,11 +1249,6 @@ async function openMailPanel() {
           col.appendChild(expandBtn);
         }
       }
-
-      const time = document.createElement('div');
-      time.className = 'notif-row-time';
-      time.textContent = relTime(d.createdAt);
-      col.appendChild(time);
 
       // 受け取るボタンは(横並びではなく)本文の下に来るよう、colの中に入れて
       // 縦積みにする(colはflexコンテナではないので、通常のブロック要素として下に並ぶ)。
