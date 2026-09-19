@@ -1206,7 +1206,10 @@ async function openMailPanel() {
       title.className = 'notif-row-text';
       title.textContent = d.title || '';
       const msg = document.createElement('div');
-      msg.className = 'notif-row-text';
+      // 管理者画面で改行して書いた説明文がそのまま伝わるように、改行を保持して表示する
+      // (textContent自体は改行を含んだまま渡っているので、CSS側でwhite-space:pre-wrapに
+      // するだけでよい。innerHTML+<br>変換は使わない)。
+      msg.className = 'notif-row-text notif-row-text-message';
       msg.textContent = d.message || '';
       const time = document.createElement('div');
       time.className = 'notif-row-time';

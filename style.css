@@ -1990,6 +1990,11 @@ footer {
   color: var(--text);
 }
 
+/* メール配信の説明文だけ、管理者画面で入力した改行をそのまま見せる */
+.notif-row-text-message {
+  white-space: pre-wrap;
+}
+
 .notif-row-time {
   font-size: 0.7rem;
   color: var(--muted);
