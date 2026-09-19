@@ -453,23 +453,43 @@ async function toggleLike(entry, likeBtn) {
       if (!privileged) { myLikedIds.add(entry.id); return; }
       // デバッガー・管理者: 確認用にいいねを取り消して再度押せる状態に戻す
       // (再描画をトリガーするlikeCount更新より先にローカル状態を更新し、再描画時の色反映ズレを防ぐ)
+      // ブースト分は「いいねした時点」の状態で決まる(giveAmount/receiveAmount)ので、
+      // 取り消し時は現在のブースト状況ではなく、当時のいいねドキュメントに記録した
+      // 金額をそのまま逆再生する(取り消しまでの間にブーストが切れていてもズレない)。
+      const prev = already.data();
+      const giveAmount = prev.giveAmount || 1;
+      const receiveAmount = prev.receiveAmount || 2;
       await deleteDoc(likeRef);
       myLikedIds.delete(entry.id);
       likeBtn.classList.remove('liked');
       await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(-1) });
-      // UP(うーこポイント): モラいいね1回=2UP、アゲいいね1回=1UP。取り消し時も対称に減らす
-      await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(-1), ukoPoints: increment(-2) }, { merge: true });
-      await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(-1), ukoPoints: increment(-1) }, { merge: true });
+      await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(-1), ukoPoints: increment(-receiveAmount) }, { merge: true });
+      await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(-1), ukoPoints: increment(-giveAmount) }, { merge: true });
       return;
     }
 
-    await setDoc(likeRef, { likedAt: serverTimestamp(), likerUserId: myUserId });
+    // UP(うーこポイント)基本額: モラいいね1回=2UP、アゲいいね1回=1UP。08_UPointの
+    // 「アゲ/モラいいねUPアップ」(sitePerks.omikuji.like{Give,Receive}BoostUntil、
+    // 24時間だけ効く時限ブースト)が有効なら、それぞれ+1する。与える側(自分)は
+    // 手元のstoreで判定(他の特典と同じく、購入直後は別タブなら反映まで再読み込みが
+    // 必要になる場合がある)、受け取る側(相手)は自分のデータではないので毎回
+    // Firestoreから最新を読んで判定する。
+    const now = Date.now();
+    const myGiveBoostUntil = store.sitePerks?.omikuji?.likeGiveBoostUntil?.toMillis?.() || 0;
+    const giveAmount = myGiveBoostUntil > now ? 2 : 1;
+
+    const targetSnap = await getDoc(doc(db, 'omikujiUsers', entry.userId));
+    const targetReceiveBoostUntil = targetSnap.exists()
+      ? (targetSnap.data().sitePerks?.omikuji?.likeReceiveBoostUntil?.toMillis?.() || 0)
+      : 0;
+    const receiveAmount = targetReceiveBoostUntil > now ? 3 : 2;
+
+    await setDoc(likeRef, { likedAt: serverTimestamp(), likerUserId: myUserId, giveAmount, receiveAmount });
     myLikedIds.add(entry.id);
     likeBtn.classList.add('liked');
     await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(1) });
-    // UP(うーこポイント): モラいいね1回=2UP、アゲいいね1回=1UP
-    await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(1), ukoPoints: increment(2) }, { merge: true });
-    await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(1), ukoPoints: increment(1) }, { merge: true });
+    await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(1), ukoPoints: increment(receiveAmount) }, { merge: true });
+    await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(1), ukoPoints: increment(giveAmount) }, { merge: true });
 
     const myAvatar = await getMyAvatar(myUserId);
     await addDoc(collection(db, 'omikujiLikeNotifications'), {
@@ -641,14 +661,12 @@ function renderFeedList(entries) {
 
     const isMine = entry.userId === myUserId;
 
-    if (entry.type === 'listing') {
-      // いいねボタンの代わりに、出品されたアイテムの入札画面へ直接飛べるリンクを置く
-      const auctionLink = document.createElement('a');
-      auctionLink.className = 'feed-like-btn feed-auction-btn';
-      auctionLink.href = `${UKO_AUCTION_URL}?listing=${encodeURIComponent(entry.listingId || '')}`;
-      auctionLink.textContent = s().auctionBtnLabel;
-      item.appendChild(auctionLink);
-    } else {
+    // 出品通知(type:'listing')は08_UPointで「オークション出品へのいいねを解放」を
+    // 交換した人だけ、通常と同じいいねボタンを「オークションへ」リンクの左に出す
+    // (未交換の人には従来通りリンクだけ)。likeCount自体は出品通知にも最初から
+    // 持たせてあるので、ボタンを出す条件だけの違い。
+    const listingLikeUnlocked = !!store.sitePerks?.omikuji?.listingLikeUnlocked;
+    if (entry.type !== 'listing' || listingLikeUnlocked) {
       const likeBtn = document.createElement('button');
       likeBtn.className = 'feed-like-btn';
       likeBtn.innerHTML = `<span class="feed-like-icon">👍</span><span class="feed-like-count">${entry.likeCount || 0}</span>`;
@@ -661,6 +679,15 @@ function renderFeedList(entries) {
         likeBtn.addEventListener('click', () => toggleLike(entry, likeBtn));
       }
       item.appendChild(likeBtn);
+    }
+
+    if (entry.type === 'listing') {
+      // 出品されたアイテムの入札画面へ直接飛べるリンク
+      const auctionLink = document.createElement('a');
+      auctionLink.className = 'feed-like-btn feed-auction-btn';
+      auctionLink.href = `${UKO_AUCTION_URL}?listing=${encodeURIComponent(entry.listingId || '')}`;
+      auctionLink.textContent = s().auctionBtnLabel;
+      item.appendChild(auctionLink);
     }
 
     // 管理者・デバッガーは検証で自分の投稿を量産しがちなので、自分の投稿だけ
