@@ -18,10 +18,15 @@ export const AUCTION_START_PRICE   = 25;
 const AUCTION_DURATION_DEFAULT_HOURS = 24; // 出品期間の選択肢のデフォルト値(確認ポップのselectと合わせる)
 
 // ===== 期間限定キャンペーン(ukoAuctionCampaigns, 2026-09-18追加) =====
-// 26_UkoAuctionの管理者画面で作成する。出品時に効くのはlistingBonus(出品するたび
-// 定額UP)とlistingCountBonus(期間中の出品数が閾値を超えるたびボーナスUP)の2種類。
-// sellerBonus(落札額×倍率)は落札時にしか効かないため、精算を担当する
-// 26_UkoAuction側だけで判定している。スキーマの詳細もそちら(script.js)のコメント参照。
+// 26_UkoAuctionの管理者画面で作成する。listingBonus(出品するたび定額UP)・
+// listingCountBonus(期間中の出品数が閾値を超えるたびボーナスUP)はここ(出品時)で
+// 即座に適用する。sellerBonus(落札額×倍率)・bidderBonus(落札額の%還元)は効果が
+// 出るのは落札確定時だが、出品期間が最短24時間あるため「出品した時はキャンペーン
+// 開催中だったのに、落札が確定する頃には終わっていて恩恵が付かない」問題があった
+// (2026-09-20発覚)。そのため出品した瞬間に有効な倍率/還元率をこのドキュメント自体に
+// スナップショット(sellerBonusMultiplier/bidderBonusRate)しておき、26_UkoAuction側の
+// 精算(settleListing)はキャンペーンを再判定せずこの値をそのまま使う。スキーマの詳細も
+// そちら(script.js)のコメント参照。
 let latestAuctionCampaigns = [];
 onSnapshot(collection(db, 'ukoAuctionCampaigns'), (snap) => {
   latestAuctionCampaigns = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -83,6 +88,20 @@ function computeListingCampaignBonus(userData) {
 
 function activeCampaignsByType(type) {
   return latestAuctionCampaigns.filter((c) => c.type === type && isCampaignActiveNow(c));
+}
+
+// 出品時点で有効なsellerBonus/bidderBonusをスナップショットする値。26_UkoAuction/script.js
+// の同名ロジック(activeSellerBonusMultiplier/activeBidderBonusRate、削除済み)と同じく、
+// 複数同時有効な場合も合算せず最大値だけ採用する(1つも無ければ倍率1・還元率0)。
+function snapshotSellerBonusMultiplier() {
+  const active = activeCampaignsByType('sellerBonus');
+  if (!active.length) return 1;
+  return Math.max(1, ...active.map((c) => c.multiplier || 1));
+}
+function snapshotBidderBonusRate() {
+  const active = activeCampaignsByType('bidderBonus');
+  if (!active.length) return 0;
+  return Math.max(0, ...active.map((c) => c.rate || 0));
 }
 
 const STR = {
@@ -204,6 +223,10 @@ export async function createListing(design) {
       soldPrice: null,
       soldTo: null,
       soldVia: null,
+      // 出品した瞬間に有効なsellerBonus/bidderBonusをスナップショット(上のコメント参照)。
+      // 精算(26_UkoAuction)はこの値をそのまま使い、精算時点のキャンペーン有無は見ない。
+      sellerBonusMultiplier: snapshotSellerBonusMultiplier(),
+      bidderBonusRate: snapshotBidderBonusRate(),
     });
 
     submitListingFeedEntry({
