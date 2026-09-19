@@ -160,7 +160,15 @@ export async function createListing(design) {
       const { totalBonus, progressUpdates } = computeListingCampaignBonus(data);
       campaignBonusEarned = totalBonus;
       const updates = { [`cardBacks.${design.id}`]: increment(-1), ...progressUpdates };
-      if (totalBonus > 0) updates.ukoPoints = increment(totalBonus);
+      if (totalBonus > 0) {
+        updates.ukoPoints = increment(totalBonus);
+        // UP取得履歴(管理者画面用の監査ログ、2026-09-19追加)。トランザクション内では
+        // addDoc()が使えないため、事前にdoc(collection(...))でrefを作りtx.set()する。
+        tx.set(doc(collection(db, 'ukoPointsLog')), {
+          userId, amount: totalBonus, type: 'auctionListingBonus',
+          meta: { itemId: design.id, itemName: design.name }, createdAt: serverTimestamp(),
+        });
+      }
       tx.update(userRef, updates);
     });
 
