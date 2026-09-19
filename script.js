@@ -6,7 +6,7 @@ import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en 
 import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=29';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=4';
-import { createListing, watchMyListings, isItemListed } from './auction.js?v=21';
+import { createListing, watchMyListings, isItemListed } from './auction.js?v=22';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -163,7 +163,6 @@ const i18n = {
     auctionStartLabel:     '開始価格',
     auctionDurationLabel:  '出品期間',
     auctionDuration24:     '24時間',
-    auctionDuration48:     '48時間',
     listingConfirmOkBtn:   '出品する',
     listingConfirmCancelBtn: 'キャンセル',
     colPosUpright:       '正',
@@ -261,7 +260,6 @@ const i18n = {
     auctionStartLabel:     'Start Price',
     auctionDurationLabel:  'Duration',
     auctionDuration24:     '24 hours',
-    auctionDuration48:     '48 hours',
     listingConfirmOkBtn:   'List It',
     listingConfirmCancelBtn: 'Cancel',
     colPosUpright:       'U',

@@ -15,7 +15,8 @@ import {
 // 上回っていたため、メイン垢で安くガチャを回して複製をサブ垢に即決購入させる自演両替の
 // 抜け道になっていた(実際の取引データから発覚)。抜け道自体を塞ぐため機能ごと削除する方針。
 export const AUCTION_START_PRICE   = 25;
-const AUCTION_DURATION_DEFAULT_HOURS = 24; // 出品期間の選択肢のデフォルト値(確認ポップのselectと合わせる)
+// 出品期間は固定24時間(2026-09-20に48時間の選択肢を廃止し、選べなくした)。
+const AUCTION_DURATION_HOURS = 24;
 
 // ===== 期間限定キャンペーン(ukoAuctionCampaigns, 2026-09-18追加) =====
 // 26_UkoAuctionの管理者画面で作成する。listingBonus(出品するたび定額UP)・
@@ -124,19 +125,17 @@ function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
 
 // ===== 出品の確認ポップ(ブラウザ標準confirm()の代わりに、うーこの部屋のデザインに合わせた
 // 独自ポップでサムネ・開始価格・出品期間を見せてから確認する) =====
-// 戻り値: キャンセル時はfalse、出品確定時は{ durationHours: number }
+// 出品期間は固定24時間で選択肢が無いため、戻り値は確定したかどうかのbooleanだけでよい。
 function openListingConfirmModal(design) {
   const modal = document.getElementById('auction-listing-confirm-modal');
-  if (!modal) return Promise.resolve({ durationHours: AUCTION_DURATION_DEFAULT_HOURS }); // 万一要素が無ければ素通りさせる
+  if (!modal) return Promise.resolve(true); // 万一要素が無ければ素通りさせる
 
   const img = document.getElementById('auction-listing-confirm-img');
   const nameEl = document.getElementById('auction-listing-confirm-name');
   const startEl = document.getElementById('auction-listing-confirm-start');
-  const durationSelect = document.getElementById('auction-listing-confirm-duration');
   if (img) { img.src = design.url; img.alt = design.name; }
   if (nameEl) nameEl.textContent = design.name;
   if (startEl) startEl.textContent = `${AUCTION_START_PRICE}UP`;
-  if (durationSelect) durationSelect.value = String(AUCTION_DURATION_DEFAULT_HOURS);
 
   modal.style.display = 'flex';
 
@@ -154,9 +153,7 @@ function openListingConfirmModal(design) {
       backdrop?.removeEventListener('click', onCancel);
       resolve(result);
     };
-    const onOk = () => finish({
-      durationHours: Number(durationSelect?.value) || AUCTION_DURATION_DEFAULT_HOURS,
-    });
+    const onOk = () => finish(true);
     const onCancel = () => finish(false);
 
     okBtn?.addEventListener('click', onOk);
@@ -173,9 +170,8 @@ function openListingConfirmModal(design) {
 export async function createListing(design) {
   if (!design) return;
   if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
-  const confirmResult = await openListingConfirmModal(design);
-  if (!confirmResult) return;
-  const { durationHours } = confirmResult;
+  const confirmed = await openListingConfirmModal(design);
+  if (!confirmed) return;
 
   const userId = getUserId();
   const userRef = doc(db, 'omikujiUsers', userId);
@@ -219,7 +215,7 @@ export async function createListing(design) {
       bidCount: 0,
       status: 'active',
       createdAt: serverTimestamp(),
-      endsAt: Timestamp.fromMillis(Date.now() + durationHours * 60 * 60 * 1000),
+      endsAt: Timestamp.fromMillis(Date.now() + AUCTION_DURATION_HOURS * 60 * 60 * 1000),
       soldPrice: null,
       soldTo: null,
       soldVia: null,

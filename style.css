@@ -1316,16 +1316,6 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
 .auction-listing-confirm-row span:first-child { color: var(--muted); }
 .auction-listing-confirm-row span:last-child { font-weight: bold; color: var(--gold); }
 
-.auction-listing-confirm-duration-select {
-  font-weight: bold;
-  color: var(--gold);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 2px 6px;
-  font-size: 0.85rem;
-}
-
 .auction-listing-confirm-actions {
   display: flex;
   gap: 10px;
