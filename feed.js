@@ -486,7 +486,13 @@ async function toggleLike(entry, likeBtn) {
       : 0;
     const receiveAmount = targetReceiveBoostUntil > now ? 3 : 2;
 
-    await setDoc(likeRef, { likedAt: serverTimestamp(), likerUserId: myUserId, giveAmount, receiveAmount });
+    // receiverUserId: このいいねドキュメント自体(likes/{likerUserId})はentry.idの下に
+    // ぶら下がっているので誰の投稿かはentry.userIdでしか分からない。管理者画面のUP取得
+    // 履歴でcollectionGroup('likes')横断検索から「誰が受け取ったか」を直接引けるように、
+    // 冗長でもここにコピーしておく(2026-09-19追加)。
+    await setDoc(likeRef, {
+      likedAt: serverTimestamp(), likerUserId: myUserId, receiverUserId: entry.userId, giveAmount, receiveAmount,
+    });
     myLikedIds.add(entry.id);
     likeBtn.classList.add('liked');
     await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(1) });
