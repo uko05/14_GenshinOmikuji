@@ -71,15 +71,17 @@ const CAMPAIGN_TYPE_BANNER_URLS = {
 const CAMPAIGN_BANNER_STR = {
   ja: {
     sellerBonus: (mult, until) => `🎉 出品者ボーナス開催中！出品が落札されると通常の${mult}倍のUPがもらえます（${until}まで）`,
-    listingBonus: (amount, until) => `🎉 出品即時ボーナス開催中！出品するたび+${amount}UP（${until}まで）`,
+    listingBonus: (amount, until) => `🎉 出品ボーナス開催中！出品するたび+${amount}UP（${until}まで）`,
     listingCountBonus: (until) => `🎉 出品数ボーナス開催中！出品数に応じてボーナスUPがもらえます（${until}まで）`,
     bidderBonus: (rate, until) => `🎉 落札者キャッシュバック開催中！落札すると支払額の${rate}%がUPで還元されます（${until}まで）`,
+    deferredNote: '※ボーナスUPはキャンペーン終了後、メールでまとめてお届けします（受け取る操作で加算されます）',
   },
   en: {
     sellerBonus: (mult, until) => `🎉 Seller Bonus is live! Sellers get ${mult}x UP when their listing sells (until ${until})`,
-    listingBonus: (amount, until) => `🎉 Instant Listing Bonus is live! +${amount}UP every time you list an item (until ${until})`,
+    listingBonus: (amount, until) => `🎉 Listing Bonus is live! +${amount}UP every time you list an item (until ${until})`,
     listingCountBonus: (until) => `🎉 Listing Count Bonus is live! Bonus UP based on how many items you list (until ${until})`,
     bidderBonus: (rate, until) => `🎉 Bidder Cashback is live! Get ${rate}% of what you pay back as UP when you win (until ${until})`,
+    deferredNote: '※ Bonus UP is delivered by mail after the campaign ends (claim it there to receive it)',
   },
 };
 
@@ -132,6 +134,14 @@ export function renderCampaignBanner() {
 
     el.appendChild(link);
   });
+  // ボーナスUP自体は即時付与ではなくキャンペーン終了後の集計メール経由(2026-09-20変更)
+  // なので、そのことを一度だけ案内しておく(バナーごとに繰り返さない)。
+  if (visible.length > 0) {
+    const note = document.createElement('div');
+    note.className = 'campaign-banner-note';
+    note.textContent = CAMPAIGN_BANNER_STR[store.lang === 'en' ? 'en' : 'ja'].deferredNote;
+    el.appendChild(note);
+  }
 }
 
 // 出品1件につきもらえるボーナスUPの内訳を返す。
@@ -195,14 +205,14 @@ const STR = {
     listNoStock: '出品できる在庫がありません。',
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
-    listDoneWithBonus: (n) => `出品しました。キャンペーンで+${n}UPもらいました！うーこオークションで確認できます。`,
+    listDoneWithBonus: (n) => `出品しました。キャンペーン対象で+${n}UP分！キャンペーン終了後、メールでお届けします。`,
   },
   en: {
     listLoginRequired: 'Listing requires a free account. Please register and log in first.',
     listNoStock: "You don't have any to list.",
     listFailed: 'Failed to list. Please try again later.',
     listDone: 'Listed! You can check it on Uko Auction.',
-    listDoneWithBonus: (n) => `Listed! You earned +${n}UP from a campaign! You can check it on Uko Auction.`,
+    listDoneWithBonus: (n) => `Listed! This qualifies for +${n}UP — it'll be delivered by mail after the campaign ends.`,
   },
 };
 function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
@@ -273,11 +283,13 @@ export async function createListing(design) {
       campaignBonusEarned = totalBonus;
       const updates = { [`cardBacks.${design.id}`]: increment(-1), ...progressUpdates };
       if (totalBonus > 0) {
-        updates.ukoPoints = increment(totalBonus);
-        // UP取得履歴(管理者画面用の監査ログ、2026-09-19追加)。トランザクション内では
-        // addDoc()が使えないため、事前にdoc(collection(...))でrefを作りtx.set()する。
-        // breakdown 1件=1キャンペーンごとに別々のログを書く(campaignId単位で
-        // 後から集計できるようにするため、2026-09-20)。
+        // ukoPointsはここでは増やさない(2026-09-20変更): キャンペーンによるボーナス分は
+        // 即時付与せず、キャンペーン終了後に24_AccountCenter/adminから送る集計メールの
+        // 「受け取る」操作で初めて加算される(sellerBonus/bidderBonusと扱いを揃えた)。
+        // ここではUP取得履歴(管理者画面用の監査ログ、2026-09-19追加)だけ記録しておく。
+        // トランザクション内ではaddDoc()が使えないため、事前にdoc(collection(...))で
+        // refを作りtx.set()する。breakdown 1件=1キャンペーンごとに別々のログを書く
+        // (campaignId単位で後から集計できるようにするため、2026-09-20)。
         breakdown.forEach((b) => {
           tx.set(doc(collection(db, 'ukoPointsLog')), {
             userId, amount: b.amount, type: 'auctionListingBonus',

@@ -1609,6 +1609,11 @@ footer {
   margin-top: 6px;
   text-align: center;
 }
+.campaign-banner-note {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+}
 
 .feed-item {
   display: flex;
