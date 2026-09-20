@@ -56,12 +56,23 @@ function isCampaignActiveNow(c) {
 //   閾値を超えたtierのボーナスだけを加算する(同じtierを二重に払わないよう
 //   claimedTiersで管理)。progressUpdatesは呼び出し側がtx.update()に含めるための
 //   auctionCampaignProgress.{campaignId}の新しい値。
+// breakdown(2026-09-20追加): totalBonusの内訳を、どのキャンペーンが何UP分寄与したか
+// 1件ずつ持たせたもの。同時に複数のlistingBonus/listingCountBonusが有効な場合
+// 合算されるため、1つのukoPointsLogエントリにまとめるとキャンペーンごとの
+// 集計メール送信(24_AccountCenter/admin)で按分できなくなる。呼び出し側で
+// このbreakdown 1件ごとに別々のukoPointsLogを書くことで、campaignId単位の
+// 正確な合計を後から拾えるようにする。
 function computeListingCampaignBonus(userData) {
   let totalBonus = 0;
   const progressUpdates = {};
+  const breakdown = [];
 
   activeCampaignsByType('listingBonus').forEach((c) => {
-    totalBonus += c.bonusAmount || 0;
+    const amount = c.bonusAmount || 0;
+    if (amount > 0) {
+      totalBonus += amount;
+      breakdown.push({ campaignId: c.id, campaignType: 'listingBonus', amount });
+    }
   });
 
   activeCampaignsByType('listingCountBonus').forEach((c) => {
@@ -69,19 +80,24 @@ function computeListingCampaignBonus(userData) {
     const newCount = progress.count + 1;
     const claimedTiers = progress.claimedTiers || [];
     const newlyClaimed = [];
+    let campaignAmount = 0;
     (c.tiers || []).forEach((tier) => {
       if (newCount >= tier.count && !claimedTiers.includes(tier.count)) {
-        totalBonus += tier.bonus || 0;
+        campaignAmount += tier.bonus || 0;
         newlyClaimed.push(tier.count);
       }
     });
+    if (campaignAmount > 0) {
+      totalBonus += campaignAmount;
+      breakdown.push({ campaignId: c.id, campaignType: 'listingCountBonus', amount: campaignAmount });
+    }
     progressUpdates[`auctionCampaignProgress.${c.id}`] = {
       count: newCount,
       claimedTiers: [...claimedTiers, ...newlyClaimed],
     };
   });
 
-  return { totalBonus, progressUpdates };
+  return { totalBonus, progressUpdates, breakdown };
 }
 
 function activeCampaignsByType(type) {
@@ -168,16 +184,21 @@ export async function createListing(design) {
       const owned = (data.cardBacks || {})[design.id] || 0;
       if (owned < 1) throw new Error('NO_STOCK');
 
-      const { totalBonus, progressUpdates } = computeListingCampaignBonus(data);
+      const { totalBonus, progressUpdates, breakdown } = computeListingCampaignBonus(data);
       campaignBonusEarned = totalBonus;
       const updates = { [`cardBacks.${design.id}`]: increment(-1), ...progressUpdates };
       if (totalBonus > 0) {
         updates.ukoPoints = increment(totalBonus);
         // UP取得履歴(管理者画面用の監査ログ、2026-09-19追加)。トランザクション内では
         // addDoc()が使えないため、事前にdoc(collection(...))でrefを作りtx.set()する。
-        tx.set(doc(collection(db, 'ukoPointsLog')), {
-          userId, amount: totalBonus, type: 'auctionListingBonus',
-          meta: { itemId: design.id, itemName: design.name }, createdAt: serverTimestamp(),
+        // breakdown 1件=1キャンペーンごとに別々のログを書く(campaignId単位で
+        // 後から集計できるようにするため、2026-09-20)。
+        breakdown.forEach((b) => {
+          tx.set(doc(collection(db, 'ukoPointsLog')), {
+            userId, amount: b.amount, type: 'auctionListingBonus',
+            meta: { itemId: design.id, itemName: design.name, campaignId: b.campaignId, campaignType: b.campaignType },
+            createdAt: serverTimestamp(),
+          });
         });
       }
       tx.update(userRef, updates);
