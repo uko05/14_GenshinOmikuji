@@ -19,6 +19,12 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* [hidden]属性はブラウザ標準でdisplay:noneになるはずだが、同じ要素にdisplay:flex等を
+   指定するクラスが付いていると作成者スタイルがUAスタイルシートのデフォルトに勝って
+   しまい非表示にならない(originがspecificityより優先されるため)。26_UkoAuctionで
+   実際にこれが原因のバグがあったため、明示的に強制しておく。 */
+[hidden] { display: none !important; }
+
 .hidden { display: none !important; }
 
 /* うーこポイント交換所ミッション達成トースト(01_TiersList等、他サイトと共通デザイン) */
@@ -1571,6 +1577,37 @@ footer {
   color: var(--muted);
   font-size: 0.85rem;
   padding: 10px 0;
+}
+
+/* ===== うーこオークション開催中キャンペーンのお知らせバナー(2026-09-20追加) ===== */
+.campaign-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0;
+}
+.campaign-banner-item {
+  display: block;
+  background: rgba(255, 204, 0, 0.16);
+  border: 1px solid rgba(170, 136, 0, 0.35);
+  border-radius: var(--radius);
+  padding: 8px;
+  text-decoration: none;
+  color: var(--text);
+}
+.campaign-banner-img {
+  display: block;
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.campaign-banner-text {
+  font-size: 0.82rem;
+  font-weight: bold;
+  color: var(--gold);
+  margin-top: 6px;
+  text-align: center;
 }
 
 .feed-item {

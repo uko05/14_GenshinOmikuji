@@ -28,6 +28,7 @@ const AUCTION_DURATION_HOURS = 24;
 let latestAuctionCampaigns = [];
 onSnapshot(collection(db, 'ukoAuctionCampaigns'), (snap) => {
   latestAuctionCampaigns = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  renderCampaignBanner();
 }, (e) => console.error('[auction] campaigns listen failed', e));
 
 // adminOnly(2026-09-20追加): テスト中のキャンペーンを一般ユーザーに適用しないためのフラグ。
@@ -40,6 +41,7 @@ let isAdminRole = false;
   } catch (e) {
     console.error('[auction] role load failed', e);
   }
+  renderCampaignBanner();
 })();
 
 function isCampaignActiveNow(c) {
@@ -47,6 +49,89 @@ function isCampaignActiveNow(c) {
   if (c.adminOnly && !isAdminRole) return false;
   const now = Date.now();
   return c.startsAt?.toMillis() <= now && now <= c.endsAt?.toMillis();
+}
+
+// ===== 開催中キャンペーンのお知らせバナー(2026-09-20追加、まずは管理者ロールだけに表示) =====
+// 「オークションサイトにしかバナーが出ないと気づかない人がいる」という理由で、
+// おみくじサイト側(みんなの結果フィードの下、アルカナ結果の上=#campaign-banner)にも
+// 26_UkoAuction/script.jsと同じ内容のバナーを複製する。バナー画像URL・要約文言は
+// あちら側と同じものをこちらにも持たせている(画像を差し替えたら3箇所
+// [26_UkoAuction/script.js, 24_AccountCenter/admin/admin.js, ここ]を揃えること)。
+// CAMPAIGN_BANNER_ADMIN_ONLYはこのバナー自体を一般公開する前の確認用フラグ
+// (campaign doc側のadminOnlyとは別物)。確認が取れたらfalseにするだけで全員に出る。
+const CAMPAIGN_BANNER_ADMIN_ONLY = true;
+
+const CAMPAIGN_TYPE_BANNER_URLS = {
+  listingBonus: 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/auction/%E5%87%BA%E5%93%81%E5%8D%B3%E6%99%82%E3%83%9C%E3%83%BC%E3%83%8A%E3%82%B9.png',
+  sellerBonus: 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/auction/%E8%90%BD%E6%9C%AD%E6%99%82%E3%83%9C%E3%83%BC%E3%83%8A%E3%82%B9.png',
+  listingCountBonus: 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/auction/%E5%87%BA%E5%93%81%E6%95%B0%E3%83%9C%E3%83%BC%E3%83%8A%E3%82%B9.png',
+  bidderBonus: 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/auction/%E8%90%BD%E6%9C%AD%E6%99%82%E3%82%AD%E3%83%A3%E3%83%83%E3%82%B7%E3%83%A5%E3%83%90%E3%83%83%E3%82%AF.png',
+};
+
+const CAMPAIGN_BANNER_STR = {
+  ja: {
+    sellerBonus: (mult, until) => `🎉 出品者ボーナス開催中！出品が落札されると通常の${mult}倍のUPがもらえます（${until}まで）`,
+    listingBonus: (amount, until) => `🎉 出品即時ボーナス開催中！出品するたび+${amount}UP（${until}まで）`,
+    listingCountBonus: (until) => `🎉 出品数ボーナス開催中！出品数に応じてボーナスUPがもらえます（${until}まで）`,
+    bidderBonus: (rate, until) => `🎉 落札者キャッシュバック開催中！落札すると支払額の${rate}%がUPで還元されます（${until}まで）`,
+  },
+  en: {
+    sellerBonus: (mult, until) => `🎉 Seller Bonus is live! Sellers get ${mult}x UP when their listing sells (until ${until})`,
+    listingBonus: (amount, until) => `🎉 Instant Listing Bonus is live! +${amount}UP every time you list an item (until ${until})`,
+    listingCountBonus: (until) => `🎉 Listing Count Bonus is live! Bonus UP based on how many items you list (until ${until})`,
+    bidderBonus: (rate, until) => `🎉 Bidder Cashback is live! Get ${rate}% of what you pay back as UP when you win (until ${until})`,
+  },
+};
+
+function fmtCampaignBannerDate(ts) {
+  if (!ts || typeof ts.toMillis !== 'function') return '';
+  const d = new Date(ts.toMillis());
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function campaignBannerSummaryText(c) {
+  const until = fmtCampaignBannerDate(c.endsAt);
+  const t = CAMPAIGN_BANNER_STR[store.lang === 'en' ? 'en' : 'ja'];
+  if (c.type === 'sellerBonus') return t.sellerBonus(c.multiplier, until);
+  if (c.type === 'listingBonus') return t.listingBonus(c.bonusAmount, until);
+  if (c.type === 'listingCountBonus') return t.listingCountBonus(until);
+  if (c.type === 'bidderBonus') return t.bidderBonus(c.rate, until);
+  return '';
+}
+
+// バナー全体をクリックすると26_UkoAuctionへ飛ぶ(このサイト単体では出品/入札できず、
+// 詳細を確認する場所が別サイトのため)。
+export function renderCampaignBanner() {
+  const el = document.getElementById('campaign-banner');
+  if (!el) return;
+  const active = latestAuctionCampaigns.filter(isCampaignActiveNow);
+  const visible = CAMPAIGN_BANNER_ADMIN_ONLY ? (isAdminRole ? active : []) : active;
+  el.innerHTML = '';
+  el.hidden = visible.length === 0;
+  visible.forEach((c) => {
+    const link = document.createElement('a');
+    link.className = 'campaign-banner-item';
+    link.href = 'https://uko05.github.io/26_UkoAuction/';
+    link.target = '_blank';
+    link.rel = 'noopener';
+
+    const bannerUrl = CAMPAIGN_TYPE_BANNER_URLS[c.type];
+    if (bannerUrl) {
+      const img = document.createElement('img');
+      img.className = 'campaign-banner-img';
+      img.src = bannerUrl;
+      img.alt = '';
+      link.appendChild(img);
+    }
+
+    const row = document.createElement('div');
+    row.className = 'campaign-banner-text';
+    row.textContent = campaignBannerSummaryText(c);
+    link.appendChild(row);
+
+    el.appendChild(link);
+  });
 }
 
 // 出品1件につきもらえるボーナスUPの内訳を返す。
