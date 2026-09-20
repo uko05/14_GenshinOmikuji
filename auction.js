@@ -58,8 +58,8 @@ function isCampaignActiveNow(c) {
 // あちら側と同じものをこちらにも持たせている(画像を差し替えたら3箇所
 // [26_UkoAuction/script.js, 24_AccountCenter/admin/admin.js, ここ]を揃えること)。
 // CAMPAIGN_BANNER_ADMIN_ONLYはこのバナー自体を一般公開する前の確認用フラグ
-// (campaign doc側のadminOnlyとは別物)。確認が取れたらfalseにするだけで全員に出る。
-const CAMPAIGN_BANNER_ADMIN_ONLY = true;
+// (campaign doc側のadminOnlyとは別物)。2026-09-20、確認が取れたためfalseにして全員に公開。
+const CAMPAIGN_BANNER_ADMIN_ONLY = false;
 
 const CAMPAIGN_TYPE_BANNER_URLS = {
   listingBonus: 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/auction/%E5%87%BA%E5%93%81%E5%8D%B3%E6%99%82%E3%83%9C%E3%83%BC%E3%83%8A%E3%82%B9.png',
