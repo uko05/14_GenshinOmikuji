@@ -1,12 +1,12 @@
 // script.js
 import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
-import { GACHA_DESIGNS } from './gachaBacks.js?v=4';
+import { GACHA_DESIGNS } from './gachaBacks.js?v=5';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=30';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=31';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=4';
-import { createListing, watchMyListings, isItemListed, renderCampaignBanner } from './auction.js?v=28';
+import { createListing, watchMyListings, isItemListed, renderCampaignBanner } from './auction.js?v=29';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
