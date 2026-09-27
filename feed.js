@@ -736,16 +736,25 @@ export function refreshFeedLang() {
   renderFeedList(latestFeedEntries);
 }
 
+// フィードに載せる投稿の起点。フィード本体と自分のいいね履歴の購読で同じ値を使うため、
+// ページを開いた時に一度だけ決める。1時間単位に切り捨てる(2026-09-27)のは、購読条件が
+// 同じならFirestoreのキャッシュ(resume token)が効き、タブ復帰や同じ時間帯のリロードで
+// 変わったドキュメントだけの読み取りで済むため。48時間の投稿数はlimit(200)を大きく
+// 上回るので、起点が最大1時間ずれてもフィードの表示は変わらない。
+let feedSince = null;
+function getFeedSince() {
+  if (!feedSince) {
+    const HOUR_MS = 60 * 60 * 1000;
+    const rollingSinceMs = Math.floor((Date.now() - FEED_WINDOW_HOURS * HOUR_MS) / HOUR_MS) * HOUR_MS;
+    feedSince = Timestamp.fromMillis(Math.max(rollingSinceMs, FEED_CUTOFF_MS));
+  }
+  return feedSince;
+}
+
 function startFeedListener() {
-  // 起点は1時間単位に切り捨てる(2026-09-27)。購読条件が同じならFirestoreのキャッシュ
-  // (resume token)が効き、タブ復帰や同じ時間帯のリロードで変わった投稿だけの読み取りで済む。
-  // 48時間の投稿数はlimit(200)を大きく上回るため、起点が最大1時間ずれても表示は変わらない。
-  const HOUR_MS = 60 * 60 * 1000;
-  const rollingSinceMs = Math.floor((Date.now() - FEED_WINDOW_HOURS * HOUR_MS) / HOUR_MS) * HOUR_MS;
-  const since = Timestamp.fromMillis(Math.max(rollingSinceMs, FEED_CUTOFF_MS));
   const q = query(
     collection(db, 'omikujiFeed'),
-    where('createdAt', '>=', since),
+    where('createdAt', '>=', getFeedSince()),
     orderBy('createdAt', 'desc'),
     limit(200)
   );
@@ -756,10 +765,18 @@ function startFeedListener() {
 }
 
 // 自分が過去にいいねした投稿一覧をリアルタイム購読し、リロード直後や他端末での
-// いいねでもボタンの色・disabled状態が正しく反映されるようにする
+// いいねでもボタンの色・disabled状態が正しく反映されるようにする。
+// フィードの起点以降にいいねしたものだけに絞る(2026-09-27、読み取り削減)。フィードに
+// 出る投稿はすべて起点以降の投稿で、そこへのいいねは必ず投稿より後なので、ボタンの表示に
+// 必要なものは漏れない(以前は全期間分を読んでおり、ヘビーユーザーは1回で数千〜1万件超)。
+// collectionGroup('likes')の(likerUserId, likedAt)複合インデックスが必要。
 function startMyLikesListener() {
   const myUserId = getUserId();
-  const q = query(collectionGroup(db, 'likes'), where('likerUserId', '==', myUserId));
+  const q = query(
+    collectionGroup(db, 'likes'),
+    where('likerUserId', '==', myUserId),
+    where('likedAt', '>=', getFeedSince())
+  );
   listenWhileVisible(() => onSnapshot(q, (snap) => {
     myLikedIds.clear();
     snap.docs.forEach((d) => {
