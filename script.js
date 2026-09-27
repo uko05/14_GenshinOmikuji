@@ -748,7 +748,7 @@ function renderAchievements() {
 function applyLang(lang) {
   currentLang = lang;
   document.documentElement.lang = lang === 'en' ? 'en' : 'ja';
-  document.title = lang === 'en' ? 'Genshin Omikuji - Uko\'s Room' : '原神おみくじ - うーこの部屋';
+  document.title = lang === 'en' ? 'Genshin Omikuji - Uko\'s Room' : '原神おみくじ｜星座占い・タロットで今日の運勢 - うーこの部屋';
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.dataset.i18n;
     if (i18n[lang][key] !== undefined) el.textContent = i18n[lang][key];
