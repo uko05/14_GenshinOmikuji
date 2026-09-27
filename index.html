@@ -267,6 +267,28 @@
 
 </main>
 
+<!-- サイト説明(検索向け)。画像保存の範囲外に置くこと -->
+<style>
+.uko-about{max-width:760px;margin:32px auto 24px;padding:0 16px;box-sizing:border-box;text-align:left;font-size:14px;line-height:1.75;color:inherit;-webkit-user-select:text;user-select:text}
+.uko-about>summary{cursor:pointer;list-style:none;display:inline-block;padding:6px 14px;border:1px solid rgba(128,128,128,.35);border-radius:999px;font-size:13px;opacity:.75}
+.uko-about>summary:hover{opacity:1}
+.uko-about>summary::-webkit-details-marker{display:none}
+.uko-about>summary::before{content:"▶ "}
+.uko-about[open]>summary::before{content:"▼ "}
+.uko-about-body{margin-top:12px;padding:16px 20px;border:1px solid rgba(128,128,128,.25);border-radius:12px;background:rgba(128,128,128,.06)}
+.uko-about h2{font-size:15px;font-weight:bold;margin:14px 0 6px;padding:0;border:0;background:none;color:inherit;text-align:left}
+.uko-about h2:first-child{margin-top:0}
+.uko-about p,.uko-about dl{margin:0 0 8px}
+.uko-about ul,.uko-about ol{margin:0 0 8px;padding-left:1.5em}
+.uko-about li{margin:2px 0;list-style:revert}
+.uko-about dt{font-weight:bold;margin-top:6px}
+.uko-about dd{margin:0 0 4px 1em}
+</style>
+<details class="uko-about">
+  <summary>このサイトについて</summary>
+  <div class="uko-about-body"><h2>原神おみくじとは</h2><p>原神の世界観をテーマにした無料の占いサイトです。生年月日を入れるだけで、星座占い・バイオリズム・原神アルカナタロットの3つで今日の運勢を占えます。</p><h2>占える内容</h2><ul><li><b>星座占い：</b>総合・恋愛・仕事・健康の4項目</li><li><b>バイオリズム：</b>身体（23日）・感情（28日）・知性（33日）のリズムから、今日のコンディションを算出</li><li><b>原神アルカナ：</b>シャッフルして引いた1枚のカードが、今日のあなたへのメッセージを伝えます</li><li><b>その他：</b>今日のラッキーカラー・ラッキーナンバー・ラッキーアイテム、干支・厄年のチェック</li></ul><h2>遊び方</h2><ol><li>アルカナをシャッフルして、カードを1枚選びます。</li><li>生年月日を入力します（名前・性別は任意です）。</li><li>「今日の運勢を占う」を押します。</li></ol><p>結果は画像で保存して、SNSでシェアできます。アカウント登録（任意）をすると、アルカナ図鑑・タロットスキンのガチャ・アチーブメントなども楽しめます。</p><h2>よくある質問</h2><dl><dt>Q. 無料で遊べる？</dt><dd>A. すべて無料です。</dd><dt>Q. 自分の結果は他の人に見える？</dt><dd>A. 「自分の占いを公開しない」にチェックすれば、「みんなの結果」には表示されません。</dd></dl></div>
+</details>
+
 <footer>
   <a href="https://x.com/uko_dayo_" target="_blank">
     <img src="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/footer_icon/twitter_image.png" alt="Twitter" class="twitter-icon">
