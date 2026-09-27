@@ -3,6 +3,7 @@
 import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
 import { GACHA_DESIGNS } from './gachaBacks.js?v=6';
+import { listenWhileVisible } from './visibleListener.js';
 import {
   collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
   query, where, orderBy, limit, serverTimestamp, increment, arrayUnion, runTransaction, Timestamp,
@@ -736,7 +737,11 @@ export function refreshFeedLang() {
 }
 
 function startFeedListener() {
-  const rollingSinceMs = Date.now() - FEED_WINDOW_HOURS * 60 * 60 * 1000;
+  // 起点は1時間単位に切り捨てる(2026-09-27)。購読条件が同じならFirestoreのキャッシュ
+  // (resume token)が効き、タブ復帰や同じ時間帯のリロードで変わった投稿だけの読み取りで済む。
+  // 48時間の投稿数はlimit(200)を大きく上回るため、起点が最大1時間ずれても表示は変わらない。
+  const HOUR_MS = 60 * 60 * 1000;
+  const rollingSinceMs = Math.floor((Date.now() - FEED_WINDOW_HOURS * HOUR_MS) / HOUR_MS) * HOUR_MS;
   const since = Timestamp.fromMillis(Math.max(rollingSinceMs, FEED_CUTOFF_MS));
   const q = query(
     collection(db, 'omikujiFeed'),
@@ -744,10 +749,10 @@ function startFeedListener() {
     orderBy('createdAt', 'desc'),
     limit(200)
   );
-  onSnapshot(q, (snap) => {
+  listenWhileVisible(() => onSnapshot(q, (snap) => {
     latestFeedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     renderFeedList(latestFeedEntries);
-  }, (err) => console.error('[feed] listen failed', err));
+  }, (err) => console.error('[feed] listen failed', err)));
 }
 
 // 自分が過去にいいねした投稿一覧をリアルタイム購読し、リロード直後や他端末での
@@ -755,14 +760,14 @@ function startFeedListener() {
 function startMyLikesListener() {
   const myUserId = getUserId();
   const q = query(collectionGroup(db, 'likes'), where('likerUserId', '==', myUserId));
-  onSnapshot(q, (snap) => {
+  listenWhileVisible(() => onSnapshot(q, (snap) => {
     myLikedIds.clear();
     snap.docs.forEach((d) => {
       const feedId = d.ref.parent.parent?.id;
       if (feedId) myLikedIds.add(feedId);
     });
     renderFeedList(latestFeedEntries);
-  }, (err) => console.error('[feed] my-likes listen failed', err));
+  }, (err) => console.error('[feed] my-likes listen failed', err)));
 }
 
 // ===== いいね通知トースト（アチーブトーストと同じキュー方式・薄め短時間） =====
@@ -811,7 +816,7 @@ function startNotifListener() {
     where('toUserId', '==', myUserId),
     where('shown', '==', false)
   );
-  onSnapshot(q, (snap) => {
+  listenWhileVisible(() => onSnapshot(q, (snap) => {
     const added = snap.docChanges()
       .filter((c) => c.type === 'added')
       .map((c) => ({ id: c.doc.id, ...c.doc.data() }));
@@ -823,7 +828,7 @@ function startNotifListener() {
       updateDoc(doc(db, 'omikujiLikeNotifications', notif.id), { shown: true })
         .catch((e) => console.error('[feed] mark shown failed', e));
     });
-  }, (err) => console.error('[feed] notif listen failed', err));
+  }, (err) => console.error('[feed] notif listen failed', err)));
 }
 
 // ===== いいね履歴パネル（通知ベル） =====
@@ -901,7 +906,7 @@ let latestMailDocs = []; // omikujiMailBroadcastsのdocSnap配列(未読バッ�
 function startStatsFooterListener() {
   const upEl    = document.getElementById('stats-up-count');
   const gachaEl = document.getElementById('gacha-ticket-count');
-  onSnapshot(doc(db, 'omikujiUsers', getUserId()), (snap) => {
+  listenWhileVisible(() => onSnapshot(doc(db, 'omikujiUsers', getUserId()), (snap) => {
     const d = snap.exists() ? snap.data() : {};
     latestLikesGiven     = d.totalLikesGiven || 0;
     latestLikesReceived  = d.totalLikesReceived || 0;
@@ -910,16 +915,16 @@ function startStatsFooterListener() {
     if (upEl)    upEl.textContent    = d.ukoPoints || 0;
     if (gachaEl) gachaEl.textContent = latestGachaTickets;
     updateMailBadge();
-  }, (err) => console.error('[feed] stats footer listen failed', err));
+  }, (err) => console.error('[feed] stats footer listen failed', err)));
 }
 
 // ===== メール未読バッジ（リアルタイム） =====
 function startMailBadgeListener() {
   const q = query(collection(db, 'omikujiMailBroadcasts'), orderBy('createdAt', 'desc'), limit(50));
-  onSnapshot(q, (snap) => {
+  listenWhileVisible(() => onSnapshot(q, (snap) => {
     latestMailDocs = snap.docs;
     updateMailBadge();
-  }, (err) => console.error('[feed] mail badge listen failed', err));
+  }, (err) => console.error('[feed] mail badge listen failed', err)));
 }
 
 function updateMailBadge() {

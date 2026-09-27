@@ -2,7 +2,8 @@
 // 裏面デザインの出品（閲覧・入札・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
-import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=32';
+import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=33';
+import { listenWhileVisible } from './visibleListener.js';
 import {
   collection, doc, getDoc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
   onSnapshot, query, where,
@@ -26,10 +27,10 @@ const AUCTION_DURATION_HOURS = 24;
 // 判定するため(2026-09-20、出品時点スナップショット方式から変更)、精算を担当する
 // 26_UkoAuction側だけで判定している。スキーマの詳細もそちら(script.js)のコメント参照。
 let latestAuctionCampaigns = [];
-onSnapshot(collection(db, 'ukoAuctionCampaigns'), (snap) => {
+listenWhileVisible(() => onSnapshot(collection(db, 'ukoAuctionCampaigns'), (snap) => {
   latestAuctionCampaigns = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   renderCampaignBanner();
-}, (e) => console.error('[auction] campaigns listen failed', e));
+}, (e) => console.error('[auction] campaigns listen failed', e)));
 
 // adminOnly(2026-09-20追加): テスト中のキャンペーンを一般ユーザーに適用しないためのフラグ。
 // 26_UkoAuction/script.jsと同じ仕組み(sharedUserRoles、匿名ID直接キー)で判定する。
@@ -350,10 +351,10 @@ export function watchMyListings(onChange) {
     where('sellerId', '==', getUserId()),
     where('status', '==', 'active'),
   );
-  onSnapshot(q, (snap) => {
+  listenWhileVisible(() => onSnapshot(q, (snap) => {
     myListedItemIds = new Set(snap.docs.map((d) => d.data().itemId));
     onChange();
-  }, (e) => console.error('[auction] my listings watch failed', e));
+  }, (e) => console.error('[auction] my listings watch failed', e)));
 }
 
 export function isItemListed(itemId) {
