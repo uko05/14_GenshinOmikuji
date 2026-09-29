@@ -2,7 +2,7 @@
 // 裏面デザインの出品（閲覧・入札・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
-import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=34';
+import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=35';
 import { listenWhileVisible } from './visibleListener.js';
 import {
   collection, doc, getDoc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
