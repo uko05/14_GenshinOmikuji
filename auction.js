@@ -6,7 +6,7 @@ import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } fr
 import { listenWhileVisible } from './visibleListener.js';
 import {
   collection, doc, getDoc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
-  onSnapshot, query, where,
+  onSnapshot, query, where, getCountFromServer,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // ガチャ券は08_UPoint側で50UP固定(2026-09時点)。開始=券の5分の1という比率で運用する方針
@@ -16,6 +16,10 @@ import {
 // 上回っていたため、メイン垢で安くガチャを回して複製をサブ垢に即決購入させる自演両替の
 // 抜け道になっていた(実際の取引データから発覚)。抜け道自体を塞ぐため機能ごと削除する方針。
 export const AUCTION_START_PRICE   = 25;
+// 1人が同時に出品できる件数の上限(2026-10-02追加)。うーこオークションの一覧は出品中の
+// 全件を読み込むため、出品中の件数がそのまま読み取り課金になる。直近7日で6,871件出品・
+// 落札は約1割で、上位数人が数百件ずつ出していたため上限を設けた。
+export const MAX_ACTIVE_LISTINGS_PER_USER = 50;
 // 出品期間は固定24時間(2026-09-20に48時間の選択肢を廃止し、選べなくした)。
 const AUCTION_DURATION_HOURS = 24;
 
@@ -204,6 +208,7 @@ const STR = {
   ja: {
     listLoginRequired: '出品にはアカウント登録（無料）が必要です。登録・ログインしてから出品してください。',
     listNoStock: '出品できる在庫がありません。',
+    listLimitReached: (max) => `同時に出品できるのは${max}件までです。出品中のアイテムが落札されるか、期限が切れてから出品してください。`,
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
     listDoneWithBonus: (n) => `出品しました。キャンペーン対象で+${n}UP分！キャンペーン終了後、メールでお届けします。`,
@@ -211,6 +216,7 @@ const STR = {
   en: {
     listLoginRequired: 'Listing requires a free account. Please register and log in first.',
     listNoStock: "You don't have any to list.",
+    listLimitReached: (max) => `You can have up to ${max} active listings at a time. Please wait until some of them sell or expire.`,
     listFailed: 'Failed to list. Please try again later.',
     listDone: 'Listed! You can check it on Uko Auction.',
     listDoneWithBonus: (n) => `Listed! This qualifies for +${n}UP — it'll be delivered by mail after the campaign ends.`,
@@ -265,6 +271,10 @@ function openListingConfirmModal(design) {
 export async function createListing(design) {
   if (!design) return;
   if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
+  if (await countMyActiveListings() >= MAX_ACTIVE_LISTINGS_PER_USER) {
+    alert(s().listLimitReached(MAX_ACTIVE_LISTINGS_PER_USER));
+    return;
+  }
   const confirmed = await openListingConfirmModal(design);
   if (!confirmed) return;
 
@@ -339,6 +349,22 @@ export async function createListing(design) {
     console.error('[auction] listing failed', e);
     alert(e.message === 'NO_STOCK' ? s().listNoStock : s().listFailed);
     return false;
+  }
+}
+
+// 自分が今出品中の件数。件数だけ数える集計クエリなので、50件あっても読み取りは1回分で済む
+async function countMyActiveListings() {
+  try {
+    const q = query(
+      collection(db, 'ukoMarketListings'),
+      where('sellerId', '==', getUserId()),
+      where('status', '==', 'active'),
+    );
+    return (await getCountFromServer(q)).data().count;
+  } catch (e) {
+    // 数えられなかったときは出品を止めない(上限は読み取りを抑えるための目安なので)
+    console.error('[auction] count my listings failed', e);
+    return 0;
   }
 }
 
