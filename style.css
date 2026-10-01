@@ -967,6 +967,16 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   margin-bottom: 14px;
 }
 
+/* 裏面図鑑: オークションの出品中の数(上限50件) */
+.gacha-listing-count {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: -8px 0 14px;
+}
+.gacha-listing-count.near-limit { color: #d97706; font-weight: bold; }
+.gacha-listing-count.at-limit   { color: #dc2626; font-weight: bold; }
+
 .collection-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, 72px); /* ② 1.5倍 */

@@ -228,9 +228,11 @@ function s() { return STR[store.lang === 'en' ? 'en' : 'ja']; }
 // ===== 出品の確認ポップ(ブラウザ標準confirm()の代わりに、うーこの部屋のデザインに合わせた
 // 独自ポップでサムネ・開始価格・出品期間を見せてから確認する) =====
 // 出品期間は固定24時間で選択肢が無いため、戻り値は確定したかどうかのbooleanだけでよい。
-function openListingConfirmModal(design) {
+function openListingConfirmModal(design, activeCount) {
   const modal = document.getElementById('auction-listing-confirm-modal');
   if (!modal) return Promise.resolve(true); // 万一要素が無ければ素通りさせる
+  const activeEl = document.getElementById('auction-listing-confirm-active');
+  if (activeEl) activeEl.textContent = `${activeCount} → ${activeCount + 1} / ${MAX_ACTIVE_LISTINGS_PER_USER}`;
 
   const img = document.getElementById('auction-listing-confirm-img');
   const nameEl = document.getElementById('auction-listing-confirm-name');
@@ -273,11 +275,12 @@ export async function createListing(design) {
   if (!design) return;
   if (!(await ensureLatestVersion())) return;
   if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
-  if (await countMyActiveListings() >= MAX_ACTIVE_LISTINGS_PER_USER) {
+  const activeCount = await countMyActiveListings();
+  if (activeCount >= MAX_ACTIVE_LISTINGS_PER_USER) {
     alert(s().listLimitReached(MAX_ACTIVE_LISTINGS_PER_USER));
     return;
   }
-  const confirmed = await openListingConfirmModal(design);
+  const confirmed = await openListingConfirmModal(design, activeCount);
   if (!confirmed) return;
 
   const userId = getUserId();
@@ -372,6 +375,12 @@ async function countMyActiveListings() {
 
 // ===== 自分が現在出品中のアイテム一覧(裏面図鑑に「出品中」バッジを出すため) =====
 let myListedItemIds = new Set();
+let myActiveListingCount = null; // 読み込み前は null
+
+// 自分の出品中の件数(裏面図鑑の「出品中 ○/50件」表示用。読み込み前は null)
+export function getMyActiveListingCount() {
+  return myActiveListingCount;
+}
 
 export function watchMyListings(onChange) {
   const q = query(
@@ -381,6 +390,7 @@ export function watchMyListings(onChange) {
   );
   listenWhileVisible(() => onSnapshot(q, (snap) => {
     myListedItemIds = new Set(snap.docs.map((d) => d.data().itemId));
+    myActiveListingCount = snap.size;
     onChange();
   }, (e) => console.error('[auction] my listings watch failed', e)));
 }

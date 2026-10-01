@@ -6,7 +6,7 @@ import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en 
 import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=36';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=4';
-import { createListing, watchMyListings, isItemListed, renderCampaignBanner } from './auction.js?v=35';
+import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=36';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -155,6 +155,8 @@ const i18n = {
     collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} 収録`,
     sectionGachaCollection:  'スキンデザイン図鑑',
     gachaCollectionProgress: (n, total) => `${n} / ${total} 収録`,
+    gachaListingCount: (n, max) => n >= max ? `オークション出品中 ${n} / ${max}件（上限です）` : `オークション出品中 ${n} / ${max}件`,
+    auctionActiveLabel: '出品中の数',
     gachaEquipBtn:       '裏面に設定する',
     gachaEquippedLabel:  '設定中',
     gachaListedBadge:    '出品中',
@@ -252,6 +254,8 @@ const i18n = {
     collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} collected`,
     sectionGachaCollection:  'Card-Back Gallery',
     gachaCollectionProgress: (n, total) => `${n} / ${total} collected`,
+    gachaListingCount: (n, max) => n >= max ? `Listed on auction: ${n} / ${max} (limit reached)` : `Listed on auction: ${n} / ${max}`,
+    auctionActiveLabel: 'Active listings',
     gachaEquipBtn:       'Set as Card Back',
     gachaEquippedLabel:  'Equipped',
     gachaListedBadge:    'Listed',
@@ -940,6 +944,17 @@ function renderGachaCollection(newDesignId = null) {
   const ownedCount = Object.values(owned).filter((n) => n > 0).length;
   if (countEl) {
     countEl.textContent = i18n[currentLang].gachaCollectionProgress(ownedCount, GACHA_DESIGNS.length);
+  }
+  // オークションの出品中の数(すでに購読している自分の出品一覧を数えるだけなので読み取りは増えない)
+  const listingCountEl = document.getElementById('gacha-listing-count');
+  const activeListings = getMyActiveListingCount();
+  if (listingCountEl) {
+    listingCountEl.hidden = activeListings === null;
+    if (activeListings !== null) {
+      listingCountEl.textContent = i18n[currentLang].gachaListingCount(activeListings, MAX_ACTIVE_LISTINGS_PER_USER);
+      listingCountEl.classList.toggle('near-limit', activeListings >= MAX_ACTIVE_LISTINGS_PER_USER - 5 && activeListings < MAX_ACTIVE_LISTINGS_PER_USER);
+      listingCountEl.classList.toggle('at-limit', activeListings >= MAX_ACTIVE_LISTINGS_PER_USER);
+    }
   }
 
   groupsEl.innerHTML = '';
