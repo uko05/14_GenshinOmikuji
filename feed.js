@@ -4,6 +4,7 @@ import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
 import { GACHA_DESIGNS } from './gachaBacks.js?v=7';
 import { listenWhileVisible } from './visibleListener.js';
+import { ensureLatestVersion } from './versionGuard.js?v=1';
 import {
   collection, collectionGroup, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
   query, where, orderBy, limit, serverTimestamp, increment, arrayUnion, runTransaction, Timestamp,
@@ -1138,6 +1139,7 @@ async function handleGachaDraw() {
     alert(s().gachaNoTicketAlert);
     return;
   }
+  if (!(await ensureLatestVersion())) return;
 
   const els = getGachaEls();
   const ticketsBeforeDraw = latestGachaTickets; // onSnapshotの反映タイミングに左右されないよう、抽選前の枚数を確保しておく
@@ -1287,6 +1289,7 @@ async function openMailPanel() {
       btn.disabled = claimed;
       btn.addEventListener('click', async () => {
         btn.disabled = true;
+        if (!(await ensureLatestVersion())) return;
         try {
           await claimMail(docSnap.id, d.rewards);
           btn.textContent = s().mailClaimedBtn;

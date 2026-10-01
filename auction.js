@@ -2,8 +2,9 @@
 // 裏面デザインの出品（閲覧・入札・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=3';
-import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=35';
+import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=36';
 import { listenWhileVisible } from './visibleListener.js';
+import { ensureLatestVersion } from './versionGuard.js?v=1';
 import {
   collection, doc, getDoc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
   onSnapshot, query, where, getCountFromServer,
@@ -270,6 +271,7 @@ function openListingConfirmModal(design) {
 // 返却先フィールドを書き込んでおくことで、26_UkoAuction側はサイト固有の知識なしに精算できる)。
 export async function createListing(design) {
   if (!design) return;
+  if (!(await ensureLatestVersion())) return;
   if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
   if (await countMyActiveListings() >= MAX_ACTIVE_LISTINGS_PER_USER) {
     alert(s().listLimitReached(MAX_ACTIVE_LISTINGS_PER_USER));
