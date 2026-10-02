@@ -44,7 +44,7 @@ const STR = {
     gachaResultToast: (name) => `「${name}」を手に入れた！`,
     gachaNoTicketAlert: 'ガチャ券がありません。',
     gachaDrawFailedAlert: 'ガチャの抽選に失敗しました。時間をおいて再度お試しください。',
-    deleteBtnTitle: 'この投稿をフィードから削除(管理者/デバッガー専用)',
+    deleteBtnTitle: 'この投稿をフィードから削除(管理者専用)',
     deleteConfirm:  'この投稿をみんなの結果から削除しますか？（他の人からも見えなくなります）',
     deleteFailed:   '削除に失敗しました。',
     missionAchievedToast: 'ミッション達成！うーこポイント交換所で受け取ろう',
@@ -72,7 +72,7 @@ const STR = {
     gachaResultToast: (name) => `You got "${name}"!`,
     gachaNoTicketAlert: 'You have no gacha tickets.',
     gachaDrawFailedAlert: 'The gacha draw failed. Please try again later.',
-    deleteBtnTitle: 'Delete this post from the feed (admin/debugger only)',
+    deleteBtnTitle: 'Delete this post from the feed (admin only)',
     deleteConfirm:  'Delete this post from everyone\'s results? (Others will no longer see it either)',
     deleteFailed:   'Failed to delete.',
     missionAchievedToast: 'Mission complete! Claim it on the UPoint page.',
@@ -426,7 +426,7 @@ export async function submitListingFeedEntry({ name, itemId, itemName, itemImage
 // ===== いいね =====
 const myLikedIds = new Set();
 
-// デバッガー・管理者ロールは確認用に同じ投稿へ何度でもいいねできる
+// 管理者ロールは確認用に同じ投稿へ何度でもいいねできる(デバッガーはコネクトバトル専用、2026-10-02)
 let isFeedDebugger = false;
 let myRole = 'general'; // メールのロール指定配信の絞り込みに使う
 async function loadFeedDebuggerRole() {
@@ -434,7 +434,7 @@ async function loadFeedDebuggerRole() {
     const snap = await getDoc(doc(db, 'sharedUserRoles', getUserId()));
     if (snap.exists()) {
       const d = snap.data();
-      isFeedDebugger = d.role === 'admin' || d.role === 'debugger' || !!d.debugOmikuji;
+      isFeedDebugger = d.role === 'admin';
       myRole = d.role || 'general';
     }
   } catch (e) {

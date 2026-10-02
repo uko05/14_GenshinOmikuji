@@ -4,9 +4,9 @@ import { GACHA_DESIGNS } from './gachaBacks.js?v=7';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=36';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=37';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=4';
-import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=36';
+import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=37';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=3';
 import { db } from './firebaseConfig.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -1429,7 +1429,7 @@ function showDailyDoneOverlay() {
   area.appendChild(overlay);
 }
 
-// 管理画面(AccountCenter)でロール「デバッガー」+「原神おみくじ」を付与された場合だけ true。
+// 管理画面(AccountCenter)でロール「管理者」を付与された場合だけ true(2026-10-02からデバッガーは対象外)。
 // 初期化時に一度だけFirestoreから取得してキャッシュする（loadDebuggerRole参照）。
 let isOmikujiDebugger = false;
 
@@ -1442,8 +1442,8 @@ async function loadDebuggerRole() {
     const snap = await getDoc(doc(db, 'sharedUserRoles', getUserId()));
     if (snap.exists()) {
       const d = snap.data();
-      // 管理者はデバッガーの上位ロールなので、admin/debugger いずれの role でもデバッグ扱いにする
-      isOmikujiDebugger = d.role === 'admin' || d.role === 'debugger' || !!d.debugOmikuji;
+      // デバッグ扱いは管理者だけ(2026-10-02、デバッガーロールはコネクトバトル専用にした)
+      isOmikujiDebugger = d.role === 'admin';
     }
   } catch (e) {
     console.warn('[debug] ロール取得に失敗:', e);
