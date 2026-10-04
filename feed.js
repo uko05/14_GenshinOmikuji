@@ -781,9 +781,13 @@ async function loadFeedInitial() {
 }
 
 let fetchingNewer = false;
+let fetchNewerAgain = false;
+// 読み込み中に次の新着が来た場合(ガチャを続けて引いた時など)は、終わってからもう一度読む。
+// 以前は読み込み中の新着を無視していたため、続けて投稿された2件目以降が一覧に出なかった
 async function fetchNewerFeed() {
-  if (fetchingNewer) return;
+  if (fetchingNewer) { fetchNewerAgain = true; return; }
   fetchingNewer = true;
+  fetchNewerAgain = false;
   try {
     const q = query(
       collection(db, 'omikujiFeed'),
@@ -803,6 +807,7 @@ async function fetchNewerFeed() {
     console.error('[feed] fetch newer failed', err);
   } finally {
     fetchingNewer = false;
+    if (fetchNewerAgain) fetchNewerFeed();
   }
 }
 
