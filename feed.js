@@ -467,6 +467,7 @@ async function toggleLike(entry, likeBtn) {
       myLikedIds.delete(entry.id);
       likeBtn.classList.remove('liked');
       await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(-1) });
+      bumpLocalLikeCount(entry.id, -1);
       await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(-1), ukoPoints: increment(-receiveAmount) }, { merge: true });
       await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(-1), ukoPoints: increment(-giveAmount) }, { merge: true });
       return;
@@ -498,6 +499,7 @@ async function toggleLike(entry, likeBtn) {
     myLikedIds.add(entry.id);
     likeBtn.classList.add('liked');
     await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(1) });
+    bumpLocalLikeCount(entry.id, 1);
     await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(1), ukoPoints: increment(receiveAmount) }, { merge: true });
     await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(1), ukoPoints: increment(giveAmount) }, { merge: true });
 
@@ -752,17 +754,83 @@ function getFeedSince() {
   return feedSince;
 }
 
-function startFeedListener() {
+// フィードの読み込み(2026-10-04 変更、読み取り削減)。
+// 以前は直近200件をリアルタイム購読していたため、いいね1件ごとに投稿の likeCount が書き換わり、
+// 画面を開いている全員に1件ずつ読み取りが発生していた(いいねは1日約1万件、閲覧者の数だけ倍になる)。
+// 今は「開いた時に1回だけ200件読む」+「一番新しい投稿1件だけを見張り、新しい投稿が来たら
+// 増えた分だけ追加で読む」。他の人のいいね数は開き直すまで更新しない(自分のいいねはその場で反映)。
+const FEED_LIMIT = 200;
+let feedNewestMs = 0;
+const feedCreatedMs = (e) => e.createdAt?.toMillis?.() || 0;
+
+async function loadFeedInitial() {
   const q = query(
     collection(db, 'omikujiFeed'),
     where('createdAt', '>=', getFeedSince()),
     orderBy('createdAt', 'desc'),
-    limit(200)
+    limit(FEED_LIMIT)
   );
-  listenWhileVisible(() => onSnapshot(q, (snap) => {
+  try {
+    const snap = await getDocs(q);
     latestFeedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    feedNewestMs = Math.max(0, ...latestFeedEntries.map(feedCreatedMs));
     renderFeedList(latestFeedEntries);
-  }, (err) => console.error('[feed] listen failed', err)));
+  } catch (err) {
+    console.error('[feed] load failed', err);
+  }
+}
+
+let fetchingNewer = false;
+async function fetchNewerFeed() {
+  if (fetchingNewer) return;
+  fetchingNewer = true;
+  try {
+    const q = query(
+      collection(db, 'omikujiFeed'),
+      where('createdAt', '>', Timestamp.fromMillis(feedNewestMs)),
+      orderBy('createdAt', 'desc'),
+      limit(50)
+    );
+    const snap = await getDocs(q);
+    const known = new Set(latestFeedEntries.map((e) => e.id));
+    const fresh = snap.docs.filter((d) => !known.has(d.id)).map((d) => ({ id: d.id, ...d.data() }));
+    if (fresh.length) {
+      latestFeedEntries = [...fresh, ...latestFeedEntries].slice(0, FEED_LIMIT);
+      feedNewestMs = Math.max(feedNewestMs, ...fresh.map(feedCreatedMs));
+      renderFeedList(latestFeedEntries);
+    }
+  } catch (err) {
+    console.error('[feed] fetch newer failed', err);
+  } finally {
+    fetchingNewer = false;
+  }
+}
+
+function startFeedListener() {
+  loadFeedInitial().then(() => {
+    const newestQ = query(collection(db, 'omikujiFeed'), orderBy('createdAt', 'desc'), limit(1));
+    listenWhileVisible(() => onSnapshot(newestQ, (snap) => {
+      if (snap.metadata.hasPendingWrites) return; // 自分の投稿の送信中(作成日時がまだ入っていない)
+      const d = snap.docs[0];
+      if (!d) return;
+      const data = d.data();
+      if (feedCreatedMs(data) > feedNewestMs) { fetchNewerFeed(); return; }
+      // 一番新しい投稿のいいね数の変化は、この購読で届いた分だけ反映する(追加の読み取りなし)
+      const i = latestFeedEntries.findIndex((e) => e.id === d.id);
+      if (i >= 0 && latestFeedEntries[i].likeCount !== data.likeCount) {
+        latestFeedEntries[i] = { id: d.id, ...data };
+        renderFeedList(latestFeedEntries);
+      }
+    }, (err) => console.error('[feed] newest listen failed', err)));
+  });
+}
+
+// 自分のいいねは、読み直さずに手元のいいね数を増減して描画する
+function bumpLocalLikeCount(feedId, delta) {
+  const e = latestFeedEntries.find((x) => x.id === feedId);
+  if (!e) return;
+  e.likeCount = Math.max(0, (e.likeCount || 0) + delta);
+  renderFeedList(latestFeedEntries);
 }
 
 // 自分が過去にいいねした投稿一覧をリアルタイム購読し、リロード直後や他端末での
