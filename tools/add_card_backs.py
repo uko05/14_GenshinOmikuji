@@ -46,6 +46,9 @@ def write(path, text):
 
 
 def main():
+    print('原神おみくじ: 裏面デザインを追加します')
+    print('（99_SharedImage/01_Genshin/Omikuji/GachaBacks に back_Custom_XXX.jpg を連番で置いてから実行してください）')
+    print()
     # ---- 1. 画像の番号を数える ----
     nums = sorted(int(m.group(1)) for f in os.listdir(BACKS_DIR) if (m := re.fullmatch(r'back_Custom_(\d{3,})\.jpg', f)))
     if not nums:
