@@ -10,8 +10,9 @@
 
 import { db } from './firebaseConfig.js';
 import {
-  doc, getDoc, setDoc, serverTimestamp,
+  doc, setDoc, serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getDoc } from './fsTracked.js'; // 読み取り件数の集計(調査用、fsTracked.js参照)
 
 // ===== localStorage に残すキー（2つだけ） =====
 const LS_USER_ID    = 'genshinOmikuji_userId';

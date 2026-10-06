@@ -1,14 +1,14 @@
 // auction.js
 // 裏面デザインの出品（閲覧・入札・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
-import { getUserId, store } from './userData.js?v=3';
-import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=43';
+import { getUserId, store } from './userData.js?v=4';
+import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=44';
 import { listenWhileVisible } from './visibleListener.js';
-import { ensureLatestVersion } from './versionGuard.js?v=1';
+import { ensureLatestVersion } from './versionGuard.js?v=2';
 import {
-  collection, doc, getDoc, addDoc, runTransaction, serverTimestamp, increment, Timestamp,
-  onSnapshot, query, where, getCountFromServer,
+  collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp, query, where,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getDoc, onSnapshot, getCountFromServer } from './fsTracked.js'; // 読み取り件数の集計(調査用、fsTracked.js参照)
 
 // ガチャ券は08_UPoint側で50UP固定(2026-09時点)。開始=券の5分の1という比率で運用する方針
 // のため、ここは連動する自動計算ではなく固定値。券の価格を変更したらここも手動で合わせること。

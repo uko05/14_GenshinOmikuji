@@ -5,7 +5,7 @@
 // 表に戻った時しか確認しないため、操作の直前にも version.json を見て、古ければ止めて読み込み直す。
 // version.json は GitHub Pages の普通のファイルなので、Firestore の読み取りは増えない。
 // 確認に失敗したとき(通信エラーなど)は操作を止めない。
-import { store } from './userData.js?v=3';
+import { store } from './userData.js?v=4';
 
 const MSG = {
   ja: '新しいバージョンが公開されています。ページを読み込み直してから、もう一度操作してください。',
