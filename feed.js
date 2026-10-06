@@ -900,12 +900,16 @@ function processLikeToastQueue() {
 }
 
 // 自分宛の未表示通知を購読（初回ロード分＋開いている間のリアルタイム分の両方を処理）
+// 24時間以内の通知だけ(2026-10-07)。古い未表示通知がたまった人は開くたびに全部読んでいたため。
+// 24時間たった通知はサーバー(24_AccountCenter/functions/likeNotifCleanup.js)が消す。
 function startNotifListener() {
   const myUserId = getUserId();
+  const since = Timestamp.fromMillis(Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 3600000) * 3600000);
   const q = query(
     collection(db, 'omikujiLikeNotifications'),
     where('toUserId', '==', myUserId),
-    where('shown', '==', false)
+    where('shown', '==', false),
+    where('createdAt', '>=', since)
   );
   listenWhileVisible(() => onSnapshot(q, (snap) => {
     const added = snap.docChanges()
