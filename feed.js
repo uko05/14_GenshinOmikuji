@@ -926,64 +926,6 @@ function startNotifListener() {
   }, (err) => console.error('[feed] notif listen failed', err)));
 }
 
-// ===== いいね履歴パネル（通知ベル） =====
-async function openNotifPanel() {
-  const modal  = document.getElementById('notif-panel');
-  const listEl = document.getElementById('notif-panel-list');
-  if (!modal || !listEl) return;
-  modal.style.display = 'flex';
-  listEl.innerHTML = '';
-
-  try {
-    const q = query(
-      collection(db, 'omikujiLikeNotifications'),
-      where('toUserId', '==', getUserId()),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      const p = document.createElement('p');
-      p.className = 'notif-empty';
-      p.textContent = s().notifEmpty;
-      listEl.appendChild(p);
-      return;
-    }
-    snap.forEach((docSnap) => {
-      const d = docSnap.data();
-      const row = document.createElement('div');
-      row.className = 'notif-row';
-
-      const avatar = document.createElement('img');
-      avatar.className = 'notif-row-avatar';
-      avatar.src = avatarUrl(d.fromAvatarGame, d.fromAvatarIcon);
-      avatar.alt = '';
-      row.appendChild(avatar);
-
-      const col = document.createElement('div');
-      col.className = 'notif-row-col';
-      const text = document.createElement('div');
-      text.className = 'notif-row-text';
-      text.textContent = s().likeToast(d.fromName || s().noName);
-      const time = document.createElement('div');
-      time.className = 'notif-row-time';
-      time.textContent = relTime(d.createdAt);
-      col.appendChild(text);
-      col.appendChild(time);
-      row.appendChild(col);
-
-      listEl.appendChild(row);
-    });
-  } catch (e) {
-    console.error('[feed] notif history load failed', e);
-  }
-}
-
-function closeNotifPanel() {
-  const modal = document.getElementById('notif-panel');
-  if (modal) modal.style.display = 'none';
-}
-
 function closeAvatarNudgeModal() {
   const modal = document.getElementById('avatar-nudge-modal');
   if (modal) modal.style.display = 'none';
@@ -1422,13 +1364,7 @@ export async function initFeed() {
   startStatsFooterListener();
   startMailBadgeListener();
 
-  const bell = document.getElementById('notif-bell');
-  if (bell) bell.addEventListener('click', openNotifPanel);
 
-  const notifClose = document.getElementById('notif-panel-close');
-  if (notifClose) notifClose.addEventListener('click', closeNotifPanel);
-  const notifBackdrop = document.querySelector('#notif-panel .col-modal-backdrop');
-  if (notifBackdrop) notifBackdrop.addEventListener('click', closeNotifPanel);
 
   const nudgeClose = document.getElementById('avatar-nudge-close');
   if (nudgeClose) nudgeClose.addEventListener('click', closeAvatarNudgeModal);
