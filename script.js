@@ -1429,8 +1429,9 @@ function showDailyDoneOverlay() {
   area.appendChild(overlay);
 }
 
-// 管理画面(AccountCenter)でロール「管理者」を付与された場合だけ true(2026-10-02からデバッガーは対象外)。
-// 初期化時に一度だけFirestoreから取得してキャッシュする（loadDebuggerRole参照）。
+// 「1日何回でも占える」デバッグモード。2026-10-07から管理者も含めて全員1日1回にした
+// (管理者が今日もう占ったか分からなくなるため)。仕組みは残しておき、必要になったら
+// loadDebuggerRole でロールを見て true にすれば元に戻せる。
 let isOmikujiDebugger = false;
 
 function isDebugMode() {
@@ -1439,12 +1440,7 @@ function isDebugMode() {
 
 async function loadDebuggerRole() {
   try {
-    const snap = await getDoc(doc(db, 'sharedUserRoles', getUserId()));
-    if (snap.exists()) {
-      const d = snap.data();
-      // デバッグ扱いは管理者だけ(2026-10-02、デバッガーロールはコネクトバトル専用にした)
-      isOmikujiDebugger = d.role === 'admin';
-    }
+    isOmikujiDebugger = false;
   } catch (e) {
     console.warn('[debug] ロール取得に失敗:', e);
   }
