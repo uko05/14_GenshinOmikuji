@@ -813,6 +813,9 @@ async function fetchNewerFeed() {
 
 function startFeedListener() {
   loadFeedInitial().then(() => {
+    // 自分のいいね一覧は、フィードに出ている一番古い投稿以降の分だけ読めば足りる
+    // (いいねは必ず投稿より後なので漏れない)。フィードが読めてから始める
+    startMyLikesListener(Math.min(...latestFeedEntries.map(feedCreatedMs).filter((x) => x > 0), Date.now()));
     const newestQ = query(collection(db, 'omikujiFeed'), orderBy('createdAt', 'desc'), limit(1));
     listenWhileVisible(() => onSnapshot(newestQ, (snap) => {
       if (snap.metadata.hasPendingWrites) return; // 自分の投稿の送信中(作成日時がまだ入っていない)
@@ -844,12 +847,16 @@ function bumpLocalLikeCount(feedId, delta) {
 // 出る投稿はすべて起点以降の投稿で、そこへのいいねは必ず投稿より後なので、ボタンの表示に
 // 必要なものは漏れない(以前は全期間分を読んでおり、ヘビーユーザーは1回で数千〜1万件超)。
 // collectionGroup('likes')の(likerUserId, likedAt)複合インデックスが必要。
-function startMyLikesListener() {
+// 2026-10-08: 範囲を「フィードの起点(48時間前)以降」から「フィードに出ている一番古い投稿以降」に縮めた。
+// フィードの200件はここ数時間分なので、1日に何百件もいいねする人でも読み取りが大きく減る
+// (以前は開くたびに48時間分、多い人で約2,000件を読んでいた)。1時間単位に切り捨てるのはキャッシュを効かせるため。
+function startMyLikesListener(oldestPostMs) {
   const myUserId = getUserId();
+  const sinceMs = Math.floor((oldestPostMs || Date.now()) / 3600000) * 3600000;
   const q = query(
     collectionGroup(db, 'likes'),
     where('likerUserId', '==', myUserId),
-    where('likedAt', '>=', getFeedSince())
+    where('likedAt', '>=', Timestamp.fromMillis(sinceMs))
   );
   listenWhileVisible(() => onSnapshot(q, (snap) => {
     myLikedIds.clear();
@@ -1359,7 +1366,6 @@ export async function initFeed() {
   initPlayerAvatar();
   await loadFeedDebuggerRole();
   startFeedListener();
-  startMyLikesListener();
   startNotifListener();
   startStatsFooterListener();
   startMailBadgeListener();
