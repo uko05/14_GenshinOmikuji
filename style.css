@@ -1298,6 +1298,8 @@ details[open] > .ach-group-header::after { transform: rotate(90deg); }
   text-align: center;
 }
 
+/* ダブりが無くて出品できない時(2026-10-07) */
+.gacha-col-sell-btn:disabled,
 .gacha-col-equip-btn-active {
   background: var(--surface2);
   color: var(--muted);

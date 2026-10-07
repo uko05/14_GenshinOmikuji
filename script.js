@@ -6,7 +6,7 @@ import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en 
 import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=45';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=4';
-import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=45';
+import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=46';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
 import { db } from './firebaseConfig.js';
 import {
@@ -164,6 +164,7 @@ const i18n = {
     gachaEquippedLabel:  '設定中',
     gachaListedBadge:    '出品中',
     gachaSellBtn:        '出品する',
+    gachaSellDupOnly:    'ダブりのみ出品できます',
     listingConfirmTitle:   'オークションに出品しますか？',
     auctionStartLabel:     '開始価格',
     auctionDurationLabel:  '出品期間',
@@ -263,6 +264,7 @@ const i18n = {
     gachaEquippedLabel:  'Equipped',
     gachaListedBadge:    'Listed',
     gachaSellBtn:        'List for Sale',
+    gachaSellDupOnly:    'Duplicates only',
     listingConfirmTitle:   'List this for auction?',
     auctionStartLabel:     'Start Price',
     auctionDurationLabel:  'Duration',
@@ -1056,6 +1058,13 @@ function updateGachaEquipBtn() {
   btn.textContent = isEquipped ? i18n[currentLang].gachaEquippedLabel : i18n[currentLang].gachaEquipBtn;
   btn.classList.toggle('gacha-col-equip-btn-active', isEquipped);
   btn.disabled = isEquipped;
+  // 出品はダブり(2枚以上)のときだけ(2026-10-07)。1枚しかない物は出品ボタンを押せなくする
+  const sellBtn = document.getElementById('gacha-col-sell-btn');
+  if (sellBtn) {
+    const canSell = ((store.cardBacks || {})[currentGachaCollectionDesign.id] || 0) >= 2;
+    sellBtn.textContent = canSell ? i18n[currentLang].gachaSellBtn : i18n[currentLang].gachaSellDupOnly;
+    sellBtn.disabled = !canSell;
+  }
 }
 
 function equipCurrentGachaCollectionDesign() {

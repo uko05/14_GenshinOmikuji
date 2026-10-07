@@ -20,7 +20,7 @@ export const AUCTION_START_PRICE   = 25;
 // 1人が同時に出品できる件数の上限(2026-10-02追加)。うーこオークションの一覧は出品中の
 // 全件を読み込むため、出品中の件数がそのまま読み取り課金になる。直近7日で6,871件出品・
 // 落札は約1割で、上位数人が数百件ずつ出していたため上限を設けた。
-export const MAX_ACTIVE_LISTINGS_PER_USER = 50;
+export const MAX_ACTIVE_LISTINGS_PER_USER = 30; // 2026-10-07に50→30
 // 出品期間は固定24時間(2026-09-20に48時間の選択肢を廃止し、選べなくした)。
 const AUCTION_DURATION_HOURS = 24;
 
@@ -209,6 +209,7 @@ const STR = {
   ja: {
     listLoginRequired: '出品にはアカウント登録（無料）が必要です。登録・ログインしてから出品してください。',
     listNoStock: '出品できる在庫がありません。',
+    listNoDupe: '出品できるのはダブり（2枚以上持っているもの）だけです。',
     listLimitReached: (max) => `同時に出品できるのは${max}件までです。出品中のアイテムが落札されるか、期限が切れてから出品してください。`,
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
@@ -217,6 +218,7 @@ const STR = {
   en: {
     listLoginRequired: 'Listing requires a free account. Please register and log in first.',
     listNoStock: "You don't have any to list.",
+    listNoDupe: 'Only duplicates (2 or more) can be listed.',
     listLimitReached: (max) => `You can have up to ${max} active listings at a time. Please wait until some of them sell or expire.`,
     listFailed: 'Failed to list. Please try again later.',
     listDone: 'Listed! You can check it on Uko Auction.',
@@ -294,6 +296,8 @@ export async function createListing(design) {
       const data = snap.data();
       const owned = (data.cardBacks || {})[design.id] || 0;
       if (owned < 1) throw new Error('NO_STOCK');
+      // 出品できるのはダブりだけ(2026-10-07)。1枚しか持っていない物は出品できない
+      if (owned < 2) throw new Error('NO_DUPE');
 
       const { totalBonus, progressUpdates, breakdown } = computeListingCampaignBonus(data);
       campaignBonusEarned = totalBonus;
@@ -352,12 +356,12 @@ export async function createListing(design) {
     return true;
   } catch (e) {
     console.error('[auction] listing failed', e);
-    alert(e.message === 'NO_STOCK' ? s().listNoStock : s().listFailed);
+    alert(e.message === 'NO_STOCK' ? s().listNoStock : e.message === 'NO_DUPE' ? s().listNoDupe : s().listFailed);
     return false;
   }
 }
 
-// 自分が今出品中の件数。件数だけ数える集計クエリなので、50件あっても読み取りは1回分で済む
+// 自分が今出品中の件数。件数だけ数える集計クエリなので、上限まであっても読み取りは1回分で済む
 async function countMyActiveListings() {
   try {
     const q = query(
@@ -377,7 +381,7 @@ async function countMyActiveListings() {
 let myListedItemIds = new Set();
 let myActiveListingCount = null; // 読み込み前は null
 
-// 自分の出品中の件数(裏面図鑑の「出品中 ○/50件」表示用。読み込み前は null)
+// 自分の出品中の件数(裏面図鑑の「出品中 ○/上限件」表示用。読み込み前は null)
 export function getMyActiveListingCount() {
   return myActiveListingCount;
 }
