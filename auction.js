@@ -2,9 +2,10 @@
 // 裏面デザインの出品（閲覧・入札・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=45';
+import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=46';
 import { listenWhileVisible } from './visibleListener.js';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
+import { isStarRailDesign } from './gachaBacks.js?v=10';
 import {
   collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp, query, where,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -210,6 +211,7 @@ const STR = {
     listLoginRequired: '出品にはアカウント登録（無料）が必要です。登録・ログインしてから出品してください。',
     listNoStock: '出品できる在庫がありません。',
     listNoDupe: '出品できるのはダブり（2枚以上持っているもの）だけです。',
+    listNotListable: 'スタレ裏面はオークションに出品できません。',
     listLimitReached: (max) => `同時に出品できるのは${max}件までです。出品中のアイテムが落札されるか、期限が切れてから出品してください。`,
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
@@ -219,6 +221,7 @@ const STR = {
     listLoginRequired: 'Listing requires a free account. Please register and log in first.',
     listNoStock: "You don't have any to list.",
     listNoDupe: 'Only duplicates (2 or more) can be listed.',
+    listNotListable: 'Star Rail card backs cannot be listed.',
     listLimitReached: (max) => `You can have up to ${max} active listings at a time. Please wait until some of them sell or expire.`,
     listFailed: 'Failed to list. Please try again later.',
     listDone: 'Listed! You can check it on Uko Auction.',
@@ -276,6 +279,7 @@ function openListingConfirmModal(design, activeCount) {
 export async function createListing(design) {
   if (!design) return;
   if (!(await ensureLatestVersion())) return;
+  if (isStarRailDesign(design.id)) { alert(s().listNotListable); return false; }
   if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
   const activeCount = await countMyActiveListings();
   if (activeCount >= MAX_ACTIVE_LISTINGS_PER_USER) {
@@ -295,6 +299,8 @@ export async function createListing(design) {
       if (!snap.exists()) throw new Error('NO_USER_DOC');
       const data = snap.data();
       const owned = (data.cardBacks || {})[design.id] || 0;
+      // スタレ裏面(sr_***)は出品できない(自力で引くしかない特別な裏面、2026-10-09)
+      if (isStarRailDesign(design.id)) throw new Error('NOT_LISTABLE');
       if (owned < 1) throw new Error('NO_STOCK');
       // 出品できるのはダブりだけ(2026-10-07)。1枚しか持っていない物は出品できない
       if (owned < 2) throw new Error('NO_DUPE');
@@ -356,7 +362,7 @@ export async function createListing(design) {
     return true;
   } catch (e) {
     console.error('[auction] listing failed', e);
-    alert(e.message === 'NO_STOCK' ? s().listNoStock : e.message === 'NO_DUPE' ? s().listNoDupe : s().listFailed);
+    alert(e.message === 'NO_STOCK' ? s().listNoStock : e.message === 'NO_DUPE' ? s().listNoDupe : e.message === 'NOT_LISTABLE' ? s().listNotListable : s().listFailed);
     return false;
   }
 }

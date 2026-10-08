@@ -2,7 +2,7 @@
 // みんなの結果フィード・いいね・いいね通知・アバター表示
 import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { GACHA_DESIGNS } from './gachaBacks.js?v=9';
+import { pickGachaDesign, isStarRailDesign } from './gachaBacks.js?v=10';
 import { listenWhileVisible } from './visibleListener.js';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
 import {
@@ -596,6 +596,8 @@ function renderFeedList(entries) {
       item.classList.add('feed-item-achievement', `rarity-${entry.rarity || 'bronze'}`);
     } else if (entry.type === 'gacha') {
       item.classList.add('feed-item-gacha');
+      // スタレ裏面は星空っぽい紺〜青で、ほかの投稿より少し目立たせる(2026-10-09)
+      if (isStarRailDesign(entry.cardBackId)) item.classList.add('feed-item-gacha-sr');
     } else if (entry.type === 'listing') {
       item.classList.add('feed-item-listing');
     }
@@ -616,6 +618,7 @@ function renderFeedList(entries) {
     if (entry.type === 'achievement') {
       lineEl.appendChild(document.createTextNode(s().achLine(entry.achievementName)));
     } else if (entry.type === 'gacha') {
+      if (isStarRailDesign(entry.cardBackId)) lineEl.insertBefore(document.createTextNode('✦ '), lineEl.firstChild);
       lineEl.appendChild(document.createTextNode(s().gachaGetLine(entry.cardBackName)));
     } else if (entry.type === 'listing') {
       lineEl.appendChild(document.createTextNode(s().listingLine(entry.itemName)));
@@ -955,6 +958,12 @@ function startStatsFooterListener() {
     latestLikesGiven     = d.totalLikesGiven || 0;
     latestLikesReceived  = d.totalLikesReceived || 0;
     latestGachaTickets   = d.sitePerks?.omikuji?.gachaTickets || 0;
+    // UP交換所でスタレ裏面ガチャを解放したら、開いたままの画面でも図鑑を切り替える
+    const srUnlocked = !!d.sitePerks?.omikuji?.starRailGachaUnlocked;
+    if (srUnlocked !== !!store.sitePerks?.omikuji?.starRailGachaUnlocked && d.sitePerks) {
+      store.sitePerks = d.sitePerks;
+      window.dispatchEvent(new CustomEvent('starRailUnlockChanged'));
+    }
     latestClaimedMailIds = new Set(d.claimedMailIds || []);
     if (upEl)    upEl.textContent    = d.ukoPoints || 0;
     if (gachaEl) gachaEl.textContent = latestGachaTickets;
@@ -1062,7 +1071,7 @@ function closeGachaConfirmModal() {
 async function drawGachaTransaction() {
   const userId = getUserId();
   const ref = doc(db, 'omikujiUsers', userId);
-  const design = GACHA_DESIGNS[Math.floor(Math.random() * GACHA_DESIGNS.length)];
+  let design = null;
   let isNew = false;
 
   await runTransaction(db, async (tx) => {
@@ -1071,6 +1080,9 @@ async function drawGachaTransaction() {
     const data = snap.data();
     const tickets = data.sitePerks?.omikuji?.gachaTickets || 0;
     if (tickets < 1) throw new Error('NO_TICKETS');
+    // スタレ裏面ガチャ解放済み(UP交換所、2026-10-09追加)ならスタレ裏面も排出対象に入る。
+    // 解放はサーバー上の最新の値で判定したいので、抽選はトランザクションの中で行う。
+    design = pickGachaDesign(!!data.sitePerks?.omikuji?.starRailGachaUnlocked);
 
     // cardBacksは { デザインID: 所持数 } 形式。旧データ(所持デザインIDの配列)が
     // 残っている場合はここで新形式に丸ごと変換してから書き込む(ドットパスでの

@@ -2538,3 +2538,21 @@ details#extra-fortune-section[open] > .extra-fortune-summary::after {
   pointer-events: none;
   z-index: 901;
 }
+
+/* スタレ裏面図鑑の解放前の案内(2026-10-09) */
+.starrail-locked-msg {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--muted);
+  text-align: center;
+  margin: 0 8px;
+}
+.starrail-locked-msg a { font-weight: bold; }
+
+/* フィード: スタレ裏面の入手は星空っぽい紺〜青で目立たせる(既存の実績・ガチャ・出品と被らない色) */
+.feed-item-gacha.feed-item-gacha-sr {
+  background: linear-gradient(135deg, #16205e 0%, #5b7fe0 50%, #16205e 100%);
+  box-shadow: 0 0 0 1px #8fb0ff, 0 0 10px rgba(120, 160, 255, 0.45);
+}
+.feed-item-gacha.feed-item-gacha-sr .feed-item-line { color: #ffffff; }
+.feed-item-gacha.feed-item-gacha-sr .feed-item-time { color: rgba(255, 255, 255, 0.75); }

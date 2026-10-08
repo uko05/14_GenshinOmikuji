@@ -1,12 +1,12 @@
 // script.js
 import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
-import { GACHA_DESIGNS } from './gachaBacks.js?v=9';
+import { GACHA_DESIGNS, STARRAIL_DESIGNS, ALL_CARD_DESIGNS, isStarRailDesign } from './gachaBacks.js?v=10';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=45';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=46';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=4';
-import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=46';
+import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=47';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
 import { db } from './firebaseConfig.js';
 import {
@@ -18,7 +18,7 @@ import { getDoc } from './fsTracked.js'; // 読み取り件数の集計(調査�
 // 未設定なら通常のback.pngを、カード裏面を表示する全箇所で使う
 function currentCardBackUrl() {
   if (store.equippedCardBackId) {
-    const d = GACHA_DESIGNS.find((x) => x.id === store.equippedCardBackId);
+    const d = ALL_CARD_DESIGNS.find((x) => x.id === store.equippedCardBackId);
     if (d) return d.url;
   }
   return CARD_BACK;
@@ -158,6 +158,10 @@ const i18n = {
     collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} 収録`,
     sectionGachaCollection:  'スキンデザイン図鑑',
     gachaCollectionProgress: (n, total) => `${n} / ${total} 収録`,
+    sectionStarRailCollection: 'スタレ裏面図鑑',
+    starRailLockedMsg:   'UP交換所で「スタレ裏面ガチャ解放」（500UP）と交換すると、ガチャでスタレ裏面が出るようになります。スタレ裏面はオークションに出品できない、自分で引き当てるしかない特別な裏面です。',
+    starRailLockedLink:  'UP交換所へ',
+    gachaSellSrNo:       'スタレ裏面は出品できません',
     gachaListingCount: (n, max) => n >= max ? `オークション出品中 ${n} / ${max}件（上限です）` : `オークション出品中 ${n} / ${max}件`,
     auctionActiveLabel: '出品中の数',
     gachaEquipBtn:       '裏面に設定する',
@@ -258,6 +262,10 @@ const i18n = {
     collectionProgress:  (n) => `${n} / ${totalCollectibleCount()} collected`,
     sectionGachaCollection:  'Card-Back Gallery',
     gachaCollectionProgress: (n, total) => `${n} / ${total} collected`,
+    sectionStarRailCollection: 'Star Rail Card-Back Gallery',
+    starRailLockedMsg:   'Redeem "Unlock Star Rail Card-Back Gacha" (500 UP) at the UP Exchange to add Star Rail card backs to the gacha. They cannot be listed on the auction — you can only get them by drawing yourself.',
+    starRailLockedLink:  'Go to UP Exchange',
+    gachaSellSrNo:       'Star Rail backs cannot be listed',
     gachaListingCount: (n, max) => n >= max ? `Listed on auction: ${n} / ${max} (limit reached)` : `Listed on auction: ${n} / ${max}`,
     auctionActiveLabel: 'Active listings',
     gachaEquipBtn:       'Set as Card Back',
@@ -941,12 +949,14 @@ function renderGachaCollection(newDesignId = null) {
   if (!groupsEl) return;
 
   if (newDesignId) {
-    const idx = GACHA_DESIGNS.findIndex((d) => d.id === newDesignId);
-    if (idx !== -1) gachaCollectionOpenGroups.add(Math.floor(idx / GACHA_COLLECTION_GROUP_SIZE));
+    const sr = isStarRailDesign(newDesignId);
+    const idx = (sr ? STARRAIL_DESIGNS : GACHA_DESIGNS).findIndex((d) => d.id === newDesignId);
+    if (idx !== -1) gachaCollectionOpenGroups.add(`${sr ? 'sr' : 'g'}${Math.floor(idx / GACHA_COLLECTION_GROUP_SIZE)}`);
   }
 
   const owned = store.cardBacks;
-  const ownedCount = Object.values(owned).filter((n) => n > 0).length;
+  // 収録数は原神の裏面だけ数える(スタレ裏面は下のスタレ裏面図鑑で別に数える)
+  const ownedCount = GACHA_DESIGNS.filter((d) => (owned[d.id] || 0) > 0).length;
   if (countEl) {
     countEl.textContent = i18n[currentLang].gachaCollectionProgress(ownedCount, GACHA_DESIGNS.length);
   }
@@ -963,11 +973,47 @@ function renderGachaCollection(newDesignId = null) {
   }
 
   groupsEl.innerHTML = '';
+  renderDesignGroups(GACHA_DESIGNS, groupsEl, 'g');
+  renderStarRailCollection();
+}
 
-  for (let start = 0; start < GACHA_DESIGNS.length; start += GACHA_COLLECTION_GROUP_SIZE) {
-    const groupIndex = start / GACHA_COLLECTION_GROUP_SIZE;
-    const end = Math.min(start + GACHA_COLLECTION_GROUP_SIZE, GACHA_DESIGNS.length);
-    const groupDesigns = GACHA_DESIGNS.slice(start, end);
+// ===== スタレ裏面図鑑(2026-10-09追加、スキンデザイン図鑑のすぐ下) =====
+// 解放前で1枚も持っていない人には、UP交換所への案内だけを出す。
+function renderStarRailCollection() {
+  const section = document.getElementById('starrail-collection-section');
+  const countEl = document.getElementById('starrail-collection-count');
+  const lockedEl = document.getElementById('starrail-locked-msg');
+  const groupsEl = document.getElementById('starrail-collection-groups');
+  if (!section || !groupsEl) return;
+  const owned = store.cardBacks;
+  const ownedCount = STARRAIL_DESIGNS.filter((d) => (owned[d.id] || 0) > 0).length;
+  const unlocked = !!store.sitePerks?.omikuji?.starRailGachaUnlocked;
+  if (countEl) countEl.textContent = i18n[currentLang].gachaCollectionProgress(ownedCount, STARRAIL_DESIGNS.length);
+  groupsEl.innerHTML = '';
+  if (!unlocked && ownedCount === 0) {
+    if (lockedEl) {
+      lockedEl.innerHTML = '';
+      lockedEl.appendChild(document.createTextNode(i18n[currentLang].starRailLockedMsg + ' '));
+      const a = document.createElement('a');
+      a.href = 'https://uko05.github.io/08_UPoint/';
+      a.textContent = i18n[currentLang].starRailLockedLink;
+      lockedEl.appendChild(a);
+      lockedEl.hidden = false;
+    }
+    return;
+  }
+  if (lockedEl) lockedEl.hidden = true;
+  renderDesignGroups(STARRAIL_DESIGNS, groupsEl, 'sr');
+}
+
+// designsを50件ずつの<details>に分けてgroupsElへ描画する(原神・スタレ共通)。
+// keyPrefixは開閉状態を覚えるキーの頭(原神とスタレでグループ番号が重ならないように)
+function renderDesignGroups(designs, groupsEl, keyPrefix) {
+  const owned = store.cardBacks;
+  for (let start = 0; start < designs.length; start += GACHA_COLLECTION_GROUP_SIZE) {
+    const groupIndex = `${keyPrefix}${start / GACHA_COLLECTION_GROUP_SIZE}`;
+    const end = Math.min(start + GACHA_COLLECTION_GROUP_SIZE, designs.length);
+    const groupDesigns = designs.slice(start, end);
 
     const details = document.createElement('details');
     details.className = 'gacha-col-group';
@@ -1061,8 +1107,10 @@ function updateGachaEquipBtn() {
   // 出品はダブり(2枚以上)のときだけ(2026-10-07)。1枚しかない物は出品ボタンを押せなくする
   const sellBtn = document.getElementById('gacha-col-sell-btn');
   if (sellBtn) {
-    const canSell = ((store.cardBacks || {})[currentGachaCollectionDesign.id] || 0) >= 2;
-    sellBtn.textContent = canSell ? i18n[currentLang].gachaSellBtn : i18n[currentLang].gachaSellDupOnly;
+    const isSr = isStarRailDesign(currentGachaCollectionDesign.id);
+    const canSell = !isSr && ((store.cardBacks || {})[currentGachaCollectionDesign.id] || 0) >= 2;
+    sellBtn.textContent = canSell ? i18n[currentLang].gachaSellBtn
+      : isSr ? i18n[currentLang].gachaSellSrNo : i18n[currentLang].gachaSellDupOnly;
     sellBtn.disabled = !canSell;
   }
 }
@@ -1497,6 +1545,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   watchMyListings(() => renderGachaCollection());
 
   // ガチャで裏面デザインを入手したら図鑑を即座に再描画し、関連実績も判定する(feed.jsから発火)
+  // UP交換所でスタレ裏面ガチャを解放したら、スタレ裏面図鑑の案内を消して図鑑を出す(feed.jsから発火)
+  window.addEventListener('starRailUnlockChanged', () => renderGachaCollection());
   window.addEventListener('gachaCardBacksUpdated', (e) => {
     renderGachaCollection(e.detail?.isNew ? e.detail.designId : null);
     checkAndUnlockAchievements();
