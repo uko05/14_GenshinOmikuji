@@ -28,7 +28,7 @@ export const STARRAIL_DESIGNS = Array.from({ length: 115 }, (_, i) => {
 });
 
 // スタレ裏面1枚あたりの出やすさ(原神の裏面1枚を1としたときの倍率)
-export const STARRAIL_WEIGHT = 0.7;
+export const STARRAIL_WEIGHT = 0.5; // 2026-10-09に0.7→0.5(スタレの出る割合 約13%→約10%)
 
 // 原神・スタレ両方の裏面(装備中の裏面の表示や、管理画面のサムネ表示用)
 export const ALL_CARD_DESIGNS = [...GACHA_DESIGNS, ...STARRAIL_DESIGNS];
