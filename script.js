@@ -12,7 +12,7 @@ import { db } from './firebaseConfig.js';
 import {
   doc,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-import { getDoc } from './fsTracked.js'; // 読み取り件数の集計(調査用、fsTracked.js参照)
+import { getDoc } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // ガチャで入手した裏面デザインを「使用中」に設定している場合はそちらを、
 // 未設定なら通常のback.pngを、カード裏面を表示する全箇所で使う
