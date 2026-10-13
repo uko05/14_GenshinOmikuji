@@ -6,7 +6,7 @@ import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en 
 import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=48';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=4';
-import { initSell } from './sell.js?v=1';
+import { initSell } from './sell.js?v=2';
 import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=49';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
 import { db } from './firebaseConfig.js';
