@@ -14,7 +14,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- 大きめの修正時だけ version.json と一緒に上げる(開きっぱなしのタブを自動で読み込み直す。TopPage00/shared/auto-reload.js参照) -->
-  <meta name="uko-reload-version" content="11">
+  <meta name="uko-reload-version" content="12">
   <meta name="description" content="生年月日から今日の運勢を占う原神テーマのおみくじサイト。星座占い・バイオリズム・原神アルカナタロットで今日の運勢をチェック！">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="うーこの部屋">
@@ -51,7 +51,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@uko_dayo_">
   <title>原神おみくじ｜星座占い・タロットで今日の運勢 - うーこの部屋</title>
-  <link rel="stylesheet" href="style.css?v=44">
+  <link rel="stylesheet" href="style.css?v=45">
 
   <!-- Favicon -->
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/favicon.ico" type="image/x-icon">
@@ -255,6 +255,7 @@
     <div class="section-title" data-i18n="sectionGachaCollection">スキンデザイン図鑑</div>
     <div id="gacha-collection-count" class="collection-count"></div>
     <div id="gacha-listing-count" class="gacha-listing-count" hidden></div>
+    <div class="sell-open-row"><button type="button" id="sell-open-btn" class="avatar-nudge-btn">まとめて売却</button></div>
     <div id="gacha-collection-groups"></div>
   </section>
 
@@ -359,6 +360,19 @@
 </div>
 
 <!-- 出品の確認ポップ -->
+<!-- ダブりのまとめて売却(2026-10-14、sell.js) -->
+<div id="sell-modal" class="col-modal" style="display:none;">
+  <div class="col-modal-backdrop"></div>
+  <div class="col-modal-content sell-modal-content">
+    <button id="sell-close" class="col-modal-close" aria-label="close">×</button>
+    <p class="gacha-modal-title" id="sell-title">ダブりをまとめて売却</p>
+    <p class="sell-desc" id="sell-desc"></p>
+    <div class="sell-tools"><button type="button" id="sell-all" class="sell-tool-btn">ダブりを全部選ぶ</button><button type="button" id="sell-clear" class="sell-tool-btn">すべて0にする</button></div>
+    <div id="sell-list" class="sell-list"></div>
+    <div class="sell-footer"><div id="sell-total" class="sell-total"></div><button type="button" id="sell-ok" class="avatar-nudge-btn" disabled>売却する</button></div>
+  </div>
+</div>
+
 <div id="auction-listing-confirm-modal" class="col-modal" style="display:none;">
   <div class="col-modal-backdrop"></div>
   <div class="col-modal-content">
@@ -504,12 +518,12 @@
   </div>
 </div>
 
-<span id="site-version" class="site-version">v4.43</span>
+<span id="site-version" class="site-version">v4.44</span>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
-<script type="module" src="script.js?v=72"></script>
+<script type="module" src="script.js?v=73"></script>
 <script type="module" src="https://uko05.github.io/24_AccountCenter/account-status.js"></script>
 <script src="https://uko05.github.io/TopPage00/shared/sidebar.js"></script>
 </body>

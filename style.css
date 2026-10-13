@@ -2556,3 +2556,22 @@ details#extra-fortune-section[open] > .extra-fortune-summary::after {
 }
 .feed-item-gacha.feed-item-gacha-sr .feed-item-line { color: #ffffff; }
 .feed-item-gacha.feed-item-gacha-sr .feed-item-time { color: rgba(255, 255, 255, 0.75); }
+
+/* ダブりのまとめて売却(2026-10-14) */
+.sell-open-row { text-align: center; margin: -4px 0 14px; }
+.sell-desc { font-size: 0.82rem; color: var(--muted); margin: 0 0 10px; }
+.sell-tools { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; }
+.sell-tool-btn { font-size: 0.78rem; padding: 4px 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); cursor: pointer; }
+.sell-list { max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 2px; }
+.sell-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; background: var(--surface2); border: 2px solid transparent; }
+.sell-row.picked { border-color: #e0a52a; }
+.sell-row img { width: 34px; height: 57px; object-fit: cover; border-radius: 4px; flex: none; }
+.sell-info { flex: 1; min-width: 0; }
+.sell-name { font-size: 0.85rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sell-owned { font-size: 0.75rem; color: var(--muted); }
+.sell-stepper { display: flex; align-items: center; gap: 6px; }
+.sell-stepper button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 1rem; cursor: pointer; }
+.sell-n { min-width: 1.6em; text-align: center; font-weight: bold; }
+.sell-none { text-align: center; color: var(--muted); padding: 16px 0; }
+.sell-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.sell-total { font-weight: bold; }

@@ -6,6 +6,7 @@ import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en 
 import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=48';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=4';
+import { initSell } from './sell.js?v=1';
 import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=49';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
 import { db } from './firebaseConfig.js';
@@ -1547,6 +1548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ガチャで裏面デザインを入手したら図鑑を即座に再描画し、関連実績も判定する(feed.jsから発火)
   // UP交換所でスタレ裏面ガチャを解放したら、スタレ裏面図鑑の案内を消して図鑑を出す(feed.jsから発火)
   window.addEventListener('starRailUnlockChanged', () => renderGachaCollection());
+  initSell(); // ダブりのまとめて売却(sell.js)
   window.addEventListener('gachaCardBacksUpdated', (e) => {
     renderGachaCollection(e.detail?.isNew ? e.detail.designId : null);
     checkAndUnlockAchievements();
