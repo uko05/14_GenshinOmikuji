@@ -18,6 +18,10 @@ import { getDoc, onSnapshot, getCountFromServer } from "https://www.gstatic.com/
 // 上回っていたため、メイン垢で安くガチャを回して複製をサブ垢に即決購入させる自演両替の
 // 抜け道になっていた(実際の取引データから発覚)。抜け道自体を塞ぐため機能ごと削除する方針。
 export const AUCTION_START_PRICE   = 25;
+// 出品手数料(2026-10-14追加)。売れても売れ残っても返さない。売れ残っても裏面は戻るので
+// 「とりあえず上限まで出す」出品が多く(約8割が売れ残り)、一覧の読み取りが増えていたため。
+// ダブりの処分は まとめて売却(sell.js、1枚10UP) を使ってもらう
+export const AUCTION_LISTING_FEE   = 5;
 // 1人が同時に出品できる件数の上限(2026-10-02追加)。うーこオークションの一覧は出品中の
 // 全件を読み込むため、出品中の件数がそのまま読み取り課金になる。直近7日で6,871件出品・
 // 落札は約1割で、上位数人が数百件ずつ出していたため上限を設けた。
@@ -211,6 +215,7 @@ const STR = {
     listLoginRequired: '出品にはアカウント登録（無料）が必要です。登録・ログインしてから出品してください。',
     listNoStock: '出品できる在庫がありません。',
     listNoDupe: '出品できるのはダブり（2枚以上持っているもの）だけです。',
+    listNoUp: (fee) => `出品手数料（${fee}UP）が足りません。`,
     listNotListable: 'スタレ裏面はオークションに出品できません。',
     listLimitReached: (max) => `同時に出品できるのは${max}件までです。出品中のアイテムが落札されるか、期限が切れてから出品してください。`,
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
@@ -221,6 +226,7 @@ const STR = {
     listLoginRequired: 'Listing requires a free account. Please register and log in first.',
     listNoStock: "You don't have any to list.",
     listNoDupe: 'Only duplicates (2 or more) can be listed.',
+    listNoUp: (fee) => `You need ${fee} UP for the listing fee.`,
     listNotListable: 'Star Rail card backs cannot be listed.',
     listLimitReached: (max) => `You can have up to ${max} active listings at a time. Please wait until some of them sell or expire.`,
     listFailed: 'Failed to list. Please try again later.',
@@ -245,6 +251,8 @@ function openListingConfirmModal(design, activeCount) {
   if (img) { img.src = design.url; img.alt = design.name; }
   if (nameEl) nameEl.textContent = design.name;
   if (startEl) startEl.textContent = `${AUCTION_START_PRICE}UP`;
+  const feeEl = document.getElementById('auction-listing-confirm-fee');
+  if (feeEl) feeEl.textContent = `${AUCTION_LISTING_FEE}UP`;
 
   modal.style.display = 'flex';
 
@@ -304,10 +312,16 @@ export async function createListing(design) {
       if (owned < 1) throw new Error('NO_STOCK');
       // 出品できるのはダブりだけ(2026-10-07)。1枚しか持っていない物は出品できない
       if (owned < 2) throw new Error('NO_DUPE');
+      if ((data.ukoPoints || 0) < AUCTION_LISTING_FEE) throw new Error('NO_UP');
 
       const { totalBonus, progressUpdates, breakdown } = computeListingCampaignBonus(data);
       campaignBonusEarned = totalBonus;
-      const updates = { [`cardBacks.${design.id}`]: increment(-1), ...progressUpdates };
+      const updates = { [`cardBacks.${design.id}`]: increment(-1), ukoPoints: increment(-AUCTION_LISTING_FEE), ...progressUpdates };
+      tx.set(doc(collection(db, 'ukoPointsLog')), {
+        userId, amount: -AUCTION_LISTING_FEE, type: 'auctionListingFee',
+        meta: { itemId: design.id, itemName: design.name },
+        createdAt: serverTimestamp(),
+      });
       if (totalBonus > 0) {
         // ukoPointsはここでは増やさない(2026-09-20変更): キャンペーンによるボーナス分は
         // 即時付与せず、キャンペーン終了後に24_AccountCenter/adminから送る集計メールの
@@ -362,7 +376,7 @@ export async function createListing(design) {
     return true;
   } catch (e) {
     console.error('[auction] listing failed', e);
-    alert(e.message === 'NO_STOCK' ? s().listNoStock : e.message === 'NO_DUPE' ? s().listNoDupe : e.message === 'NOT_LISTABLE' ? s().listNotListable : s().listFailed);
+    alert(e.message === 'NO_STOCK' ? s().listNoStock : e.message === 'NO_DUPE' ? s().listNoDupe : e.message === 'NOT_LISTABLE' ? s().listNotListable : e.message === 'NO_UP' ? s().listNoUp(AUCTION_LISTING_FEE) : s().listFailed);
     return false;
   }
 }
