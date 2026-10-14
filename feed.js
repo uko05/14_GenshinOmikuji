@@ -2,7 +2,7 @@
 // みんなの結果フィード・いいね・いいね通知・アバター表示
 import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { pickGachaDesign, isStarRailDesign } from './gachaBacks.js?v=14';
+import { pickGachaDesign, isStarRailDesign } from './gachaBacks.js?v=15';
 import { listenWhileVisible } from './visibleListener.js';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
 import {
