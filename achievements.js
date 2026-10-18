@@ -59,7 +59,7 @@ export const ACHIEVEMENT_GROUPS = [
       { id:'streak_7',      rarity:'silver', name:'一週間の旅人',   nameEn:'Week Traveler',       condition:'7日連続でおみくじを引く',           conditionEn:'7-day streak',                         check:(s)=>s.maxStreak>=7 },
       { id:'streak_30',     rarity:'gold',   name:'月の巡り',       nameEn:'Moon Cycle',          condition:'30日連続でおみくじを引く',          conditionEn:'30-day streak',                        check:(s)=>s.maxStreak>=30 },
       { id:'streak_100',    rarity:'gold',   name:'百日の誓い',     nameEn:'Hundred Days',        condition:'100日連続でおみくじを引く',         conditionEn:'100-day streak',                       check:(s)=>s.maxStreak>=100 },
-      { id:'streak_365',    rarity:'legend', name:'永遠の旅人',     nameEn:'Eternal Traveler',    condition:'365日連続でおみくじを引く',         conditionEn:'365-day streak',                       check:(s)=>s.maxStreak>=365 },
+      { id:'streak_200',    rarity:'legend', name:'二百日の巡礼',   nameEn:'Two Hundred Days',    condition:'200日連続でおみくじを引く',         conditionEn:'200-day streak',                       check:(s)=>s.maxStreak>=200 },  // 2026-10-19: 365日連続→200日に変更(累計365回は total_365 があるため)
       { id:'streak_return', rarity:'silver', name:'出戻り旅人',     nameEn:'Returning Traveler',  condition:'途切れた後に再びおみくじを引く',    conditionEn:'Return after a streak break',          check:(s)=>s.hadReturn },
     ],
   },

@@ -5,7 +5,7 @@ import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=51';
-import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=4';
+import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=5';
 import { initSell } from './sell.js?v=5';
 import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=52';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
