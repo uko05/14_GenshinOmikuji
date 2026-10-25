@@ -25,6 +25,7 @@ const STR = {
     feedMore: 'もっと見る',
     notifEmpty: 'まだいいねはありません',
     likeToast: (name) => `${name}さんがいいねしました！`,
+    likeToastMany: (name, n) => `${name}さんたちから${n}件のいいね！`,
     justNow:   'たった今',
     minAgo:    (n) => `${n}分前`,
     hourAgo:   (n) => `${n}時間前`,
@@ -56,6 +57,7 @@ const STR = {
     feedMore: 'Load more',
     notifEmpty: 'No likes yet',
     likeToast: (name) => `${name} liked your fortune!`,
+    likeToastMany: (name, n) => `${n} likes from ${name} and others!`,
     justNow:   'just now',
     minAgo:    (n) => `${n}m ago`,
     hourAgo:   (n) => `${n}h ago`,
@@ -505,17 +507,23 @@ async function toggleLike(entry, likeBtn) {
     await setDoc(doc(db, 'omikujiUsers', entry.userId), { totalLikesReceived: increment(1), ukoPoints: increment(receiveAmount) }, { merge: true });
     await setDoc(doc(db, 'omikujiUsers', myUserId), { totalLikesGiven: increment(1), ukoPoints: increment(giveAmount) }, { merge: true });
 
+    // 通知は「受け取る人×1時間」で1件にまとめ、いいねのたびに件数を足す(2026-10-25、書き込み削減)。
+    // 以前は1いいね1件で、作成・表示済み・24時間後の削除で計3件の書き込みになっていた。
+    // createdAt はその1時間の始まり(固定値)なので、24時間後の削除(likeNotifCleanup)もそのまま効く。
+    // 'shown' は付けない(古い版の画面の「shown==false」の購読に引っかからないように)。
     const myAvatar = await getMyAvatar(myUserId);
-    await addDoc(collection(db, 'omikujiLikeNotifications'), {
+    const hourMs = Math.floor(Date.now() / 3600000) * 3600000;
+    await setDoc(doc(db, 'omikujiLikeNotifications', `${entry.userId}_${hourMs}`), {
       toUserId: entry.userId,
       fromUserId: myUserId,
       fromName: store.name || '',
       fromAvatarGame: myAvatar.game,
       fromAvatarIcon: myAvatar.icon,
       feedId: entry.id,
-      createdAt: serverTimestamp(),
-      shown: false,
-    });
+      createdAt: Timestamp.fromMillis(hourMs),
+      updatedAt: serverTimestamp(),
+      count: increment(1),
+    }, { merge: true });
   } catch (e) {
     console.error('[feed] like failed', e);
   } finally {
@@ -944,7 +952,8 @@ function processLikeToastQueue() {
   const avatarImg = document.getElementById('like-toast-avatar');
   const textEl    = document.getElementById('like-toast-text');
   if (avatarImg) avatarImg.src = avatarUrl(notif.fromAvatarGame, notif.fromAvatarIcon);
-  if (textEl) textEl.textContent = s().likeToast(notif.fromName || s().noName);
+  const fromName = notif.fromName || s().noName;
+  if (textEl) textEl.textContent = (notif.count || 1) > 1 ? s().likeToastMany(fromName, notif.count) : s().likeToast(fromName);
 
   toast.style.display = 'flex';
   void toast.offsetWidth; // reflow
@@ -962,30 +971,48 @@ function processLikeToastQueue() {
   }, 2200); // アチーブトースト(3.2s)より短め
 }
 
-// 自分宛の未表示通知を購読（初回ロード分＋開いている間のリアルタイム分の両方を処理）
-// 24時間以内の通知だけ(2026-10-07)。古い未表示通知がたまった人は開くたびに全部読んでいたため。
+// 自分宛のいいね通知を購読(24時間以内)。2026-10-25 から通知は「1人×1時間」で1件にまとめ、
+// count にいいねの件数が入る。どこまで表示したかはサーバーに書かず、この端末の localStorage に
+// 通知ごとの表示済み件数として覚える(以前は通知1件ごとに shown:true を書き込んでいた)。
+// 1回の更新で届いた分は、最後にいいねした人の名前で1つのトーストにまとめる。
 // 24時間たった通知はサーバー(24_AccountCenter/functions/likeNotifCleanup.js)が消す。
+const LIKE_SEEN_KEY = 'omikujiLikeNotifSeen';
+let likeSeenMem = null;
+function loadLikeSeen() {
+  if (likeSeenMem) return likeSeenMem;
+  try { likeSeenMem = JSON.parse(localStorage.getItem(LIKE_SEEN_KEY) || '{}') || {}; } catch { likeSeenMem = {}; }
+  return likeSeenMem;
+}
+function saveLikeSeen(seen, liveIds) {
+  // もう購読範囲にない(消えた)通知の記録は捨てる
+  for (const id of Object.keys(seen)) if (!liveIds.has(id)) delete seen[id];
+  try { localStorage.setItem(LIKE_SEEN_KEY, JSON.stringify(seen)); } catch {}
+}
+
 function startNotifListener() {
   const myUserId = getUserId();
   const since = Timestamp.fromMillis(Math.floor((Date.now() - 24 * 60 * 60 * 1000) / 3600000) * 3600000);
   const q = query(
     collection(db, 'omikujiLikeNotifications'),
     where('toUserId', '==', myUserId),
-    where('shown', '==', false),
     where('createdAt', '>=', since)
   );
   listenWhileVisible(() => onSnapshot(q, (snap) => {
-    const added = snap.docChanges()
-      .filter((c) => c.type === 'added')
-      .map((c) => ({ id: c.doc.id, ...c.doc.data() }));
-    if (!added.length) return;
-
-    added.sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0));
-    added.forEach((notif) => {
-      showLikeToast(notif);
-      updateDoc(doc(db, 'omikujiLikeNotifications', notif.id), { shown: true })
-        .catch((e) => console.error('[feed] mark shown failed', e));
+    const seen = loadLikeSeen();
+    let total = 0, latest = null, latestMs = -1;
+    snap.docs.forEach((d) => {
+      const n = d.data();
+      if (n.shown === true) return; // 古い形式で表示済みのもの
+      const count = n.count || 1;
+      const fresh = count - (seen[d.id] || 0);
+      if (fresh <= 0) return;
+      seen[d.id] = count;
+      total += fresh;
+      const ms = n.updatedAt?.toMillis?.() ?? n.createdAt?.toMillis?.() ?? 0;
+      if (ms >= latestMs) { latestMs = ms; latest = n; }
     });
+    saveLikeSeen(seen, new Set(snap.docs.map((d) => d.id)));
+    if (total > 0 && latest) showLikeToast({ ...latest, count: total });
   }, (err) => console.error('[feed] notif listen failed', err)));
 }
 
