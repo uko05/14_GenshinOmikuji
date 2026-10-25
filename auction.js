@@ -2,7 +2,7 @@
 // 裏面デザインの出品（閲覧・入札・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=53';
+import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=54';
 import { listenWhileVisible } from './visibleListener.js';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
 import { isStarRailDesign } from './gachaBacks.js?v=17';
@@ -25,7 +25,7 @@ export const AUCTION_LISTING_FEE   = 5;
 // 1人が同時に出品できる件数の上限(2026-10-02追加)。うーこオークションの一覧は出品中の
 // 全件を読み込むため、出品中の件数がそのまま読み取り課金になる。直近7日で6,871件出品・
 // 落札は約1割で、上位数人が数百件ずつ出していたため上限を設けた。
-export const MAX_ACTIVE_LISTINGS_PER_USER = 30; // 2026-10-07に50→30
+export const MAX_ACTIVE_LISTINGS_PER_USER = 20; // 2026-10-07に50→30、2026-10-25に30→20
 // 出品期間は固定24時間(2026-09-20に48時間の選択肢を廃止し、選べなくした)。
 const AUCTION_DURATION_HOURS = 24;
 

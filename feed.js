@@ -22,6 +22,7 @@ const STR = {
   ja: {
     noName:    '名無しの旅人',
     feedEmpty: 'まだ結果がありません',
+    feedMore: 'もっと見る',
     notifEmpty: 'まだいいねはありません',
     likeToast: (name) => `${name}さんがいいねしました！`,
     justNow:   'たった今',
@@ -52,6 +53,7 @@ const STR = {
   en: {
     noName:    'Nameless Traveler',
     feedEmpty: 'No results yet',
+    feedMore: 'Load more',
     notifEmpty: 'No likes yet',
     likeToast: (name) => `${name} liked your fortune!`,
     justNow:   'just now',
@@ -577,6 +579,7 @@ function renderFeedList(entries) {
   const list = document.getElementById('feed-list');
   if (!list) return;
   const myUserId = getUserId();
+  const keepScroll = list.scrollTop; // 描き直しても見ていた位置のままにする(「もっと見る」・いいねの後など)
   list.innerHTML = '';
 
   const visibleEntries = entries;
@@ -719,6 +722,18 @@ function renderFeedList(entries) {
 
     list.appendChild(item);
   });
+
+  // 続きの投稿(最初は50件だけ読む。2026-10-25)
+  if (feedHasMore && visibleEntries.length < FEED_LIMIT) {
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'feed-like-btn feed-more-btn';
+    more.textContent = s().feedMore;
+    more.disabled = loadingMoreFeed;
+    more.addEventListener('click', loadMoreFeed);
+    list.appendChild(more);
+  }
+  list.scrollTop = keepScroll;
 }
 
 async function deleteFeedEntry(feedId) {
@@ -762,7 +777,13 @@ function getFeedSince() {
 // 画面を開いている全員に1件ずつ読み取りが発生していた(いいねは1日約1万件、閲覧者の数だけ倍になる)。
 // 今は「開いた時に1回だけ200件読む」+「一番新しい投稿1件だけを見張り、新しい投稿が来たら
 // 増えた分だけ追加で読む」。他の人のいいね数は開き直すまで更新しない(自分のいいねはその場で反映)。
+// 2026-10-25: 開いた時に読むのは新しい50件だけにし、続きは「もっと見る」で50件ずつ(最大200件)読む。
+// 開くたびに200件を読んでいたのが、おみくじの読み取りでいちばん大きかったため
 const FEED_LIMIT = 200;
+const FEED_PAGE = 50;
+let feedHasMore = false;
+let loadingMoreFeed = false;
+let stopMyLikes = null; // 自分のいいねの購読(続きを読んだら範囲を広げて張り直す)
 let feedNewestMs = 0;
 const feedCreatedMs = (e) => e.createdAt?.toMillis?.() || 0;
 
@@ -771,11 +792,12 @@ async function loadFeedInitial() {
     collection(db, 'omikujiFeed'),
     where('createdAt', '>=', getFeedSince()),
     orderBy('createdAt', 'desc'),
-    limit(FEED_LIMIT)
+    limit(FEED_PAGE)
   );
   try {
     const snap = await getDocs(q);
     latestFeedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    feedHasMore = snap.size === FEED_PAGE;
     feedNewestMs = Math.max(0, ...latestFeedEntries.map(feedCreatedMs));
     renderFeedList(latestFeedEntries);
   } catch (err) {
@@ -814,11 +836,41 @@ async function fetchNewerFeed() {
   }
 }
 
+const oldestFeedMs = () => Math.min(...latestFeedEntries.map(feedCreatedMs).filter((x) => x > 0), Date.now());
+
+// 「もっと見る」: 今出ている一番古い投稿より前の50件を読む
+async function loadMoreFeed() {
+  if (loadingMoreFeed || !feedHasMore) return;
+  loadingMoreFeed = true;
+  renderFeedList(latestFeedEntries);
+  try {
+    const q = query(
+      collection(db, 'omikujiFeed'),
+      where('createdAt', '>=', getFeedSince()),
+      where('createdAt', '<', Timestamp.fromMillis(oldestFeedMs())),
+      orderBy('createdAt', 'desc'),
+      limit(Math.min(FEED_PAGE, FEED_LIMIT - latestFeedEntries.length))
+    );
+    const snap = await getDocs(q);
+    const known = new Set(latestFeedEntries.map((e) => e.id));
+    const older = snap.docs.filter((d) => !known.has(d.id)).map((d) => ({ id: d.id, ...d.data() }));
+    latestFeedEntries = [...latestFeedEntries, ...older];
+    feedHasMore = snap.size === FEED_PAGE && latestFeedEntries.length < FEED_LIMIT;
+    // 自分のいいねの購読を、新しく出た投稿の分まで広げる
+    if (older.length) startMyLikesListener(oldestFeedMs());
+  } catch (err) {
+    console.error('[feed] load more failed', err);
+  } finally {
+    loadingMoreFeed = false;
+    renderFeedList(latestFeedEntries);
+  }
+}
+
 function startFeedListener() {
   loadFeedInitial().then(() => {
     // 自分のいいね一覧は、フィードに出ている一番古い投稿以降の分だけ読めば足りる
     // (いいねは必ず投稿より後なので漏れない)。フィードが読めてから始める
-    startMyLikesListener(Math.min(...latestFeedEntries.map(feedCreatedMs).filter((x) => x > 0), Date.now()));
+    startMyLikesListener(oldestFeedMs());
     const newestQ = query(collection(db, 'omikujiFeed'), orderBy('createdAt', 'desc'), limit(1));
     listenWhileVisible(() => onSnapshot(newestQ, (snap) => {
       if (snap.metadata.hasPendingWrites) return; // 自分の投稿の送信中(作成日時がまだ入っていない)
@@ -861,7 +913,8 @@ function startMyLikesListener(oldestPostMs) {
     where('likerUserId', '==', myUserId),
     where('likedAt', '>=', Timestamp.fromMillis(sinceMs))
   );
-  listenWhileVisible(() => onSnapshot(q, (snap) => {
+  if (stopMyLikes) stopMyLikes();
+  stopMyLikes = listenWhileVisible(() => onSnapshot(q, (snap) => {
     myLikedIds.clear();
     snap.docs.forEach((d) => {
       const feedId = d.ref.parent.parent?.id;
@@ -972,10 +1025,18 @@ function startStatsFooterListener() {
 }
 
 // ===== メール未読バッジ（リアルタイム） =====
+// 期限が切れていないメールだけを読む(2026-10-25)。以前は期限切れも含めて新しい順に50通を読んでいた
+// (98通のうち受け取れるのは1通だけで、開くたびに約50件の読み取り)。無期限のメールは2099年末の期限で保存している。
+// 1時間単位に切り捨てるのはキャッシュを効かせるため(少し前に切れたメールは mailIsVisible で除く)
+function liveMailQuery() {
+  const since = Timestamp.fromMillis(Math.floor(Date.now() / 3600000) * 3600000);
+  return query(collection(db, 'omikujiMailBroadcasts'), where('expiresAt', '>', since), orderBy('expiresAt', 'asc'), limit(50));
+}
+const byCreatedDesc = (a, b) => (b.data().createdAt?.toMillis?.() || 0) - (a.data().createdAt?.toMillis?.() || 0);
+
 function startMailBadgeListener() {
-  const q = query(collection(db, 'omikujiMailBroadcasts'), orderBy('createdAt', 'desc'), limit(50));
-  listenWhileVisible(() => onSnapshot(q, (snap) => {
-    latestMailDocs = snap.docs;
+  listenWhileVisible(() => onSnapshot(liveMailQuery(), (snap) => {
+    latestMailDocs = [...snap.docs].sort(byCreatedDesc);
     updateMailBadge();
   }, (err) => console.error('[feed] mail badge listen failed', err)));
 }
@@ -1247,11 +1308,11 @@ async function openMailPanel() {
   try {
     const myUserId = getUserId();
     const [mailSnap, userSnap] = await Promise.all([
-      getDocs(query(collection(db, 'omikujiMailBroadcasts'), orderBy('createdAt', 'desc'), limit(50))),
+      getDocs(liveMailQuery()),
       getDoc(doc(db, 'omikujiUsers', myUserId)),
     ]);
 
-    const visibleDocs = mailSnap.docs.filter((docSnap) => mailIsVisible(docSnap, myUserId));
+    const visibleDocs = [...mailSnap.docs].sort(byCreatedDesc).filter((docSnap) => mailIsVisible(docSnap, myUserId));
 
     if (visibleDocs.length === 0) {
       const p = document.createElement('p');
