@@ -8,7 +8,7 @@ import { ensureLatestVersion } from './versionGuard.js?v=2';
 import {
   collection, collectionGroup, doc, addDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, serverTimestamp, increment, arrayUnion, runTransaction, Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-import { getDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getDoc, getDocs, getDocsFromCache, onSnapshot } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { genshinChars } from 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/chara_data/genshin_chars.js';
 import { starrailChars } from 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/02_Starrail/chara_data/starrail_chars.js';
@@ -458,7 +458,7 @@ async function toggleLike(entry, likeBtn) {
     const already  = await getDoc(likeRef);
 
     if (already.exists()) {
-      if (!privileged) { myLikedIds.add(entry.id); return; }
+      if (!privileged) { myLikedIds.add(entry.id); rememberMyLike(entry.id, true); return; }
       // デバッガー・管理者: 確認用にいいねを取り消して再度押せる状態に戻す
       // (再描画をトリガーするlikeCount更新より先にローカル状態を更新し、再描画時の色反映ズレを防ぐ)
       // ブースト分は「いいねした時点」の状態で決まる(giveAmount/receiveAmount)ので、
@@ -469,6 +469,7 @@ async function toggleLike(entry, likeBtn) {
       const receiveAmount = prev.receiveAmount || 2;
       await deleteDoc(likeRef);
       myLikedIds.delete(entry.id);
+      rememberMyLike(entry.id, false);
       likeBtn.classList.remove('liked');
       await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(-1) });
       bumpLocalLikeCount(entry.id, -1);
@@ -501,6 +502,7 @@ async function toggleLike(entry, likeBtn) {
       likedAt: serverTimestamp(), likerUserId: myUserId, receiverUserId: entry.userId, giveAmount, receiveAmount,
     });
     myLikedIds.add(entry.id);
+    rememberMyLike(entry.id, true);
     likeBtn.classList.add('liked');
     await updateDoc(doc(db, 'omikujiFeed', entry.id), { likeCount: increment(1) });
     bumpLocalLikeCount(entry.id, 1);
@@ -791,9 +793,18 @@ const FEED_LIMIT = 200;
 const FEED_PAGE = 50;
 let feedHasMore = false;
 let loadingMoreFeed = false;
-let stopMyLikes = null; // 自分のいいねの購読(続きを読んだら範囲を広げて張り直す)
 let feedNewestMs = 0;
 const feedCreatedMs = (e) => e.createdAt?.toMillis?.() || 0;
+
+const FEED_CACHE_KEY = 'omikujiFeedServerAt';
+const FEED_CACHE_MS = 30 * 60 * 1000;
+
+function setFeedEntries(snap) {
+  latestFeedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  feedHasMore = snap.size === FEED_PAGE;
+  feedNewestMs = Math.max(0, ...latestFeedEntries.map(feedCreatedMs));
+  renderFeedList(latestFeedEntries);
+}
 
 async function loadFeedInitial() {
   const q = query(
@@ -802,12 +813,27 @@ async function loadFeedInitial() {
     orderBy('createdAt', 'desc'),
     limit(FEED_PAGE)
   );
+  // 2026-10-25: 前回サーバーから読んでから30分以内なら、端末のキャッシュ(firebaseConfig.js の
+  // 永続キャッシュ)から出して、新着だけをサーバーから読む(開き直すたびに50件読むのをやめる)。
+  // 他の人のいいね数は最大30分古いまま。自分のいいねはキャッシュにも反映されている。
+  let cachedAt = 0;
+  try { cachedAt = Number(localStorage.getItem(FEED_CACHE_KEY)) || 0; } catch {}
+  if (Date.now() - cachedAt < FEED_CACHE_MS) {
+    try {
+      const snap = await getDocsFromCache(q);
+      if (snap.size > 0) {
+        setFeedEntries(snap);
+        await fetchNewerFeed();
+        return;
+      }
+    } catch (err) {
+      // キャッシュが使えない環境ではサーバーから読む
+    }
+  }
   try {
     const snap = await getDocs(q);
-    latestFeedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    feedHasMore = snap.size === FEED_PAGE;
-    feedNewestMs = Math.max(0, ...latestFeedEntries.map(feedCreatedMs));
-    renderFeedList(latestFeedEntries);
+    setFeedEntries(snap);
+    try { localStorage.setItem(FEED_CACHE_KEY, String(Date.now())); } catch {}
   } catch (err) {
     console.error('[feed] load failed', err);
   }
@@ -865,7 +891,7 @@ async function loadMoreFeed() {
     latestFeedEntries = [...latestFeedEntries, ...older];
     feedHasMore = snap.size === FEED_PAGE && latestFeedEntries.length < FEED_LIMIT;
     // 自分のいいねの購読を、新しく出た投稿の分まで広げる
-    if (older.length) startMyLikesListener(oldestFeedMs());
+    if (older.length) await ensureMyLikes(oldestFeedMs());
   } catch (err) {
     console.error('[feed] load more failed', err);
   } finally {
@@ -878,7 +904,7 @@ function startFeedListener() {
   loadFeedInitial().then(() => {
     // 自分のいいね一覧は、フィードに出ている一番古い投稿以降の分だけ読めば足りる
     // (いいねは必ず投稿より後なので漏れない)。フィードが読めてから始める
-    startMyLikesListener(oldestFeedMs());
+    ensureMyLikes(oldestFeedMs());
     const newestQ = query(collection(db, 'omikujiFeed'), orderBy('createdAt', 'desc'), limit(1));
     listenWhileVisible(() => onSnapshot(newestQ, (snap) => {
       if (snap.metadata.hasPendingWrites) return; // 自分の投稿の送信中(作成日時がまだ入っていない)
@@ -904,33 +930,87 @@ function bumpLocalLikeCount(feedId, delta) {
   renderFeedList(latestFeedEntries);
 }
 
-// 自分が過去にいいねした投稿一覧をリアルタイム購読し、リロード直後や他端末での
-// いいねでもボタンの色・disabled状態が正しく反映されるようにする。
-// フィードの起点以降にいいねしたものだけに絞る(2026-09-27、読み取り削減)。フィードに
-// 出る投稿はすべて起点以降の投稿で、そこへのいいねは必ず投稿より後なので、ボタンの表示に
-// 必要なものは漏れない(以前は全期間分を読んでおり、ヘビーユーザーは1回で数千〜1万件超)。
-// collectionGroup('likes')の(likerUserId, likedAt)複合インデックスが必要。
-// 2026-10-08: 範囲を「フィードの起点(48時間前)以降」から「フィードに出ている一番古い投稿以降」に縮めた。
-// フィードの200件はここ数時間分なので、1日に何百件もいいねする人でも読み取りが大きく減る
-// (以前は開くたびに48時間分、多い人で約2,000件を読んでいた)。1時間単位に切り捨てるのはキャッシュを効かせるため。
-function startMyLikesListener(oldestPostMs) {
-  const myUserId = getUserId();
-  const sinceMs = Math.floor((oldestPostMs || Date.now()) / 3600000) * 3600000;
-  const q = query(
-    collectionGroup(db, 'likes'),
-    where('likerUserId', '==', myUserId),
-    where('likedAt', '>=', Timestamp.fromMillis(sinceMs))
-  );
-  if (stopMyLikes) stopMyLikes();
-  stopMyLikes = listenWhileVisible(() => onSnapshot(q, (snap) => {
-    myLikedIds.clear();
-    snap.docs.forEach((d) => {
-      const feedId = d.ref.parent.parent?.id;
-      if (feedId) myLikedIds.add(feedId);
-    });
-    renderFeedList(latestFeedEntries);
-  }, (err) => console.error('[feed] my-likes listen failed', err)));
+// 自分がいいねした投稿(ボタンの色・押せるかどうか)は、この端末の localStorage に記録する(2026-10-25)。
+// 以前は開くたびに「フィードに出ている一番古い投稿以降の自分のいいね」をリアルタイム購読しており、
+// おみくじの読み取りでいちばん大きかった。サーバーから読むのは、この端末で1日1回と、
+// 「もっと見る」でまだ確かめていない古い時間帯の投稿が出た時だけ。
+// 別の端末で押したいいねは、次にサーバーから読むまでボタンに出ないことがあるが、
+// 押してもいいねの記録があれば二重にはならない(toggleLike で確認している)。
+// collectionGroup('likes') の (likerUserId, likedAt) 複合インデックスを使う。
+const MY_LIKES_KEEP_MS = 3 * 24 * 3600000; // フィードは48時間分なので、それより古い記録は捨てる
+const MY_LIKES_SYNC_MS = 24 * 3600000;
+const myLikesKey = () => `omikujiMyLikes_${getUserId()}`;
+let myLikesStore = null; // { likes: { feedId: いいねした時刻 }, syncedAt, syncedFromMs }
+
+function loadMyLikesStore() {
+  const key = myLikesKey(); // アカウント連携でIDが変わった時に別の人の記録を使わないよう、キーごとに持つ
+  if (myLikesStore && myLikesStore.key === key) return myLikesStore;
+  let v = null;
+  try { v = JSON.parse(localStorage.getItem(key) || 'null'); } catch {}
+  myLikesStore = (v && v.likes && typeof v.likes === 'object') ? v : { likes: {}, syncedAt: 0, syncedFromMs: null };
+  myLikesStore.key = key;
+  return myLikesStore;
 }
+
+function saveMyLikesStore() {
+  const st = loadMyLikesStore();
+  const cutoff = Date.now() - MY_LIKES_KEEP_MS;
+  for (const [id, at] of Object.entries(st.likes)) if (at < cutoff) delete st.likes[id];
+  try { localStorage.setItem(myLikesKey(), JSON.stringify(st)); } catch {}
+}
+
+function applyMyLikes() {
+  myLikedIds.clear();
+  Object.keys(loadMyLikesStore().likes).forEach((id) => myLikedIds.add(id));
+}
+
+function rememberMyLike(feedId, on) {
+  const st = loadMyLikesStore();
+  if (on) st.likes[feedId] = st.likes[feedId] || Date.now();
+  else delete st.likes[feedId];
+  saveMyLikesStore();
+}
+
+async function fetchMyLikes(fromMs, toMs) {
+  const conds = [where('likerUserId', '==', getUserId()), where('likedAt', '>=', Timestamp.fromMillis(fromMs))];
+  if (toMs) conds.push(where('likedAt', '<', Timestamp.fromMillis(toMs)));
+  const snap = await getDocs(query(collectionGroup(db, 'likes'), ...conds));
+  const st = loadMyLikesStore();
+  snap.docs.forEach((d) => {
+    const feedId = d.ref.parent.parent?.id;
+    if (feedId) st.likes[feedId] = d.data().likedAt?.toMillis?.() || Date.now();
+  });
+}
+
+// フィードに出ている一番古い投稿の時刻を受け取り、その時刻以降の自分のいいねがそろっている状態にする
+async function ensureMyLikes(oldestPostMs) {
+  const st = loadMyLikesStore();
+  const fromMs = Math.floor((oldestPostMs || Date.now()) / 3600000) * 3600000;
+  const now = Date.now();
+  try {
+    if (!st.syncedAt || now - st.syncedAt > MY_LIKES_SYNC_MS || st.syncedFromMs == null) {
+      await fetchMyLikes(fromMs, null);
+      st.syncedAt = now;
+      st.syncedFromMs = fromMs;
+    } else if (fromMs < st.syncedFromMs) {
+      await fetchMyLikes(fromMs, st.syncedFromMs);
+      st.syncedFromMs = fromMs;
+    }
+  } catch (err) {
+    console.error('[feed] my-likes fetch failed', err);
+  }
+  saveMyLikesStore();
+  applyMyLikes();
+  renderFeedList(latestFeedEntries);
+}
+
+// 同じ端末の別タブで押したいいねも反映する
+window.addEventListener('storage', (e) => {
+  if (e.key !== myLikesKey()) return;
+  myLikesStore = null;
+  applyMyLikes();
+  renderFeedList(latestFeedEntries);
+});
 
 // ===== いいね通知トースト（アチーブトーストと同じキュー方式・薄め短時間） =====
 let likeToastQueue = [];
