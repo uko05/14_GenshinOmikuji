@@ -154,13 +154,17 @@ function avatarUrl(game, icon) {
   return (game === 'starrail' ? STARRAIL_ICON_BASE : GENSHIN_ICON_BASE) + icon;
 }
 
+// 開いている間は、読んだアバターを使い回す(2026-10-26、読み取り削減。いいねのたびに読んでいた)。
+// このページで変えた時は selectAvatarFromPicker が更新する。他のサイトで変えた分は開き直すと反映される。
+const avatarCache = new Map();
 async function getMyAvatar(userId) {
+  if (avatarCache.has(userId)) return avatarCache.get(userId);
   try {
     const snap = await getDoc(doc(db, 'userAvatars', userId));
-    if (snap.exists()) {
-      const d = snap.data();
-      return { game: d.game || null, icon: d.icon || null };
-    }
+    const d = snap.exists() ? snap.data() : {};
+    const v = { game: d.game || null, icon: d.icon || null };
+    avatarCache.set(userId, v);
+    return v;
   } catch (e) { console.error('[feed] avatar fetch failed', e); }
   return { game: null, icon: null };
 }
@@ -299,6 +303,7 @@ async function selectAvatarFromPicker(game, icon) {
     await setDoc(doc(db, 'userAvatars', getUserId()), {
       game, icon, updatedAt: serverTimestamp(),
     });
+    avatarCache.set(getUserId(), { game: game || null, icon: icon || null });
     const img = document.getElementById('player-avatar');
     if (img) img.src = avatarUrl(game, icon);
     syncLatestFeedAvatar(getUserId(), { game, icon });
@@ -446,6 +451,19 @@ async function loadFeedDebuggerRole() {
   }
 }
 
+// 相手が「モラいいねUPアップ」中かどうかは、同じ相手なら10分間使い回す(2026-10-26、読み取り削減)。
+// 相手が特典を買った直後の最大10分は、受け取りが+3ではなく+2になることがある。
+const RECEIVE_BOOST_CACHE_MS = 10 * 60 * 1000;
+const receiveBoostCache = new Map(); // userId -> { until, at }
+async function getReceiveBoostUntil(userId) {
+  const c = receiveBoostCache.get(userId);
+  if (c && Date.now() - c.at < RECEIVE_BOOST_CACHE_MS) return c.until;
+  const snap = await getDoc(doc(db, 'omikujiUsers', userId));
+  const until = snap.exists() ? (snap.data().sitePerks?.omikuji?.likeReceiveBoostUntil?.toMillis?.() || 0) : 0;
+  receiveBoostCache.set(userId, { until, at: Date.now() });
+  return until;
+}
+
 async function toggleLike(entry, likeBtn) {
   const myUserId = getUserId();
   const privileged = isFeedDebugger;
@@ -455,10 +473,12 @@ async function toggleLike(entry, likeBtn) {
   likeBtn.disabled = true;
   try {
     const likeRef = doc(db, 'omikujiFeed', entry.id, 'likes', myUserId);
-    const already  = await getDoc(likeRef);
+    // いいね済みかどうかを先に読むのは管理者だけ(取り消して押し直せるため)。一般の人は読まずに
+    // そのまま書き、すでにいいね済みならルール(likes は作成のみで上書き不可)で拒否されるので、
+    // それを「いいね済み」として扱う(2026-10-26、読み取り削減)。
+    const already = privileged ? await getDoc(likeRef) : null;
 
-    if (already.exists()) {
-      if (!privileged) { myLikedIds.add(entry.id); rememberMyLike(entry.id, true); return; }
+    if (already && already.exists()) {
       // デバッガー・管理者: 確認用にいいねを取り消して再度押せる状態に戻す
       // (再描画をトリガーするlikeCount更新より先にローカル状態を更新し、再描画時の色反映ズレを防ぐ)
       // ブースト分は「いいねした時点」の状態で決まる(giveAmount/receiveAmount)ので、
@@ -488,19 +508,27 @@ async function toggleLike(entry, likeBtn) {
     const myGiveBoostUntil = store.sitePerks?.omikuji?.likeGiveBoostUntil?.toMillis?.() || 0;
     const giveAmount = myGiveBoostUntil > now ? 2 : 1;
 
-    const targetSnap = await getDoc(doc(db, 'omikujiUsers', entry.userId));
-    const targetReceiveBoostUntil = targetSnap.exists()
-      ? (targetSnap.data().sitePerks?.omikuji?.likeReceiveBoostUntil?.toMillis?.() || 0)
-      : 0;
+    const targetReceiveBoostUntil = await getReceiveBoostUntil(entry.userId);
     const receiveAmount = targetReceiveBoostUntil > now ? 3 : 2;
 
     // receiverUserId: このいいねドキュメント自体(likes/{likerUserId})はentry.idの下に
     // ぶら下がっているので誰の投稿かはentry.userIdでしか分からない。管理者画面のUP取得
     // 履歴でcollectionGroup('likes')横断検索から「誰が受け取ったか」を直接引けるように、
     // 冗長でもここにコピーしておく(2026-09-19追加)。
-    await setDoc(likeRef, {
-      likedAt: serverTimestamp(), likerUserId: myUserId, receiverUserId: entry.userId, giveAmount, receiveAmount,
-    });
+    try {
+      await setDoc(likeRef, {
+        likedAt: serverTimestamp(), likerUserId: myUserId, receiverUserId: entry.userId, giveAmount, receiveAmount,
+      });
+    } catch (e) {
+      if (e?.code === 'permission-denied') {
+        // 別の端末などで、すでにいいね済み
+        myLikedIds.add(entry.id);
+        rememberMyLike(entry.id, true);
+        likeBtn.classList.add('liked');
+        return;
+      }
+      throw e;
+    }
     myLikedIds.add(entry.id);
     rememberMyLike(entry.id, true);
     likeBtn.classList.add('liked');
