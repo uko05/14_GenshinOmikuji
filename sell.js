@@ -8,9 +8,9 @@
 //   UPが増える抜け道にならないようにしている
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { isAccountLoggedIn } from './feed.js?v=57';
+import { isAccountLoggedIn } from './feed.js?v=58';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
-import { GACHA_DESIGNS } from './gachaBacks.js?v=17';
+import { GACHA_DESIGNS } from './gachaBacks.js?v=18';
 import {
   collection, doc, runTransaction, serverTimestamp, increment,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
