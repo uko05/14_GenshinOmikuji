@@ -1,8 +1,8 @@
 // gachaBacks.js
-// 裏面デザインガチャの画像一覧(99_SharedImage/01_Genshin/Omikuji/GachaBacksに配置、back_Custom_001〜552、JPEG)
+// 裏面デザインガチャの画像一覧(99_SharedImage/01_Genshin/Omikuji/GachaBacksに配置、back_Custom_001〜553、JPEG)
 export const GACHA_IMG_BASE = 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/Omikuji/GachaBacks/';
 
-export const GACHA_DESIGNS = Array.from({ length: 552 }, (_, i) => {
+export const GACHA_DESIGNS = Array.from({ length: 553 }, (_, i) => {
   const num = String(i + 1).padStart(3, '0');
   return {
     id: `custom_${num}`,
