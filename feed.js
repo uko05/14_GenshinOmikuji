@@ -825,7 +825,8 @@ let feedNewestMs = 0;
 const feedCreatedMs = (e) => e.createdAt?.toMillis?.() || 0;
 
 const FEED_CACHE_KEY = 'omikujiFeedServerAt';
-const FEED_CACHE_MS = 30 * 60 * 1000;
+// 2026-10-31: 30分→3時間(よく使う人は1日に何十回も開き直し、そのたびに50件読んでいた)
+const FEED_CACHE_MS = 3 * 60 * 60 * 1000;
 
 function setFeedEntries(snap) {
   latestFeedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -843,7 +844,7 @@ async function loadFeedInitial() {
   );
   // 2026-10-25: 前回サーバーから読んでから30分以内なら、端末のキャッシュ(firebaseConfig.js の
   // 永続キャッシュ)から出して、新着だけをサーバーから読む(開き直すたびに50件読むのをやめる)。
-  // 他の人のいいね数は最大30分古いまま。自分のいいねはキャッシュにも反映されている。
+  // 他の人のいいね数は最大3時間古いまま(2026-10-31 に30分から延長)。自分のいいねはキャッシュにも反映されている。
   let cachedAt = 0;
   try { cachedAt = Number(localStorage.getItem(FEED_CACHE_KEY)) || 0; } catch {}
   if (Date.now() - cachedAt < FEED_CACHE_MS) {
@@ -883,6 +884,17 @@ async function fetchNewerFeed() {
       limit(50)
     );
     const snap = await getDocs(q);
+    // 新着が50件以上あった(キャッシュから出した後など)場合は、手元の投稿との間が抜けるので、
+    // 新しい50件だけに入れ替える(続きは「もっと見る」で読める)
+    if (snap.size >= 50) {
+      latestFeedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      feedHasMore = true;
+      feedNewestMs = Math.max(0, ...latestFeedEntries.map(feedCreatedMs));
+      try { localStorage.setItem(FEED_CACHE_KEY, String(Date.now())); } catch {}
+      renderFeedList(latestFeedEntries);
+      ensureMyLikes(oldestFeedMs());
+      return;
+    }
     const known = new Set(latestFeedEntries.map((e) => e.id));
     const fresh = snap.docs.filter((d) => !known.has(d.id)).map((d) => ({ id: d.id, ...d.data() }));
     if (fresh.length) {
