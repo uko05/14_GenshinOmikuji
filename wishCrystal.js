@@ -171,6 +171,7 @@ export async function useWishCrystal(design) {
       const snap = await tx.get(ref);
       if (!snap.exists()) throw new Error('NO_USER_DOC');
       const have = snap.data().sitePerks?.omikuji?.wishCrystals || 0;
+      const userName = snap.data().name || store.name || '';
       if (have < 1) throw new Error('NO_CRYSTAL');
       tx.update(ref, {
         'sitePerks.omikuji.wishCrystals': increment(-1),
@@ -180,7 +181,7 @@ export async function useWishCrystal(design) {
       // 管理画面(24_AccountCenter/admin の「願いの結晶の履歴」)用の記録。UPは動かないので金額は0
       tx.set(doc(collection(db, 'ukoPointsLog')), {
         userId, amount: 0, type: 'wishCrystalUse',
-        meta: { itemId: design.id, itemName: design.name },
+        meta: { itemId: design.id, itemName: design.name, userName },
         createdAt: serverTimestamp(),
       });
     });

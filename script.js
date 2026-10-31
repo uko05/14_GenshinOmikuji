@@ -9,7 +9,7 @@ import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=5';
 import { initSell } from './sell.js?v=19';
 import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=68';
 import { renderNewBacksTicker } from './newBacks.js?v=3';
-import { isWishEnabled, getWishCrystals, getWishLockedCount, isWishSelectMode, renderWishBar, useWishCrystal, wishStr } from './wishCrystal.js?v=3';
+import { isWishEnabled, getWishCrystals, getWishLockedCount, isWishSelectMode, renderWishBar, useWishCrystal, wishStr } from './wishCrystal.js?v=4';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
 import { db } from './firebaseConfig.js';
 import {
