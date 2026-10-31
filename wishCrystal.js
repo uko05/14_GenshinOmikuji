@@ -5,13 +5,13 @@
 // - 持っている裏面も選べる。スタレ裏面は選べない。
 // - 結晶で手に入れた枚数は cardBacksLocked.{裏面ID} に数えておき、その分はオークションに出品できない
 //   (auction.js の createListing が「持っている枚数 − この枚数」で判定)。一括売却(sell.js)では売れる。
-// - 使ったことはみんなの結果(フィード)には出さない。
+// - 使ったことはみんなの結果(フィード)には出さない。管理画面で見られるよう ukoPointsLog に type 'wishCrystalUse' で残す。
 // 2026-11-01に一般公開。WISH_ADMIN_ONLY を true に戻すと、管理者ロールの人にだけ結晶の表示・使う操作を出す。
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
 import { isStarRailDesign } from './gachaBacks.js?v=23';
-import { doc, runTransaction, increment } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { doc, collection, runTransaction, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const WISH_ADMIN_ONLY = false;
 
@@ -164,7 +164,8 @@ export async function useWishCrystal(design) {
   if (!(await openConfirm(design))) return false;
   if (!(await ensureLatestVersion())) return false;
 
-  const ref = doc(db, 'omikujiUsers', getUserId());
+  const userId = getUserId();
+  const ref = doc(db, 'omikujiUsers', userId);
   try {
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(ref);
@@ -175,6 +176,12 @@ export async function useWishCrystal(design) {
         'sitePerks.omikuji.wishCrystals': increment(-1),
         [`cardBacks.${design.id}`]: increment(1),
         [`cardBacksLocked.${design.id}`]: increment(1),
+      });
+      // 管理画面(24_AccountCenter/admin の「願いの結晶の履歴」)用の記録。UPは動かないので金額は0
+      tx.set(doc(collection(db, 'ukoPointsLog')), {
+        userId, amount: 0, type: 'wishCrystalUse',
+        meta: { itemId: design.id, itemName: design.name },
+        createdAt: serverTimestamp(),
       });
     });
   } catch (e) {
