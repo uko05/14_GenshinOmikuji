@@ -1170,6 +1170,8 @@ function startStatsFooterListener() {
       store.sitePerks = d.sitePerks;
       window.dispatchEvent(new CustomEvent('newBacksTickerUnlockChanged'));
     }
+    // 願いの結晶の個数・結晶で手に入れた(出品できない)枚数を wishCrystal.js へ渡す
+    window.dispatchEvent(new CustomEvent('omikujiUserDocChanged', { detail: d }));
     latestClaimedMailIds = new Set(d.claimedMailIds || []);
     if (upEl)    upEl.textContent    = d.ukoPoints || 0;
     if (gachaEl) gachaEl.textContent = latestGachaTickets;

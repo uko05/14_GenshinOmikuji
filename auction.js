@@ -2,7 +2,7 @@
 // 裏面デザインの出品（閲覧・入札・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=64';
+import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=65';
 import { listenWhileVisible } from './visibleListener.js';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
 import { isStarRailDesign } from './gachaBacks.js?v=23';
@@ -55,6 +55,8 @@ let isAdminRole = false;
   }
   renderCampaignBanner();
   renderNewBacksTicker({ isAdmin: isAdminRole }); // 新着裏面の帯(NEW_BACKS_ADMIN_ONLYのときは管理者だけ)にも同じロールを使う
+  // 願いの結晶(試験中は管理者だけ、wishCrystal.js)にも同じロールを渡す
+  window.dispatchEvent(new CustomEvent('omikujiAdminRoleLoaded', { detail: { isAdmin: isAdminRole } }));
 })();
 
 function isCampaignActiveNow(c) {
@@ -219,6 +221,7 @@ const STR = {
     listNoDupe: '出品できるのはダブり（2枚以上持っているもの）だけです。',
     listNoUp: (fee) => `出品手数料（${fee}UP）が足りません。`,
     listNotListable: 'スタレ裏面はオークションに出品できません。',
+    listWishLocked: '願いの結晶で手に入れた裏面はオークションに出品できません。',
     listLimitReached: (max) => `同時に出品できるのは${max}件までです。出品中のアイテムが落札されるか、期限が切れてから出品してください。`,
     listFailed: '出品に失敗しました。時間をおいて再度お試しください。',
     listDone: '出品しました。うーこオークションで確認できます。',
@@ -230,6 +233,7 @@ const STR = {
     listNoDupe: 'Only duplicates (2 or more) can be listed.',
     listNoUp: (fee) => `You need ${fee} UP for the listing fee.`,
     listNotListable: 'Star Rail card backs cannot be listed.',
+    listWishLocked: 'Card backs obtained with a Wish Crystal cannot be listed.',
     listLimitReached: (max) => `You can have up to ${max} active listings at a time. Please wait until some of them sell or expire.`,
     listFailed: 'Failed to list. Please try again later.',
     listDone: 'Listed! You can check it on Uko Auction.',
@@ -290,6 +294,8 @@ export async function createListing(design) {
   if (!design) return;
   if (!(await ensureLatestVersion())) return;
   if (isStarRailDesign(design.id)) { alert(s().listNotListable); return false; }
+  // 願いの結晶で手に入れた枚数(cardBacksLocked)は出品できない(2026-11-01、wishCrystal.js)
+  if (((store.cardBacks || {})[design.id] || 0) - ((store.cardBacksLocked || {})[design.id] || 0) < 1) { alert(s().listWishLocked); return false; }
   if (!(await isAccountLoggedIn())) { alert(s().listLoginRequired); return; }
   const activeCount = await countMyActiveListings();
   if (activeCount >= MAX_ACTIVE_LISTINGS_PER_USER) {
@@ -314,6 +320,8 @@ export async function createListing(design) {
       if (owned < 1) throw new Error('NO_STOCK');
       // 出品できるのはダブりだけ(2026-10-07)。1枚しか持っていない物は出品できない
       if (owned < 2) throw new Error('NO_DUPE');
+      // 願いの結晶で手に入れた分は出品できない(サーバー上の最新の枚数で確かめる)
+      if (owned - ((data.cardBacksLocked || {})[design.id] || 0) < 1) throw new Error('WISH_LOCKED');
       if ((data.ukoPoints || 0) < AUCTION_LISTING_FEE) throw new Error('NO_UP');
 
       const { totalBonus, progressUpdates, breakdown } = computeListingCampaignBonus(data);
@@ -378,7 +386,7 @@ export async function createListing(design) {
     return true;
   } catch (e) {
     console.error('[auction] listing failed', e);
-    alert(e.message === 'NO_STOCK' ? s().listNoStock : e.message === 'NO_DUPE' ? s().listNoDupe : e.message === 'NOT_LISTABLE' ? s().listNotListable : e.message === 'NO_UP' ? s().listNoUp(AUCTION_LISTING_FEE) : s().listFailed);
+    alert(e.message === 'NO_STOCK' ? s().listNoStock : e.message === 'NO_DUPE' ? s().listNoDupe : e.message === 'NOT_LISTABLE' ? s().listNotListable : e.message === 'WISH_LOCKED' ? s().listWishLocked : e.message === 'NO_UP' ? s().listNoUp(AUCTION_LISTING_FEE) : s().listFailed);
     return false;
   }
 }

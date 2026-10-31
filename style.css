@@ -2610,3 +2610,34 @@ details#extra-fortune-section[open] > .extra-fortune-summary::after {
 .new-backs-no { margin-top: 4px; font-size: 0.68rem; color: var(--text); white-space: nowrap; }
 .new-backs-item.is-sr .new-backs-no { color: #34408a; }
 .new-backs-date { font-size: 0.64rem; color: var(--muted); white-space: nowrap; }
+
+/* ===== 願いの結晶(2026-11-01追加、wishCrystal.js) ===== */
+.wish-crystal-bar { margin: -6px 0 14px; text-align: center; }
+.wish-bar-row { display: inline-flex; align-items: center; gap: 10px; }
+.wish-bar-label { font-size: 0.85rem; font-weight: bold; color: #5b4bb7; }
+.wish-bar-btn {
+  background: #6d5fd3;
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: bold;
+  padding: 5px 16px;
+  cursor: pointer;
+}
+.wish-bar-btn.is-active { background: var(--surface2); color: var(--text); }
+.wish-bar-hint { margin-top: 6px; font-size: 0.75rem; color: #5b4bb7; }
+/* 選択モード中は押せる裏面を薄紫の枠で示す */
+.gacha-col-item-wishable .gacha-col-scene {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px #b9b0ef;
+}
+.gacha-col-item-wishable .gacha-col-scene:hover { box-shadow: 0 0 0 2px #6d5fd3; }
+.gacha-col-unknown-wish { font-size: 0.62rem; color: #6d5fd3; }
+.gacha-col-wish-note { font-size: 0.75rem; color: #5b4bb7; margin-top: -2px; }
+.gacha-col-modal-actions .gacha-col-wish-btn { background: #6d5fd3; color: #fff; }
+.wish-modal-owned { font-size: 0.8rem; color: var(--text); margin-bottom: 4px; }
+.wish-modal-note { font-size: 0.75rem; color: var(--muted); }
+.wish-modal .wish-modal-ok { background: #6d5fd3; color: #fff; }
+.wish-modal .wish-modal-cancel { background: var(--surface2); }

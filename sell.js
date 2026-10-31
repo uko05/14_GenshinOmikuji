@@ -8,7 +8,7 @@
 //   UPが増える抜け道にならないようにしている
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { isAccountLoggedIn } from './feed.js?v=64';
+import { isAccountLoggedIn } from './feed.js?v=65';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
 import { GACHA_DESIGNS } from './gachaBacks.js?v=23';
 import {
@@ -127,16 +127,25 @@ async function doSell() {
   okBtn.disabled = true;
   const userId = getUserId();
   const userRef = doc(db, 'omikujiUsers', userId);
+  let lockedAfter = {};
   try {
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(userRef);
       if (!snap.exists()) throw new Error('NO_USER_DOC');
       const cardBacks = snap.data().cardBacks || {};
+      const lockedNow = snap.data().cardBacksLocked || {};
       const updates = { ukoPoints: increment(up) };
+      lockedAfter = {};
       for (const [id, n] of items) {
         // サーバー上の最新の枚数で、1枚は必ず残ることを確かめる(別の画面で出品・売却していた時のため)
         if (!GACHA_DESIGNS.some((d) => d.id === id) || (cardBacks[id] || 0) - n < 1) throw new Error('CHANGED');
         updates[`cardBacks.${id}`] = increment(-n);
+        // 願いの結晶で手に入れた枚数(出品できない枚数)が、残る枚数より多くならないように合わせる
+        const remain = (cardBacks[id] || 0) - n;
+        if ((lockedNow[id] || 0) > remain) {
+          updates[`cardBacksLocked.${id}`] = remain;
+          lockedAfter[id] = remain;
+        }
       }
       tx.update(userRef, updates);
       tx.set(doc(collection(db, 'ukoPointsLog')), {
@@ -146,6 +155,7 @@ async function doSell() {
       });
     });
     items.forEach(([id, n]) => { store.cardBacks[id] = (store.cardBacks[id] || 0) - n; });
+    if (Object.keys(lockedAfter).length) store.cardBacksLocked = { ...(store.cardBacksLocked || {}), ...lockedAfter };
     window.dispatchEvent(new CustomEvent('gachaCardBacksUpdated', { detail: {} }));
     closeSellModal();
     alert(s().done(total, up));

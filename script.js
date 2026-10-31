@@ -4,11 +4,12 @@ import { GACHA_DESIGNS, STARRAIL_DESIGNS, ALL_CARD_DESIGNS, isStarRailDesign } f
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=64';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=65';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=5';
-import { initSell } from './sell.js?v=18';
-import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=67';
+import { initSell } from './sell.js?v=19';
+import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=68';
 import { renderNewBacksTicker } from './newBacks.js?v=3';
+import { isWishEnabled, getWishCrystals, getWishLockedCount, isWishSelectMode, renderWishBar, useWishCrystal, wishStr } from './wishCrystal.js?v=1';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
 import { db } from './firebaseConfig.js';
 import {
@@ -164,6 +165,7 @@ const i18n = {
     starRailLockedMsg:   'UP交換所で「スタレ裏面ガチャ解放」（500UP）と交換すると、ガチャでスタレ裏面が出るようになります。スタレ裏面はオークションに出品できない、自分で引き当てるしかない特別な裏面です。',
     starRailLockedLink:  'UP交換所へ',
     gachaSellSrNo:       'スタレ裏面は出品できません',
+    gachaSellWishLocked: '結晶で入手した分は出品不可',
     gachaListingCount: (n, max) => n >= max ? `オークション出品中 ${n} / ${max}件（上限です）` : `オークション出品中 ${n} / ${max}件`,
     auctionActiveLabel: '出品中の数',
     gachaEquipBtn:       '裏面に設定する',
@@ -270,6 +272,7 @@ const i18n = {
     starRailLockedMsg:   'Redeem "Unlock Star Rail Card-Back Gacha" (500 UP) at the UP Exchange to add Star Rail card backs to the gacha. They cannot be listed on the auction — you can only get them by drawing yourself.',
     starRailLockedLink:  'Go to UP Exchange',
     gachaSellSrNo:       'Star Rail backs cannot be listed',
+    gachaSellWishLocked: 'Wish Crystal copies cannot be listed',
     gachaListingCount: (n, max) => n >= max ? `Listed on auction: ${n} / ${max} (limit reached)` : `Listed on auction: ${n} / ${max}`,
     auctionActiveLabel: 'Active listings',
     gachaEquipBtn:       'Set as Card Back',
@@ -979,6 +982,9 @@ function renderGachaCollection(newDesignId = null) {
     }
   }
 
+  // 願いの結晶 ×N [使う](持っている人だけ。試験中は管理者だけ、wishCrystal.js)
+  renderWishBar(document.getElementById('wish-crystal-bar'));
+
   groupsEl.innerHTML = '';
   renderDesignGroups(GACHA_DESIGNS, groupsEl, 'g');
   renderStarRailCollection();
@@ -1017,6 +1023,8 @@ function renderStarRailCollection() {
 // keyPrefixは開閉状態を覚えるキーの頭(原神とスタレでグループ番号が重ならないように)
 function renderDesignGroups(designs, groupsEl, keyPrefix) {
   const owned = store.cardBacks;
+  // 願いの結晶の選択モード中は、原神の裏面を押すと結晶の確認ポップを出す(持っていない「?」も押せて番号が見える)
+  const wishable = keyPrefix === 'g' && isWishSelectMode();
   for (let start = 0; start < designs.length; start += GACHA_COLLECTION_GROUP_SIZE) {
     const groupIndex = `${keyPrefix}${start / GACHA_COLLECTION_GROUP_SIZE}`;
     const end = Math.min(start + GACHA_COLLECTION_GROUP_SIZE, designs.length);
@@ -1047,7 +1055,8 @@ function renderDesignGroups(designs, groupsEl, keyPrefix) {
       const item = document.createElement('div');
       item.className = 'gacha-col-item'
         + (isOwned ? '' : ' gacha-col-item-unknown')
-        + (isEquipped ? ' gacha-col-item-equipped' : '');
+        + (isEquipped ? ' gacha-col-item-equipped' : '')
+        + (wishable ? ' gacha-col-item-wishable' : '');
 
       const scene = document.createElement('div');
       scene.className = 'gacha-col-scene';
@@ -1058,7 +1067,7 @@ function renderDesignGroups(designs, groupsEl, keyPrefix) {
         img.alt = design.name;
         img.loading = 'lazy';
         scene.appendChild(img);
-        scene.addEventListener('click', () => openGachaCollectionModal(design));
+        scene.addEventListener('click', () => (wishable ? useWishCrystal(design) : openGachaCollectionModal(design)));
         if (isListed) {
           const badge = document.createElement('span');
           badge.className = 'gacha-col-listed-badge';
@@ -1078,6 +1087,11 @@ function renderDesignGroups(designs, groupsEl, keyPrefix) {
         const unknown = document.createElement('div');
         unknown.className = 'gacha-col-unknown-mark';
         unknown.textContent = '?';
+        if (wishable) {
+          unknown.className = 'gacha-col-unknown-mark gacha-col-unknown-wish';
+          unknown.textContent = design.id.replace('custom_', 'No.');
+          scene.addEventListener('click', () => useWishCrystal(design));
+        }
         scene.appendChild(unknown);
       }
 
@@ -1115,10 +1129,27 @@ function updateGachaEquipBtn() {
   const sellBtn = document.getElementById('gacha-col-sell-btn');
   if (sellBtn) {
     const isSr = isStarRailDesign(currentGachaCollectionDesign.id);
-    const canSell = !isSr && ((store.cardBacks || {})[currentGachaCollectionDesign.id] || 0) >= 2;
+    const count = (store.cardBacks || {})[currentGachaCollectionDesign.id] || 0;
+    // 願いの結晶で手に入れた枚数は出品できない(2026-11-01)
+    const wishBlocked = count >= 2 && count - getWishLockedCount(currentGachaCollectionDesign.id) < 1;
+    const canSell = !isSr && count >= 2 && !wishBlocked;
     sellBtn.textContent = canSell ? i18n[currentLang].gachaSellBtn
-      : isSr ? i18n[currentLang].gachaSellSrNo : i18n[currentLang].gachaSellDupOnly;
+      : isSr ? i18n[currentLang].gachaSellSrNo
+      : wishBlocked ? i18n[currentLang].gachaSellWishLocked : i18n[currentLang].gachaSellDupOnly;
     sellBtn.disabled = !canSell;
+  }
+  // 「うち○枚は願いの結晶で入手（出品不可）」と「願いの結晶でもう1枚」
+  const id = currentGachaCollectionDesign.id;
+  const locked = getWishLockedCount(id);
+  const noteEl = document.getElementById('gacha-col-wish-note');
+  if (noteEl) {
+    noteEl.hidden = locked === 0;
+    noteEl.textContent = locked ? wishStr().lockedNote(locked) : '';
+  }
+  const wishBtn = document.getElementById('gacha-col-wish-btn');
+  if (wishBtn) {
+    wishBtn.hidden = !(isWishEnabled() && getWishCrystals() > 0 && !isStarRailDesign(id));
+    wishBtn.textContent = wishStr().moreBtn;
   }
 }
 
@@ -1643,6 +1674,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('gacha-collection-modal-close').addEventListener('click', closeGachaCollectionModal);
   document.getElementById('gacha-col-equip-btn').addEventListener('click', equipCurrentGachaCollectionDesign);
   document.getElementById('gacha-col-sell-btn').addEventListener('click', sellCurrentGachaCollectionDesign);
+  document.getElementById('gacha-col-wish-btn').addEventListener('click', () => {
+    const design = currentGachaCollectionDesign;
+    closeGachaCollectionModal();
+    useWishCrystal(design);
+  });
+  // 願いの結晶の個数・選択モード・出品できない枚数が変わったら図鑑を描き直す(wishCrystal.js から発火)
+  window.addEventListener('wishCrystalsChanged', () => {
+    renderGachaCollection();
+    if (document.getElementById('gacha-collection-modal').style.display === 'flex') updateGachaEquipBtn();
+  });
 
   shuffleBtn.addEventListener('click', shuffleCards);
   document.getElementById('save-img-btn').addEventListener('click', captureResult);

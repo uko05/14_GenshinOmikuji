@@ -51,7 +51,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="@uko_dayo_">
   <title>原神おみくじ｜星座占い・タロットで今日の運勢 - うーこの部屋</title>
-  <link rel="stylesheet" href="style.css?v=50">
+  <link rel="stylesheet" href="style.css?v=51">
 
   <!-- Favicon -->
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/00_common/favicon_io/favicon.ico" type="image/x-icon">
@@ -261,6 +261,7 @@
     <div class="section-title" data-i18n="sectionGachaCollection">スキンデザイン図鑑</div>
     <div id="gacha-collection-count" class="collection-count"></div>
     <div id="gacha-listing-count" class="gacha-listing-count" hidden></div>
+    <div id="wish-crystal-bar" class="wish-crystal-bar" hidden></div>
     <div class="sell-open-row"><button type="button" id="sell-open-btn" class="avatar-nudge-btn">まとめて売却</button></div>
     <div id="gacha-collection-groups"></div>
   </section>
@@ -358,9 +359,11 @@
     <button id="gacha-collection-modal-close" class="col-modal-close" aria-label="close">×</button>
     <img id="gacha-collection-modal-img" class="col-modal-img" src="" alt="">
     <div id="gacha-collection-modal-name" class="col-modal-name"></div>
+    <p id="gacha-col-wish-note" class="gacha-col-wish-note" hidden></p>
     <div class="gacha-col-modal-actions">
       <button type="button" id="gacha-col-equip-btn" class="avatar-nudge-btn" data-i18n="gachaEquipBtn">裏面に設定する</button>
       <button type="button" id="gacha-col-sell-btn" class="avatar-nudge-btn gacha-col-sell-btn" data-i18n="gachaSellBtn">出品する</button>
+      <button type="button" id="gacha-col-wish-btn" class="avatar-nudge-btn gacha-col-wish-btn" hidden></button>
     </div>
   </div>
 </div>
@@ -528,12 +531,12 @@
   </div>
 </div>
 
-<span id="site-version" class="site-version">v4.66</span>
+<span id="site-version" class="site-version">v4.67</span>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
-<script type="module" src="script.js?v=93"></script>
+<script type="module" src="script.js?v=94"></script>
 <script type="module" src="https://uko05.github.io/24_AccountCenter/account-status.js"></script>
 <script src="https://uko05.github.io/TopPage00/shared/sidebar.js"></script>
 </body>
