@@ -2,10 +2,11 @@
 // 裏面デザインの出品（閲覧・入札・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=63';
+import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=64';
 import { listenWhileVisible } from './visibleListener.js';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
-import { isStarRailDesign } from './gachaBacks.js?v=22';
+import { isStarRailDesign } from './gachaBacks.js?v=23';
+import { renderNewBacksTicker } from './newBacks.js?v=1';
 import {
   collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp, query, where,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -53,6 +54,7 @@ let isAdminRole = false;
     console.error('[auction] role load failed', e);
   }
   renderCampaignBanner();
+  renderNewBacksTicker({ isAdmin: isAdminRole }); // 新着裏面の帯(調整中は管理者だけ)にも同じロールを使う
 })();
 
 function isCampaignActiveNow(c) {

@@ -2,7 +2,7 @@
 // みんなの結果フィード・いいね・いいね通知・アバター表示
 import { app, db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { pickGachaDesign, isStarRailDesign } from './gachaBacks.js?v=22';
+import { pickGachaDesign, isStarRailDesign } from './gachaBacks.js?v=23';
 import { listenWhileVisible } from './visibleListener.js';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
 import {
@@ -1163,6 +1163,12 @@ function startStatsFooterListener() {
     if (srUnlocked !== !!store.sitePerks?.omikuji?.starRailGachaUnlocked && d.sitePerks) {
       store.sitePerks = d.sitePerks;
       window.dispatchEvent(new CustomEvent('starRailUnlockChanged'));
+    }
+    // UP交換所で新着裏面の帯を交換したら、開いたままの画面でも帯を出す(newBacks.js)
+    const nbUnlocked = !!d.sitePerks?.omikuji?.newBacksTickerUnlocked;
+    if (nbUnlocked !== !!store.sitePerks?.omikuji?.newBacksTickerUnlocked && d.sitePerks) {
+      store.sitePerks = d.sitePerks;
+      window.dispatchEvent(new CustomEvent('newBacksTickerUnlockChanged'));
     }
     latestClaimedMailIds = new Set(d.claimedMailIds || []);
     if (upEl)    upEl.textContent    = d.ukoPoints || 0;

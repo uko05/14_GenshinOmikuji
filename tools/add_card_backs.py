@@ -15,7 +15,7 @@
   5. jsDelivr のキャッシュを消して、新しい画像がすぐ表示されるようにする
 --dry-run を付けると、変更内容を表示するだけで何も書き換えない。
 """
-import os, re, subprocess, sys, urllib.request
+import datetime, os, re, subprocess, sys, urllib.request
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 OMIKUJI = os.path.join(ROOT, '14_GenshinOmikuji')
@@ -85,6 +85,15 @@ def main():
     # ---- 3. gachaBacks.js の枚数 ----
     gacha = gacha.replace(f'{{ length: {cur} }}', f'{{ length: {top} }}', 1)
     gacha = re.sub(r'back_Custom_001〜\d+', f'back_Custom_001〜{top}', gacha, count=1)
+    # 新着裏面の帯用に、追加した日を RECENT_BACKS の先頭へ足す(新しい順、30件まで)
+    m = re.search(r'(export const RECENT_BACKS = \[\n)(.*?)(\];)', gacha, re.S)
+    if m:
+        today = datetime.date.today().isoformat()
+        new_rows = [f"  ['custom_{n:03d}', '{today}'],\n" for n in range(top, first - 1, -1)]
+        old_rows = [r for r in m.group(2).splitlines(keepends=True) if r.strip()]
+        rows = (new_rows + old_rows)[:30]
+        gacha = gacha[:m.start(2)] + ''.join(rows) + gacha[m.end(2):]
+        print(f'  gachaBacks.js: 新着裏面の一覧に {today} 追加として記録しました')
     changed = {'gachaBacks.js': gacha}
 
     # ---- 4. ?v= を連鎖的に上げる ----

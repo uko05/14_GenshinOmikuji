@@ -2583,3 +2583,39 @@ details#extra-fortune-section[open] > .extra-fortune-summary::after {
   margin: 6px 0 4px;
   min-width: 140px;
 }
+
+/* ===== 新着裏面の帯(2026-10-31追加、newBacks.js) =====
+   最近追加した裏面のサムネを横にゆっくり流す。指を乗せると止まる */
+.new-backs-section { padding: 14px 0 12px; overflow: hidden; }
+.new-backs-section .section-title { margin: 0 18px 10px; }
+.new-backs-viewport {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+}
+.new-backs-track { display: flex; width: max-content; }
+.new-backs-track.is-moving {
+  animation: new-backs-scroll var(--new-backs-duration, 30s) linear infinite;
+}
+.new-backs-viewport:hover .new-backs-track.is-moving,
+.new-backs-viewport:active .new-backs-track.is-moving { animation-play-state: paused; }
+@keyframes new-backs-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(var(--new-backs-shift, -50%)); }
+}
+.new-backs-group { display: flex; gap: 14px; padding: 0 7px; }
+.new-backs-item { flex: 0 0 auto; width: 76px; text-align: center; }
+.new-backs-img {
+  display: block;
+  width: 76px;
+  aspect-ratio: 912 / 1536;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+}
+.new-backs-no { margin-top: 5px; font-size: 0.72rem; color: var(--text); }
+.new-backs-date { font-size: 0.68rem; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .new-backs-viewport { overflow-x: auto; -webkit-mask-image: none; mask-image: none; }
+}
