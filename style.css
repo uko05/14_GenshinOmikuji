@@ -2585,14 +2585,19 @@ details#extra-fortune-section[open] > .extra-fortune-summary::after {
 }
 
 /* ===== 新着裏面の帯(2026-10-31追加、newBacks.js) =====
-   直近30日に追加した裏面のサムネと追加日を、折り返して並べる */
+   直近30日に追加した裏面のサムネと追加日を1列に並べ、指やマウスで横にスクロールして見る(自動では流さない) */
 .new-backs-list {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px 10px;
+  gap: 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
 }
-.new-backs-item { flex: 0 0 auto; width: 64px; text-align: center; }
+.new-backs-list::-webkit-scrollbar { height: 6px; }
+.new-backs-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.new-backs-item { flex: 0 0 auto; width: 64px; text-align: center; scroll-snap-align: start; }
 .new-backs-img {
   display: block;
   width: 64px;
