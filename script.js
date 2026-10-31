@@ -7,8 +7,8 @@ import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=64';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=5';
 import { initSell } from './sell.js?v=18';
-import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=65';
-import { renderNewBacksTicker } from './newBacks.js?v=1';
+import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=66';
+import { renderNewBacksTicker } from './newBacks.js?v=2';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
 import { db } from './firebaseConfig.js';
 import {
@@ -200,7 +200,7 @@ const i18n = {
     yakuNoGender:   '性別を選択してください',
     yakuFutureLabel: '次の本厄',
     yakuAllPassed:   'これ以降の本厄はありません',
-    newBacksTitle:   '新しく追加された裏面デザイン',
+    newBacksTitle:   '新しく追加された裏面デザイン（30日以内）',
     feedTitle:       'みんなの結果（48時間以内）',
     hideFeedLabel:   '自分の占いを公開しない',
     statsUpLabel:       'うーこポイント',
@@ -306,7 +306,7 @@ const i18n = {
     yakuNoGender:   'Select a gender',
     yakuFutureLabel: 'Next Yakudoshi',
     yakuAllPassed:   'All unlucky years have passed',
-    newBacksTitle:   'Newly Added Card Backs',
+    newBacksTitle:   'Newly Added Card Backs (last 30 days)',
     feedTitle:       "Everyone's Results (last 48h)",
     hideFeedLabel:   "Don't publish my fortune",
     statsUpLabel:       'Uko Points',

@@ -6,7 +6,7 @@ import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } fr
 import { listenWhileVisible } from './visibleListener.js';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
 import { isStarRailDesign } from './gachaBacks.js?v=23';
-import { renderNewBacksTicker } from './newBacks.js?v=1';
+import { renderNewBacksTicker } from './newBacks.js?v=2';
 import {
   collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp, query, where,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";

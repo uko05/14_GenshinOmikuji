@@ -72,6 +72,18 @@ def main():
 
     # ---- 2. 99_SharedImage に画像をコミット・プッシュ ----
     new_files = [f'{BACKS_DIR_REL}/back_Custom_{n:03d}.jpg' for n in range(first, top + 1)]
+    # 新着裏面の帯で使う小さいサムネ(横240px、1枚30KBほど)を thumbs/ に作る
+    thumb_files = [f'{BACKS_DIR_REL}/thumbs/back_Custom_{n:03d}.jpg' for n in range(first, top + 1)]
+    if not DRY:
+        from PIL import Image
+        os.makedirs(os.path.join(BACKS_DIR, 'thumbs'), exist_ok=True)
+        for n in range(first, top + 1):
+            im = Image.open(os.path.join(BACKS_DIR, f'back_Custom_{n:03d}.jpg'))
+            im.thumbnail((240, 9999))
+            im.convert('RGB').save(os.path.join(BACKS_DIR, 'thumbs', f'back_Custom_{n:03d}.jpg'),
+                                   'JPEG', quality=82, optimize=True, progressive=True)
+        print('  サムネ(thumbs/)を作りました')
+        new_files += thumb_files
     pending = git(SHARED, 'status', '--porcelain', '--', *new_files)
     if pending:
         print('  99_SharedImage: 画像をコミットしてプッシュします')
@@ -85,13 +97,15 @@ def main():
     # ---- 3. gachaBacks.js の枚数 ----
     gacha = gacha.replace(f'{{ length: {cur} }}', f'{{ length: {top} }}', 1)
     gacha = re.sub(r'back_Custom_001〜\d+', f'back_Custom_001〜{top}', gacha, count=1)
-    # 新着裏面の帯用に、追加した日を RECENT_BACKS の先頭へ足す(新しい順、30件まで)
+    # 新着裏面の帯用に、追加した日を RECENT_BACKS の先頭へ足す(新しい順。60日より前のものは消す)
     m = re.search(r'(export const RECENT_BACKS = \[\n)(.*?)(\];)', gacha, re.S)
     if m:
         today = datetime.date.today().isoformat()
         new_rows = [f"  ['custom_{n:03d}', '{today}'],\n" for n in range(top, first - 1, -1)]
-        old_rows = [r for r in m.group(2).splitlines(keepends=True) if r.strip()]
-        rows = (new_rows + old_rows)[:30]
+        cutoff = (datetime.date.today() - datetime.timedelta(days=60)).isoformat()
+        old_rows = [r for r in m.group(2).splitlines(keepends=True)
+                    if (d := re.search(r"'(\d{4}-\d{2}-\d{2})'", r)) and d.group(1) >= cutoff]
+        rows = new_rows + old_rows
         gacha = gacha[:m.start(2)] + ''.join(rows) + gacha[m.end(2):]
         print(f'  gachaBacks.js: 新着裏面の一覧に {today} 追加として記録しました')
     changed = {'gachaBacks.js': gacha}
