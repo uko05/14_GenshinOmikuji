@@ -6,7 +6,7 @@ import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } fr
 import { listenWhileVisible } from './visibleListener.js';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
 import { isStarRailDesign } from './gachaBacks.js?v=23';
-import { renderNewBacksTicker } from './newBacks.js?v=2';
+import { renderNewBacksTicker } from './newBacks.js?v=3';
 import {
   collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp, query, where,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -54,7 +54,7 @@ let isAdminRole = false;
     console.error('[auction] role load failed', e);
   }
   renderCampaignBanner();
-  renderNewBacksTicker({ isAdmin: isAdminRole }); // 新着裏面の帯(調整中は管理者だけ)にも同じロールを使う
+  renderNewBacksTicker({ isAdmin: isAdminRole }); // 新着裏面の帯(NEW_BACKS_ADMIN_ONLYのときは管理者だけ)にも同じロールを使う
 })();
 
 function isCampaignActiveNow(c) {

@@ -7,8 +7,8 @@ import { submitOmikujiStats } from './omikujiStats.js';
 import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=64';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=5';
 import { initSell } from './sell.js?v=18';
-import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=66';
-import { renderNewBacksTicker } from './newBacks.js?v=2';
+import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=67';
+import { renderNewBacksTicker } from './newBacks.js?v=3';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
 import { db } from './firebaseConfig.js';
 import {
@@ -1530,6 +1530,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // localStorage を Firestore の内容で上書きしてから UI を初期化する
   await loadUserDataFromFirestore();
   await loadDebuggerRole();
+  renderNewBacksTicker(); // 交換済みかどうか(store.sitePerks)が分かったので新着裏面の帯を出す
 
   // 言語切り替え初期化
   initLangSwitch();

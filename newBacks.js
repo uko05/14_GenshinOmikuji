@@ -1,15 +1,15 @@
 // newBacks.js
 // 新着裏面の帯(2026-10-31追加)。みんなの結果の上に、直近30日に追加した裏面のサムネと追加日を1列に並べる
 // (自動では流さず、横スクロールで見る。2026-10-31、自動で流れるのはなしとのことで変更)。
-// UP交換所の「新着裏面の帯」(sitePerks.omikuji.newBacksTickerUnlocked)を交換した人に出す予定。
-// 今は見た目の調整中なので、NEW_BACKS_ADMIN_ONLY が true の間は管理者ロールの人にだけ出す
-// (交換していなくても出る。一般の人には交換していても出ない)。
+// UP交換所の「新着裏面の帯」(300UP、sitePerks.omikuji.newBacksTickerUnlocked)を交換した人にだけ出す。
+// 2026-10-31に一般公開。NEW_BACKS_ADMIN_ONLY を true に戻すと、調整用に管理者ロールの人にだけ出る
+// (そのときは交換していなくても出て、一般の人には交換していても出ない)。
 // Firestoreの読み取りは増やさない(ロールは auction.js が読んだものを、解放フラグは store を使う)。
 // サムネは元画像(1枚300KBほど)ではなく、各フォルダの thumbs/ にある小さい版(30KBほど)を使う。
 import { ALL_CARD_DESIGNS, RECENT_BACKS, isStarRailDesign } from './gachaBacks.js?v=23';
 import { store } from './userData.js?v=4';
 
-const NEW_BACKS_ADMIN_ONLY = true;
+const NEW_BACKS_ADMIN_ONLY = false;
 const RECENT_DAYS = 30; // この日数以内に追加した裏面を出す
 
 const STR = {
