@@ -2,11 +2,11 @@
 // 裏面デザインの出品（閲覧・入札・精算は26_UkoAuctionへ分離した）
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=65';
+import { submitListingFeedEntry, isAccountLoggedIn, markMissionAchievedOnce } from './feed.js?v=66';
 import { listenWhileVisible } from './visibleListener.js';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
-import { isStarRailDesign } from './gachaBacks.js?v=23';
-import { renderNewBacksTicker } from './newBacks.js?v=3';
+import { isStarRailDesign } from './gachaBacks.js?v=24';
+import { renderNewBacksTicker } from './newBacks.js?v=4';
 import {
   collection, doc, addDoc, runTransaction, serverTimestamp, increment, Timestamp, query, where,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";

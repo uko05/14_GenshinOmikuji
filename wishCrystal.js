@@ -10,7 +10,7 @@
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
-import { isStarRailDesign } from './gachaBacks.js?v=23';
+import { isStarRailDesign } from './gachaBacks.js?v=24';
 import { doc, collection, runTransaction, increment, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const WISH_ADMIN_ONLY = false;
