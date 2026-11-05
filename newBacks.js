@@ -6,7 +6,7 @@
 // (そのときは交換していなくても出て、一般の人には交換していても出ない)。
 // Firestoreの読み取りは増やさない(ロールは auction.js が読んだものを、解放フラグは store を使う)。
 // サムネは元画像(1枚300KBほど)ではなく、各フォルダの thumbs/ にある小さい版(30KBほど)を使う。
-import { ALL_CARD_DESIGNS, RECENT_BACKS, isStarRailDesign } from './gachaBacks.js?v=24';
+import { ALL_CARD_DESIGNS, RECENT_BACKS, isStarRailDesign } from './gachaBacks.js?v=25';
 import { store } from './userData.js?v=4';
 
 const NEW_BACKS_ADMIN_ONLY = false;
