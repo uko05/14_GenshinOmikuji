@@ -1584,10 +1584,22 @@ footer {
 .feed-lottery[hidden] { display: none; }
 .feed-lottery .lottery-test { font-size: 0.72rem; color: #b38600; margin: 0; }
 .feed-lottery .lottery-now { font-weight: bold; }
-.feed-lottery .lottery-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
-.feed-lottery .lottery-stats div { background: var(--surface2); border-radius: 8px; padding: 6px 10px; }
+/* 1等を大きく・2等を2つ横並び・3等(UP交換所と同じ並び。2026-11-17) */
+.feed-lottery .lottery-first { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.feed-lottery .lottery-first small { display: block; font-size: 0.75rem; color: var(--muted); }
+.feed-lottery .lottery-first b { display: block; font-size: 1.9rem; color: #b38600; line-height: 1.2; }
+.feed-lottery .lottery-first b span { font-size: 0.9rem; margin-left: 3px; color: var(--muted); }
+.feed-lottery .lottery-first em, .feed-lottery .lottery-prize em { display: block; font-style: normal; font-size: 0.7rem; color: var(--muted); }
+.feed-lottery .lottery-second { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.feed-lottery .lottery-prize { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px; }
+.feed-lottery .lottery-prize small { display: block; font-size: 0.7rem; color: var(--muted); }
+.feed-lottery .lottery-prize b { display: block; font-size: 1.2rem; color: #b38600; }
+.feed-lottery .lottery-prize b span { font-size: 0.75rem; margin-left: 2px; color: var(--muted); }
+.feed-lottery .lottery-third b { font-size: 1.05rem; }
+.feed-lottery .lottery-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.feed-lottery .lottery-stats div { background: var(--surface2); border-radius: 8px; padding: 6px 8px; text-align: center; }
 .feed-lottery .lottery-stats small { display: block; font-size: 0.7rem; color: var(--muted); }
-.feed-lottery .lottery-stats b { font-size: 1.1rem; color: var(--text); }
+.feed-lottery .lottery-stats b { font-size: 0.95rem; color: var(--text); }
 .feed-lottery .lottery-stats b span { font-size: 0.7rem; margin-left: 2px; color: var(--muted); }
 .feed-lottery .lottery-muted { font-size: 0.72rem; color: var(--muted); }
 .feed-lottery .lottery-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

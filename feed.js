@@ -855,6 +855,8 @@ const LOT = {
     waiting: '22:00 に結果を発表します',
     carried: (d) => `参加者が9人に届かなかったため、抽選は次の回（${d}）へ持ち越しになりました。口数と賞金はそのまま引き継がれます。`,
     carriedIn: '前の回からの持ち越しを含みます',
+    firstLabel: '1等の賞金（1人）', firstHint: '＋ 願いの結晶 2個', secondLabel: '2等（1人あたり）', secondHint: '＋ 結晶 1個',
+    thirdLabel: '3等（5人・1人あたり）', thirdHint: '賞金の2%ずつ',
   },
   en: {
     now: (d) => `This round: sales close ${d} 21:00 JST, results at 22:00`, pool: 'Total prize', first: '1st prize', tickets: 'Tickets', people: 'Players',
@@ -864,6 +866,8 @@ const LOT = {
     waiting: 'Results at 22:00',
     carried: (d) => `Fewer than 9 players, so the draw was carried over to the next round (${d}). Tickets and prize carry over.`,
     carriedIn: 'Includes a carry-over from the previous round',
+    firstLabel: '1st prize (1 winner)', firstHint: '+ 2 Wish Crystals', secondLabel: '2nd prize (each)', secondHint: '+ 1 crystal',
+    thirdLabel: '3rd prize (5 winners, each)', thirdHint: '2% of the pool each',
   },
 };
 const lotT = () => LOT[store.lang === 'en' ? 'en' : 'ja'];
@@ -926,9 +930,13 @@ async function loadLotteryPanel() {
   const pool = c ? (c.pool || 0) : 0;
   const cur$ = `
     <div class="lottery-now">${esc(t.now(cur.label))}</div>
+    <div class="lottery-first"><small>${t.firstLabel}</small><b>${Math.floor(pool * 0.60).toLocaleString()}<span>UP</span></b><em>${t.firstHint}</em></div>
+    <div class="lottery-second">
+      ${[0, 1].map(() => `<div class="lottery-prize"><small>${t.secondLabel}</small><b>${Math.floor(pool * 0.15).toLocaleString()}<span>UP</span></b><em>${t.secondHint}</em></div>`).join('')}
+    </div>
+    <div class="lottery-prize lottery-third"><small>${t.thirdLabel}</small><b>${Math.floor(pool * 0.02).toLocaleString()}<span>UP</span></b><em>${t.thirdHint}</em></div>
     <div class="lottery-stats">
       <div><small>${t.pool}</small><b>${pool.toLocaleString()}<span>UP</span></b></div>
-      <div><small>${t.first}</small><b>${Math.floor(pool * 0.6).toLocaleString()}<span>UP</span></b></div>
       <div><small>${t.tickets}</small><b>${(c?.totalTickets || 0).toLocaleString()}</b></div>
       <div><small>${t.people}</small><b>${(c?.participants || 0).toLocaleString()}</b></div>
     </div>
