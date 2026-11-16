@@ -9,6 +9,7 @@ import {
   collection, collectionGroup, doc, addDoc, setDoc, updateDoc, deleteDoc, query, where, orderBy, limit, serverTimestamp, increment, arrayUnion, runTransaction, Timestamp,
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getDoc, getDocs, getDocsFromCache, onSnapshot } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAggregateFromServer, sum, count } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { genshinChars } from 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/chara_data/genshin_chars.js';
 import { starrailChars } from 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/02_Starrail/chara_data/starrail_chars.js';
@@ -848,14 +849,14 @@ const isLotteryVisible = () => LOTTERY_PUBLIC || myRole === 'admin';
 const LOT = {
   ja: {
     now: (d) => `今回 ${d} 21:00 締め切り・22:00 結果発表`, pool: '賞金の合計', first: '1等の賞金', tickets: '全体の口数', people: '参加者',
-    hourly: '（1時間ごとに更新）', buy: 'UP交換所で買う', last: (d) => `前回（${d}）の結果`, noLast: 'まだ結果はありません',
+    hourly: '（開いた時点の数字です）', buy: 'UP交換所で買う', last: (d) => `前回（${d}）の結果`, noLast: 'まだ結果はありません',
     tier: (n) => `${n}等`, ticketsOf: (n) => `${n}口`, none: '該当なし', total: (n, p) => `全体 ${n}口・${p}人`,
     crystals: (n) => `＋結晶${n}個`, test: '試しの期間（管理者だけに表示中）', noName: '名無し', loading: '読み込み中…',
     waiting: '22:00 に結果を発表します',
   },
   en: {
     now: (d) => `This round: sales close ${d} 21:00 JST, results at 22:00`, pool: 'Total prize', first: '1st prize', tickets: 'Tickets', people: 'Players',
-    hourly: '(updated hourly)', buy: 'Buy at UP Exchange', last: (d) => `Last round (${d})`, noLast: 'No results yet',
+    hourly: '(as of when you opened this tab)', buy: 'Buy at UP Exchange', last: (d) => `Last round (${d})`, noLast: 'No results yet',
     tier: (n) => `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : 'rd'}`, ticketsOf: (n) => `${n} tix`, none: 'None', total: (n, p) => `${n} tickets / ${p} players`,
     crystals: (n) => ` + ${n} crystal${n > 1 ? 's' : ''}`, test: 'Test period (admins only)', noName: 'No name', loading: 'Loading…',
     waiting: 'Results at 22:00',
@@ -903,9 +904,17 @@ async function loadLotteryPanel() {
   panel.innerHTML = `<p class="lottery-muted">${t.loading}</p>`;
   let c = null, p = null;
   try {
-    const [cs, ps] = await Promise.all([getDoc(doc(db, 'ukoLottery', cur.id)), getDoc(doc(db, 'ukoLottery', prev.id))]);
+    // 今回の口数・参加者は、その場で数える(合計を数える集計なので読み取りは1回分。2026-11-17)
+    const [cs, ps, agg] = await Promise.all([
+      getDoc(doc(db, 'ukoLottery', cur.id)), getDoc(doc(db, 'ukoLottery', prev.id)),
+      getAggregateFromServer(query(collection(db, 'ukoLotteryEntries'), where('drawId', '==', cur.id)), { total: sum('count'), n: count() }).catch(() => null),
+    ]);
     c = cs.exists() ? cs.data() : null;
     p = ps.exists() ? ps.data() : null;
+    if (c && c.status === 'open' && agg) {
+      const total = agg.data().total || 0;
+      c = { ...c, totalTickets: total, participants: agg.data().n || 0, pool: (c.seed || 3000) + 8 * total };
+    }
   } catch (e) {
     console.error('[feed] lottery load failed', e);
   }
