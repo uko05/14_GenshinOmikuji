@@ -17,6 +17,7 @@ export const GACHA_DESIGNS = Array.from({ length: 560 }, (_, i) => {
 // スタレ裏面(sr_NNN)も載せられる(.batは対応していないので、追加したときは手で行を足し、
 // StarRailBacks/thumbs/ にサムネも作ること)。2026-10-09のスタレ初回115枚は数が多すぎるので載せていない。
 export const RECENT_BACKS = [
+  ['sr_116', '2026-11-16'],
   ['custom_560', '2026-11-16'],
   ['custom_559', '2026-11-11'],
   ['custom_558', '2026-11-05'],
@@ -44,13 +45,13 @@ export const RECENT_BACKS = [
 ];
 
 // ===== スタレ裏面(2026-10-09追加) =====
-// 99_SharedImage/01_Genshin/Omikuji/StarRailBacksに配置、StarRail_Custom_001〜115、JPEG。
+// 99_SharedImage/01_Genshin/Omikuji/StarRailBacksに配置、StarRail_Custom_001〜116、JPEG。
 // UP交換所の「スタレ裏面ガチャ解放」(sitePerks.omikuji.starRailGachaUnlocked、500UP、一度きり・オフ不可)を
 // 交換した人だけ、ガチャの排出対象に入る。オークションには出品できない(自力で引くしかない)。
-// tools/add_card_backs.py は上の原神分の Array.from だけを書き換えるので、原神分を必ず先に置くこと。
+// tools/add_card_backs.py が原神分・スタレ分の Array.from の枚数を、それぞれ名前で探して書き換える(2026-11-16からスタレにも対応)。
 export const STARRAIL_IMG_BASE = 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/Omikuji/StarRailBacks/';
 
-export const STARRAIL_DESIGNS = Array.from({ length: 115 }, (_, i) => {
+export const STARRAIL_DESIGNS = Array.from({ length: 116 }, (_, i) => {
   const num = String(i + 1).padStart(3, '0');
   return {
     id: `sr_${num}`,
