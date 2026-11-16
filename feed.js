@@ -824,9 +824,47 @@ let loadingMoreFeed = false;
 let feedNewestMs = 0;
 const feedCreatedMs = (e) => e.createdAt?.toMillis?.() || 0;
 
-const FEED_CACHE_KEY = 'omikujiFeedServerAt';
+// 2026-11-17: フィードを「結果」(おみくじ・ガチャ・実績)と「出品」(オークション出品)のタブに分けた。
+// フィードのほぼ半分が出品のお知らせで、結果が見づらかったため。読むのは開いているタブの分だけ
+// (出品タブは押した時に初めて読む)なので、開いた時の読み取りは今まで通り50件。
+// 索引: omikujiFeed (type ASC, createdAt DESC)
+const FEED_TABS = { results: ['fortune', 'gacha', 'achievement'], listing: ['listing'] };
+let feedTab = 'results';
+const feedTabState = {};   // タブ → { entries, hasMore, newestMs, stale }
+const feedTypeFilter = () => (FEED_TABS[feedTab].length === 1
+  ? where('type', '==', FEED_TABS[feedTab][0])
+  : where('type', 'in', FEED_TABS[feedTab]));
+const FEED_CACHE_KEY_BASE = 'omikujiFeedServerAt';
+const feedCacheKey = () => `${FEED_CACHE_KEY_BASE}_${feedTab}`;
 // 2026-10-31: 30分→3時間(よく使う人は1日に何十回も開き直し、そのたびに50件読んでいた)
 const FEED_CACHE_MS = 3 * 60 * 60 * 1000;
+
+function renderFeedTabs() {
+  document.querySelectorAll('[data-feed-tab]').forEach((b) => {
+    const on = b.dataset.feedTab === feedTab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+}
+
+async function switchFeedTab(tab) {
+  if (tab === feedTab || !FEED_TABS[tab]) return;
+  feedTabState[feedTab] = { entries: latestFeedEntries, hasMore: feedHasMore, newestMs: feedNewestMs, stale: false };
+  feedTab = tab;
+  renderFeedTabs();
+  const st = feedTabState[tab];
+  if (st) {
+    latestFeedEntries = st.entries; feedHasMore = st.hasMore; feedNewestMs = st.newestMs;
+    renderFeedList(latestFeedEntries);
+    if (st.stale) await fetchNewerFeed();   // 見ていない間に、このタブの新着が来ていた
+    return;
+  }
+  latestFeedEntries = []; feedHasMore = false; feedNewestMs = 0;
+  const list = document.getElementById('feed-list');
+  if (list) list.innerHTML = '';
+  await loadFeedInitial();
+  ensureMyLikes(oldestFeedMs());
+}
 
 function setFeedEntries(snap) {
   latestFeedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -836,8 +874,10 @@ function setFeedEntries(snap) {
 }
 
 async function loadFeedInitial() {
+  const tab = feedTab;
   const q = query(
     collection(db, 'omikujiFeed'),
+    feedTypeFilter(),
     where('createdAt', '>=', getFeedSince()),
     orderBy('createdAt', 'desc'),
     limit(FEED_PAGE)
@@ -846,10 +886,11 @@ async function loadFeedInitial() {
   // 永続キャッシュ)から出して、新着だけをサーバーから読む(開き直すたびに50件読むのをやめる)。
   // 他の人のいいね数は最大3時間古いまま(2026-10-31 に30分から延長)。自分のいいねはキャッシュにも反映されている。
   let cachedAt = 0;
-  try { cachedAt = Number(localStorage.getItem(FEED_CACHE_KEY)) || 0; } catch {}
+  try { cachedAt = Number(localStorage.getItem(feedCacheKey())) || 0; } catch {}
   if (Date.now() - cachedAt < FEED_CACHE_MS) {
     try {
       const snap = await getDocsFromCache(q);
+      if (tab !== feedTab) return;   // 読んでいる間に別のタブに切り替わった
       if (snap.size > 0) {
         setFeedEntries(snap);
         await fetchNewerFeed();
@@ -861,8 +902,9 @@ async function loadFeedInitial() {
   }
   try {
     const snap = await getDocs(q);
+    if (tab !== feedTab) return;
     setFeedEntries(snap);
-    try { localStorage.setItem(FEED_CACHE_KEY, String(Date.now())); } catch {}
+    try { localStorage.setItem(feedCacheKey(), String(Date.now())); } catch {}
   } catch (err) {
     console.error('[feed] load failed', err);
   }
@@ -876,21 +918,24 @@ async function fetchNewerFeed() {
   if (fetchingNewer) { fetchNewerAgain = true; return; }
   fetchingNewer = true;
   fetchNewerAgain = false;
+  const tab = feedTab;
   try {
     const q = query(
       collection(db, 'omikujiFeed'),
+      feedTypeFilter(),
       where('createdAt', '>', Timestamp.fromMillis(feedNewestMs)),
       orderBy('createdAt', 'desc'),
       limit(50)
     );
     const snap = await getDocs(q);
+    if (tab !== feedTab) return;   // 読んでいる間に別のタブに切り替わった(新着は切り替え先で読み直す)
     // 新着が50件以上あった(キャッシュから出した後など)場合は、手元の投稿との間が抜けるので、
     // 新しい50件だけに入れ替える(続きは「もっと見る」で読める)
     if (snap.size >= 50) {
       latestFeedEntries = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       feedHasMore = true;
       feedNewestMs = Math.max(0, ...latestFeedEntries.map(feedCreatedMs));
-      try { localStorage.setItem(FEED_CACHE_KEY, String(Date.now())); } catch {}
+      try { localStorage.setItem(feedCacheKey(), String(Date.now())); } catch {}
       renderFeedList(latestFeedEntries);
       ensureMyLikes(oldestFeedMs());
       return;
@@ -917,15 +962,18 @@ async function loadMoreFeed() {
   if (loadingMoreFeed || !feedHasMore) return;
   loadingMoreFeed = true;
   renderFeedList(latestFeedEntries);
+  const tab = feedTab;
   try {
     const q = query(
       collection(db, 'omikujiFeed'),
+      feedTypeFilter(),
       where('createdAt', '>=', getFeedSince()),
       where('createdAt', '<', Timestamp.fromMillis(oldestFeedMs())),
       orderBy('createdAt', 'desc'),
       limit(Math.min(FEED_PAGE, FEED_LIMIT - latestFeedEntries.length))
     );
     const snap = await getDocs(q);
+    if (tab !== feedTab) return;
     const known = new Set(latestFeedEntries.map((e) => e.id));
     const older = snap.docs.filter((d) => !known.has(d.id)).map((d) => ({ id: d.id, ...d.data() }));
     latestFeedEntries = [...latestFeedEntries, ...older];
@@ -941,6 +989,8 @@ async function loadMoreFeed() {
 }
 
 function startFeedListener() {
+  document.querySelectorAll('[data-feed-tab]').forEach((b) => b.addEventListener('click', () => switchFeedTab(b.dataset.feedTab)));
+  renderFeedTabs();
   loadFeedInitial().then(() => {
     // 自分のいいね一覧は、フィードに出ている一番古い投稿以降の分だけ読めば足りる
     // (いいねは必ず投稿より後なので漏れない)。フィードが読めてから始める
@@ -951,7 +1001,14 @@ function startFeedListener() {
       const d = snap.docs[0];
       if (!d) return;
       const data = d.data();
-      if (feedCreatedMs(data) > feedNewestMs) { fetchNewerFeed(); return; }
+      if (feedCreatedMs(data) > feedNewestMs) {
+        // 新着が今のタブの種類なら読み、別のタブの種類なら、そのタブを開いた時に読む(読み取りを増やさない)
+        if (FEED_TABS[feedTab].includes(data.type)) { fetchNewerFeed(); return; }
+        Object.keys(FEED_TABS).forEach((t) => {
+          if (t !== feedTab && FEED_TABS[t].includes(data.type) && feedTabState[t]) feedTabState[t].stale = true;
+        });
+        return;
+      }
       // 一番新しい投稿のいいね数の変化は、この購読で届いた分だけ反映する(追加の読み取りなし)
       const i = latestFeedEntries.findIndex((e) => e.id === d.id);
       if (i >= 0 && latestFeedEntries[i].likeCount !== data.likeCount) {

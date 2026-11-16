@@ -1576,6 +1576,8 @@ footer {
 }
 
 /* ===== みんなの結果フィード ===== */
+/* 結果・出品のタブ(2026-11-17)。見た目はアバター選択のタブと同じ */
+.feed-tab-bar { margin: 0 0 6px; }
 .feed-list {
   display: flex;
   flex-direction: column;
