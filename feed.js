@@ -853,6 +853,8 @@ const LOT = {
     tier: (n) => `${n}等`, ticketsOf: (n) => `${n}口`, none: '該当なし', total: (n, p) => `全体 ${n}口・${p}人`,
     crystals: (n) => `＋結晶${n}個`, test: '試しの期間（管理者だけに表示中）', noName: '名無し', loading: '読み込み中…',
     waiting: '22:00 に結果を発表します',
+    carried: (d) => `参加者が9人に届かなかったため、抽選は次の回（${d}）へ持ち越しになりました。口数と賞金はそのまま引き継がれます。`,
+    carriedIn: '前の回からの持ち越しを含みます',
   },
   en: {
     now: (d) => `This round: sales close ${d} 21:00 JST, results at 22:00`, pool: 'Total prize', first: '1st prize', tickets: 'Tickets', people: 'Players',
@@ -860,6 +862,8 @@ const LOT = {
     tier: (n) => `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : 'rd'}`, ticketsOf: (n) => `${n} tix`, none: 'None', total: (n, p) => `${n} tickets / ${p} players`,
     crystals: (n) => ` + ${n} crystal${n > 1 ? 's' : ''}`, test: 'Test period (admins only)', noName: 'No name', loading: 'Loading…',
     waiting: 'Results at 22:00',
+    carried: (d) => `Fewer than 9 players, so the draw was carried over to the next round (${d}). Tickets and prize carry over.`,
+    carriedIn: 'Includes a carry-over from the previous round',
   },
 };
 const lotT = () => LOT[store.lang === 'en' ? 'en' : 'ja'];
@@ -928,6 +932,7 @@ async function loadLotteryPanel() {
       <div><small>${t.tickets}</small><b>${(c?.totalTickets || 0).toLocaleString()}</b></div>
       <div><small>${t.people}</small><b>${(c?.participants || 0).toLocaleString()}</b></div>
     </div>
+    ${c?.carriedFrom ? `<div class="lottery-muted">${t.carriedIn}</div>` : ''}
     <div class="lottery-row"><span class="lottery-muted">${t.hourly}</span><a class="lottery-buy-link" href="${LOTTERY_UPOINT_URL}" target="_blank" rel="noopener">${t.buy}</a></div>`;
   let last$ = `<div class="lottery-last-title">${esc(t.last(prev.label))}</div>`;
   if (p && p.status === 'drawn') {
@@ -937,6 +942,8 @@ async function loadLotteryPanel() {
       return `<div class="lottery-tier lottery-tier-${tier}"><span class="lottery-tier-label">${esc(t.tier(tier))}</span><div class="lottery-tier-body">${body}</div></div>`;
     }).join('');
     last$ += rows + `<div class="lottery-muted">${esc(t.total((p.totalTickets || 0).toLocaleString(), p.participants || 0))}</div>`;
+  } else if (p && p.status === 'carried') {
+    last$ += `<div class="lottery-muted">${esc(t.carried(String(p.carriedTo || '').slice(5).replace('-', '/')))}</div>`;
   } else {
     last$ += `<div class="lottery-muted">${t.noLast}</div>`;
   }
