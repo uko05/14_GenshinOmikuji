@@ -1578,6 +1578,26 @@ footer {
 /* ===== みんなの結果フィード ===== */
 /* 結果・出品のタブ(2026-11-17)。見た目はアバター選択のタブと同じ */
 .feed-tab-bar { margin: 0 0 6px; }
+.feed-tab-bar [hidden] { display: none; }
+/* 宝くじタブ(2026-11-17) */
+.feed-lottery { display: flex; flex-direction: column; gap: 8px; max-height: 330px; overflow-y: auto; font-size: 0.85rem; }
+.feed-lottery[hidden] { display: none; }
+.feed-lottery .lottery-test { font-size: 0.72rem; color: #b38600; margin: 0; }
+.feed-lottery .lottery-now { font-weight: bold; }
+.feed-lottery .lottery-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.feed-lottery .lottery-stats div { background: var(--surface2); border-radius: 8px; padding: 6px 10px; }
+.feed-lottery .lottery-stats small { display: block; font-size: 0.7rem; color: var(--muted); }
+.feed-lottery .lottery-stats b { font-size: 1.1rem; color: var(--text); }
+.feed-lottery .lottery-stats b span { font-size: 0.7rem; margin-left: 2px; color: var(--muted); }
+.feed-lottery .lottery-muted { font-size: 0.72rem; color: var(--muted); }
+.feed-lottery .lottery-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.feed-lottery .lottery-buy-link { font-weight: bold; color: #b38600; white-space: nowrap; }
+.feed-lottery .lottery-last-title { font-weight: bold; margin-top: 6px; border-top: 1px solid var(--border); padding-top: 8px; }
+.feed-lottery .lottery-tier { display: flex; gap: 8px; align-items: flex-start; }
+.feed-lottery .lottery-tier-label { flex: none; font-weight: bold; min-width: 2.5em; }
+.feed-lottery .lottery-tier-1 .lottery-tier-label { color: #b38600; }
+.feed-lottery .lottery-tier-body { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.feed-lottery .lottery-winner small { color: var(--muted); margin-left: 2px; }
 .feed-list {
   display: flex;
   flex-direction: column;

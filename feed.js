@@ -839,15 +839,116 @@ const feedCacheKey = () => `${FEED_CACHE_KEY_BASE}_${feedTab}`;
 // 2026-10-31: 30分→3時間(よく使う人は1日に何十回も開き直し、そのたびに50件読んでいた)
 const FEED_CACHE_MS = 3 * 60 * 60 * 1000;
 
+// ===== 宝くじタブ(2026-11-17。購入は 08_UPoint、抽選は 24_AccountCenter/functions/lottery.js) =====
+// フィードの3つめのタブ。今回の回(賞金・口数・参加者)と前回の結果を出す。読み取りは開いた時に回のドキュメント2件だけ。
+const LOTTERY_PUBLIC = false;   // false の間は管理者だけにタブを出す(試しの期間)
+const LOTTERY_UPOINT_URL = 'https://uko05.github.io/08_UPoint/';
+let lotteryOpen = false;
+const isLotteryVisible = () => LOTTERY_PUBLIC || myRole === 'admin';
+const LOT = {
+  ja: {
+    now: (d) => `今回 ${d} 21:00 締め切り・22:00 結果発表`, pool: '賞金の合計', first: '1等の賞金', tickets: '全体の口数', people: '参加者',
+    hourly: '（1時間ごとに更新）', buy: 'UP交換所で買う', last: (d) => `前回（${d}）の結果`, noLast: 'まだ結果はありません',
+    tier: (n) => `${n}等`, ticketsOf: (n) => `${n}口`, none: '該当なし', total: (n, p) => `全体 ${n}口・${p}人`,
+    crystals: (n) => `＋結晶${n}個`, test: '試しの期間（管理者だけに表示中）', noName: '名無し', loading: '読み込み中…',
+    waiting: '22:00 に結果を発表します',
+  },
+  en: {
+    now: (d) => `This round: sales close ${d} 21:00 JST, results at 22:00`, pool: 'Total prize', first: '1st prize', tickets: 'Tickets', people: 'Players',
+    hourly: '(updated hourly)', buy: 'Buy at UP Exchange', last: (d) => `Last round (${d})`, noLast: 'No results yet',
+    tier: (n) => `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : 'rd'}`, ticketsOf: (n) => `${n} tix`, none: 'None', total: (n, p) => `${n} tickets / ${p} players`,
+    crystals: (n) => ` + ${n} crystal${n > 1 ? 's' : ''}`, test: 'Test period (admins only)', noName: 'No name', loading: 'Loading…',
+    waiting: 'Results at 22:00',
+  },
+};
+const lotT = () => LOT[store.lang === 'en' ? 'en' : 'ja'];
+
+// 今の回と前回(サーバーの lottery.js と同じ決め方: 1日と16日、22時に発表)
+function lotteryDraws(nowMs = Date.now()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const list = [];
+  const j = new Date(nowMs + 9 * 3600e3);
+  let y = j.getUTCFullYear(), m = j.getUTCMonth() + 1 - 1;
+  if (m < 1) { m = 12; y -= 1; }
+  for (let k = 0; k < 4; k++) {
+    for (const day of [1, 16]) list.push({ id: `${y}-${pad(m)}-${pad(day)}`, label: `${m}/${day}`, resultMs: Date.UTC(y, m - 1, day, 22 - 9) });
+    m += 1; if (m > 12) { m = 1; y += 1; }
+  }
+  const i = list.findIndex((d) => d.resultMs > nowMs);
+  return { cur: list[i], prev: list[i - 1] };
+}
+
+function openLotteryTab() {
+  lotteryOpen = true;
+  renderFeedTabs();
+  const list = document.getElementById('feed-list');
+  const panel = document.getElementById('feed-lottery');
+  if (list) list.hidden = true;
+  if (panel) panel.hidden = false;
+  loadLotteryPanel();
+}
+function closeLotteryTab() {
+  lotteryOpen = false;
+  const list = document.getElementById('feed-list');
+  const panel = document.getElementById('feed-lottery');
+  if (list) list.hidden = false;
+  if (panel) panel.hidden = true;
+}
+
+async function loadLotteryPanel() {
+  const panel = document.getElementById('feed-lottery');
+  if (!panel) return;
+  const t = lotT();
+  const { cur, prev } = lotteryDraws();
+  panel.innerHTML = `<p class="lottery-muted">${t.loading}</p>`;
+  let c = null, p = null;
+  try {
+    const [cs, ps] = await Promise.all([getDoc(doc(db, 'ukoLottery', cur.id)), getDoc(doc(db, 'ukoLottery', prev.id))]);
+    c = cs.exists() ? cs.data() : null;
+    p = ps.exists() ? ps.data() : null;
+  } catch (e) {
+    console.error('[feed] lottery load failed', e);
+  }
+  const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const pool = c ? (c.pool || 0) : 0;
+  const cur$ = `
+    <div class="lottery-now">${esc(t.now(cur.label))}</div>
+    <div class="lottery-stats">
+      <div><small>${t.pool}</small><b>${pool.toLocaleString()}<span>UP</span></b></div>
+      <div><small>${t.first}</small><b>${Math.floor(pool * 0.6).toLocaleString()}<span>UP</span></b></div>
+      <div><small>${t.tickets}</small><b>${(c?.totalTickets || 0).toLocaleString()}</b></div>
+      <div><small>${t.people}</small><b>${(c?.participants || 0).toLocaleString()}</b></div>
+    </div>
+    <div class="lottery-row"><span class="lottery-muted">${t.hourly}</span><a class="lottery-buy-link" href="${LOTTERY_UPOINT_URL}" target="_blank" rel="noopener">${t.buy}</a></div>`;
+  let last$ = `<div class="lottery-last-title">${esc(t.last(prev.label))}</div>`;
+  if (p && p.status === 'drawn') {
+    const rows = [1, 2, 3].map((tier) => {
+      const ws = (p.winners || []).filter((w) => w.tier === tier);
+      const body = ws.length ? ws.map((w) => `<span class="lottery-winner"><b>${esc(w.name || t.noName)}</b> ${w.amount.toLocaleString()}UP${w.crystals ? esc(t.crystals(w.crystals)) : ''}<small>（${esc(t.ticketsOf(w.tickets))}）</small></span>`).join('') : `<span class="lottery-muted">${t.none}</span>`;
+      return `<div class="lottery-tier lottery-tier-${tier}"><span class="lottery-tier-label">${esc(t.tier(tier))}</span><div class="lottery-tier-body">${body}</div></div>`;
+    }).join('');
+    last$ += rows + `<div class="lottery-muted">${esc(t.total((p.totalTickets || 0).toLocaleString(), p.participants || 0))}</div>`;
+  } else {
+    last$ += `<div class="lottery-muted">${t.noLast}</div>`;
+  }
+  panel.innerHTML = (LOTTERY_PUBLIC ? '' : `<p class="lottery-test">${t.test}</p>`) + cur$ + last$;
+}
+
 function renderFeedTabs() {
+  const active = lotteryOpen ? 'lottery' : feedTab;
   document.querySelectorAll('[data-feed-tab]').forEach((b) => {
-    const on = b.dataset.feedTab === feedTab;
+    const on = b.dataset.feedTab === active;
     b.classList.toggle('active', on);
     b.setAttribute('aria-selected', String(on));
   });
 }
 
 async function switchFeedTab(tab) {
+  if (tab === 'lottery') { if (isLotteryVisible()) openLotteryTab(); return; }
+  if (lotteryOpen) {   // 宝くじタブから戻る
+    closeLotteryTab();
+    if (tab === feedTab) { renderFeedTabs(); return; }
+  }
   if (tab === feedTab || !FEED_TABS[tab]) return;
   feedTabState[feedTab] = { entries: latestFeedEntries, hasMore: feedHasMore, newestMs: feedNewestMs, stale: false };
   feedTab = tab;
@@ -990,6 +1091,8 @@ async function loadMoreFeed() {
 
 function startFeedListener() {
   document.querySelectorAll('[data-feed-tab]').forEach((b) => b.addEventListener('click', () => switchFeedTab(b.dataset.feedTab)));
+  const lotteryBtn = document.querySelector('[data-feed-tab="lottery"]');
+  if (lotteryBtn) lotteryBtn.hidden = !isLotteryVisible();
   renderFeedTabs();
   loadFeedInitial().then(() => {
     // 自分のいいね一覧は、フィードに出ている一番古い投稿以降の分だけ読めば足りる

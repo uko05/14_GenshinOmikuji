@@ -4,10 +4,10 @@ import { GACHA_DESIGNS, STARRAIL_DESIGNS, ALL_CARD_DESIGNS, isStarRailDesign } f
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=71';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=72';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=5';
-import { initSell } from './sell.js?v=25';
-import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=75';
+import { initSell } from './sell.js?v=26';
+import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=76';
 import { renderNewBacksTicker } from './newBacks.js?v=9';
 import { isWishEnabled, getWishCrystals, getWishLockedCount, isWishSelectMode, renderWishBar, useWishCrystal, wishStr } from './wishCrystal.js?v=9';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
@@ -206,6 +206,7 @@ const i18n = {
     feedTitle:       'みんなの結果（48時間以内）',
     feedTabResults:  '結果',
     feedTabListing:  '出品',
+    feedTabLottery:  '宝くじ',
     hideFeedLabel:   '自分の占いを公開しない',
     statsUpLabel:       'うーこポイント',
     statsGachaLabel:    'ガチャを引く',
@@ -315,6 +316,7 @@ const i18n = {
     feedTitle:       "Everyone's Results (last 48h)",
     feedTabResults:  'Results',
     feedTabListing:  'Listings',
+    feedTabLottery:  'Lottery',
     hideFeedLabel:   "Don't publish my fortune",
     statsUpLabel:       'Uko Points',
     statsGachaLabel:    'Gacha',
