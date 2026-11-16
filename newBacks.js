@@ -13,8 +13,9 @@ const NEW_BACKS_ADMIN_ONLY = false;
 const RECENT_DAYS = 30; // この日数以内に追加した裏面を出す
 
 const STR = {
-  ja: { added: (md) => `${md} 追加`, sr: 'スタレ' },
-  en: { added: (md) => `Added ${md}`, sr: 'HSR' },
+  // スタレ裏面の印(2026-11-17: 「スタレ 」だと横幅が広く隣と重なったので「★」に)
+  ja: { added: (md) => `${md} 追加`, sr: '★' },
+  en: { added: (md) => `Added ${md}`, sr: '★' },
 };
 
 let isAdmin = false;
@@ -60,7 +61,7 @@ function makeItem(item, t) {
   img.decoding = 'async';
   const no = document.createElement('div');
   no.className = 'new-backs-no';
-  no.textContent = (sr ? `${t.sr} ` : '') + item.id.replace(/^(custom|sr)_/, 'No.');
+  no.textContent = (sr ? t.sr : '') + item.id.replace(/^(custom|sr)_/, 'No.');
   const date = document.createElement('div');
   date.className = 'new-backs-date';
   date.textContent = t.added(fmtMonthDay(item.date));
