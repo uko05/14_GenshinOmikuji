@@ -1579,6 +1579,9 @@ footer {
 /* 結果・出品のタブ(2026-11-17)。見た目はアバター選択のタブと同じ */
 .feed-tab-bar { margin: 0 0 6px; }
 .feed-tab-bar [hidden] { display: none; }
+/* 宝くじの結果のまとめ(フィードの結果タブ) */
+.feed-item.feed-item-lottery { background: linear-gradient(90deg, rgba(255, 204, 0, 0.28), rgba(255, 204, 0, 0.08)); }
+.feed-item-lottery .feed-item-line { font-weight: bold; white-space: normal; }
 /* 宝くじタブ(2026-11-17) */
 .feed-lottery { display: flex; flex-direction: column; gap: 8px; max-height: 330px; overflow-y: auto; font-size: 0.85rem; }
 .feed-lottery[hidden] { display: none; }

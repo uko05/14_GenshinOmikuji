@@ -614,6 +614,18 @@ function buildFeedBadgeEl(entry) {
 }
 
 // ===== フィード一覧描画 =====
+// 宝くじの結果のまとめ(フィード用。2026-11-17)
+const LOTTERY_FEED_ICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="20" fill="#ffcc00"/><path d="M10 14h20v4a3 3 0 0 0 0 6v4H10v-4a3 3 0 0 0 0-6z" fill="none" stroke="#4a3600" stroke-width="2" stroke-linejoin="round"/><path d="M23 14v14" stroke="#4a3600" stroke-width="1.6" stroke-dasharray="2 2"/></svg>');
+function lotteryFeedLine(e) {
+  const en = store.lang === 'en';
+  const nm = (x) => x || (en ? 'No name' : '名無し');
+  const f = e.first;
+  const p1 = f ? (en ? `1st ${nm(f.name)} (${f.amount.toLocaleString()} UP + ${f.crystals} crystals)` : `1等 ${nm(f.name)}さん（${f.amount.toLocaleString()}UP＋結晶${f.crystals}個）`) : '';
+  const p2 = (e.seconds || []).length ? (en ? ` / 2nd ${e.seconds.map(nm).join(', ')}` : `／2等 ${e.seconds.map((x) => nm(x) + 'さん').join('・')}`) : '';
+  const p3 = e.thirdCount ? (en ? ` / 3rd ${e.thirdCount} winners` : `／3等 ${e.thirdCount}人`) : '';
+  return (en ? 'UP Lottery results: ' : 'UP宝くじの結果：') + p1 + p2 + p3;
+}
+
 function renderFeedList(entries) {
   const list = document.getElementById('feed-list');
   if (!list) return;
@@ -621,7 +633,8 @@ function renderFeedList(entries) {
   const keepScroll = list.scrollTop; // 描き直しても見ていた位置のままにする(「もっと見る」・いいねの後など)
   list.innerHTML = '';
 
-  const visibleEntries = entries;
+  // 公開前の宝くじの結果(adminOnly)は管理者にだけ出す
+  const visibleEntries = entries.filter((e) => !(e.adminOnly && !isFeedDebugger));
 
   if (!visibleEntries.length) {
     const p = document.createElement('p');
@@ -642,11 +655,13 @@ function renderFeedList(entries) {
       if (isStarRailDesign(entry.cardBackId)) item.classList.add('feed-item-gacha-sr');
     } else if (entry.type === 'listing') {
       item.classList.add('feed-item-listing');
+    } else if (entry.type === 'lottery') {
+      item.classList.add('feed-item-lottery');
     }
 
     const avatar = document.createElement('img');
     avatar.className = 'feed-avatar';
-    avatar.src = avatarUrl(entry.avatarGame, entry.avatarIcon);
+    avatar.src = entry.type === 'lottery' ? LOTTERY_FEED_ICON : avatarUrl(entry.avatarGame, entry.avatarIcon);
     avatar.alt = '';
     item.appendChild(avatar);
 
@@ -664,6 +679,8 @@ function renderFeedList(entries) {
       lineEl.appendChild(document.createTextNode(s().gachaGetLine(entry.cardBackName)));
     } else if (entry.type === 'listing') {
       lineEl.appendChild(document.createTextNode(s().listingLine(entry.itemName)));
+    } else if (entry.type === 'lottery') {
+      lineEl.textContent = lotteryFeedLine(entry);
     } else {
       lineEl.appendChild(document.createTextNode(
         entry.isRare
@@ -723,7 +740,7 @@ function renderFeedList(entries) {
     // (未交換の人には従来通りリンクだけ)。likeCount自体は出品通知にも最初から
     // 持たせてあるので、ボタンを出す条件だけの違い。
     const listingLikeUnlocked = !!store.sitePerks?.omikuji?.listingLikeUnlocked;
-    if (entry.type !== 'listing' || listingLikeUnlocked) {
+    if (entry.type !== 'lottery' && (entry.type !== 'listing' || listingLikeUnlocked)) {
       const likeBtn = document.createElement('button');
       likeBtn.className = 'feed-like-btn';
       likeBtn.innerHTML = `<span class="feed-like-icon">👍</span><span class="feed-like-count">${entry.likeCount || 0}</span>`;
@@ -829,7 +846,8 @@ const feedCreatedMs = (e) => e.createdAt?.toMillis?.() || 0;
 // フィードのほぼ半分が出品のお知らせで、結果が見づらかったため。読むのは開いているタブの分だけ
 // (出品タブは押した時に初めて読む)なので、開いた時の読み取りは今まで通り50件。
 // 索引: omikujiFeed (type ASC, createdAt DESC)
-const FEED_TABS = { results: ['fortune', 'gacha', 'achievement'], listing: ['listing'] };
+// 2026-11-17: 宝くじの結果のまとめ(type 'lottery'。functions/lottery.js が抽選のたびに1件)も「結果」タブに出す
+const FEED_TABS = { results: ['fortune', 'gacha', 'achievement', 'lottery'], listing: ['listing'] };
 let feedTab = 'results';
 const feedTabState = {};   // タブ → { entries, hasMore, newestMs, stale }
 const feedTypeFilter = () => (FEED_TABS[feedTab].length === 1
