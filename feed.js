@@ -848,7 +848,7 @@ let lotteryOpen = false;
 const isLotteryVisible = () => LOTTERY_PUBLIC || myRole === 'admin';
 const LOT = {
   ja: {
-    now: (d) => `今回 ${d} 21:00 締め切り・22:00 結果発表`, pool: '賞金の合計', first: '1等の賞金', tickets: '全体の口数', people: '参加者',
+    now: (c, r) => `今回 ${c} 締め切り・${r} 結果発表`, pool: '賞金の合計', first: '1等の賞金', tickets: '全体の口数', people: '参加者',
     hourly: '（開いた時点の数字です）', buy: 'UP交換所で買う', last: (d) => `前回（${d}）の結果`, noLast: 'まだ結果はありません',
     tier: (n) => `${n}等`, ticketsOf: (n) => `${n}口`, none: '該当なし', total: (n, p) => `全体 ${n}口・${p}人`,
     crystals: (n) => `＋結晶${n}個`, test: '試しの期間（管理者だけに表示中）', noName: '名無し', loading: '読み込み中…',
@@ -859,7 +859,7 @@ const LOT = {
     thirdLabel: '3等（5人・1人あたり）', thirdHint: '賞金の2%ずつ',
   },
   en: {
-    now: (d) => `This round: sales close ${d} 21:00 JST, results at 22:00`, pool: 'Total prize', first: '1st prize', tickets: 'Tickets', people: 'Players',
+    now: (c, r) => `This round: sales close ${c} JST, results ${r}`, pool: 'Total prize', first: '1st prize', tickets: 'Tickets', people: 'Players',
     hourly: '(as of when you opened this tab)', buy: 'Buy at UP Exchange', last: (d) => `Last round (${d})`, noLast: 'No results yet',
     tier: (n) => `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : 'rd'}`, ticketsOf: (n) => `${n} tix`, none: 'None', total: (n, p) => `${n} tickets / ${p} players`,
     crystals: (n) => ` + ${n} crystal${n > 1 ? 's' : ''}`, test: 'Test period (admins only)', noName: 'No name', loading: 'Loading…',
@@ -873,14 +873,35 @@ const LOT = {
 const lotT = () => LOT[store.lang === 'en' ? 'en' : 'ja'];
 
 // 今の回と前回(サーバーの lottery.js と同じ決め方: 1日と16日、22時に発表)
-function lotteryDraws(nowMs = Date.now()) {
+// 試しの期間(2026-11-17。ukoLotteryConfig/main の testUntil・testIntervalMin)なら、その間隔の回(名前は T+発表時刻、締め切りは5分前)
+function lotteryTestSlot(nowMs, cfg, back = 0) {
+  const until = cfg && cfg.testUntil && cfg.testUntil.toMillis ? cfg.testUntil.toMillis() : 0;
+  if (!(until > nowMs && cfg.testIntervalMin > 0)) return null;
+  const pad = (n) => String(n).padStart(2, '0');
+  const iv = cfg.testIntervalMin * 60e3;
+  const res = Math.floor(nowMs / iv) * iv + iv - back * iv;
+  const j = new Date(res + 9 * 3600e3);
+  const id = `T${j.getUTCFullYear()}${pad(j.getUTCMonth() + 1)}${pad(j.getUTCDate())}-${pad(j.getUTCHours())}${pad(j.getUTCMinutes())}`;
+  return { drawId: id, id, closeMs: res - 5 * 60e3, resultMs: res };
+}
+// 日時の表示(日本時間 M/D HH:MM)
+function lotteryFmt(ms) {
+  const j = new Date(ms + 9 * 3600e3);
+  return `${j.getUTCMonth() + 1}/${j.getUTCDate()} ${String(j.getUTCHours()).padStart(2, '0')}:${String(j.getUTCMinutes()).padStart(2, '0')}`;
+}
+function lotteryDraws(nowMs = Date.now(), cfg = {}) {
+  const ts = lotteryTestSlot(nowMs, cfg);
+  if (ts) {
+    const pv = lotteryTestSlot(nowMs, cfg, 1);
+    return { cur: { ...ts, label: lotteryFmt(ts.resultMs) }, prev: { ...pv, label: lotteryFmt(pv.resultMs) } };
+  }
   const pad = (n) => String(n).padStart(2, '0');
   const list = [];
   const j = new Date(nowMs + 9 * 3600e3);
   let y = j.getUTCFullYear(), m = j.getUTCMonth() + 1 - 1;
   if (m < 1) { m = 12; y -= 1; }
   for (let k = 0; k < 4; k++) {
-    for (const day of [1, 16]) list.push({ id: `${y}-${pad(m)}-${pad(day)}`, label: `${m}/${day}`, resultMs: Date.UTC(y, m - 1, day, 22 - 9) });
+    for (const day of [1, 16]) list.push({ id: `${y}-${pad(m)}-${pad(day)}`, label: `${m}/${day}`, closeMs: Date.UTC(y, m - 1, day, 21 - 9), resultMs: Date.UTC(y, m - 1, day, 22 - 9) });
     m += 1; if (m > 12) { m = 1; y += 1; }
   }
   const i = list.findIndex((d) => d.resultMs > nowMs);
@@ -908,8 +929,10 @@ async function loadLotteryPanel() {
   const panel = document.getElementById('feed-lottery');
   if (!panel) return;
   const t = lotT();
-  const { cur, prev } = lotteryDraws();
   panel.innerHTML = `<p class="lottery-muted">${t.loading}</p>`;
+  let cfg = {};
+  try { const cs = await getDoc(doc(db, 'ukoLotteryConfig', 'main')); cfg = cs.exists() ? cs.data() : {}; } catch (e) { cfg = {}; }
+  const { cur, prev } = lotteryDraws(Date.now(), cfg);
   let c = null, p = null;
   try {
     // 今回の口数・参加者は、その場で数える(合計を数える集計なので読み取りは1回分。2026-11-17)
@@ -929,7 +952,7 @@ async function loadLotteryPanel() {
   const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const pool = c ? (c.pool || 0) : 0;
   const cur$ = `
-    <div class="lottery-now">${esc(t.now(cur.label))}</div>
+    <div class="lottery-now">${esc(t.now(lotteryFmt(cur.closeMs), lotteryFmt(cur.resultMs).split(' ')[1]))}</div>
     <div class="lottery-first"><small>${t.firstLabel}</small><b>${Math.floor(pool * 0.60).toLocaleString()}<span>UP</span></b><em>${t.firstHint}</em></div>
     <div class="lottery-second">
       ${[0, 1].map(() => `<div class="lottery-prize"><small>${t.secondLabel}</small><b>${Math.floor(pool * 0.15).toLocaleString()}<span>UP</span></b><em>${t.secondHint}</em></div>`).join('')}
