@@ -621,6 +621,9 @@ function lotteryFeedLine(e) {
   const nm = (x) => x || (en ? 'No name' : '名無し');
   const hm = (ms) => { const j = new Date(ms + 9 * 3600e3); return `${String(j.getUTCHours()).padStart(2, '0')}:${String(j.getUTCMinutes()).padStart(2, '0')}`; };
   // 2026-11-17: 発表は「まもなく発表」→ 3等(1人1件)→ 2等 → 1等 の順に流れる
+  if (e.kind === 'remind') return en
+    ? `UP Lottery: ${e.hours} hour${e.hours > 1 ? 's' : ''} left to buy! Prize pool ${e.pool.toLocaleString()} UP (${e.totalTickets} tickets, ${e.participants} players)`
+    : `UP宝くじ購入締め切りまであと${e.hours}時間！ 賞金の合計 ${e.pool.toLocaleString()}UP（${e.totalTickets}口・${e.participants}人）`;
   if (e.kind === 'pre') return en
     ? `UP Lottery results at ${hm(e.resultMs)}! Prize pool ${e.pool.toLocaleString()} UP (${e.totalTickets} tickets, ${e.participants} players)${e.enough ? '' : ' - fewer than 9 players, likely carried over'}`
     : `まもなくUP宝くじの結果発表（${hm(e.resultMs)}）！ 賞金の合計 ${e.pool.toLocaleString()}UP（${e.totalTickets}口・${e.participants}人）${e.enough ? '' : '／参加者が9人に届かないため持ち越しの見込み'}`;
