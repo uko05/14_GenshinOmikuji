@@ -919,6 +919,26 @@ function lotteryFmt(ms) {
   const j = new Date(ms + 9 * 3600e3);
   return `${j.getUTCMonth() + 1}/${j.getUTCDate()} ${String(j.getUTCHours()).padStart(2, '0')}:${String(j.getUTCMinutes()).padStart(2, '0')}`;
 }
+// カウントダウン(2026-11-17)。「締め切りまで 残り08日 10:25:10（11/16 21:00）」の形。端末の時計で1秒ごとに書き換えるだけ(読み書きなし)
+let lotteryCdTimer = null;
+function lotteryCountdown(el, closeMs, resultMs, en) {
+  if (lotteryCdTimer) clearInterval(lotteryCdTimer);
+  const p2 = (n) => String(n).padStart(2, '0');
+  const tick = () => {
+    if (!el.isConnected) { clearInterval(lotteryCdTimer); lotteryCdTimer = null; return; }
+    const now = Date.now();
+    const target = now < closeMs ? closeMs : resultMs;
+    if (now >= resultMs) { el.textContent = en ? 'Results coming soon! Check the feed.' : 'まもなく発表！ フィードをチェック'; return; }
+    let sec = Math.max(0, Math.floor((target - now) / 1000));
+    const d = Math.floor(sec / 86400); sec -= d * 86400;
+    const h = Math.floor(sec / 3600); sec -= h * 3600;
+    const m = Math.floor(sec / 60); sec -= m * 60;
+    const label = now < closeMs ? (en ? 'Sales close in' : '締め切りまで') : (en ? 'Results in' : '結果発表まで');
+    el.textContent = `${label} ${en ? '' : '残り'}${p2(d)}${en ? 'd' : '日'} ${p2(h)}:${p2(m)}:${p2(sec)}（${lotteryFmt(target)}）`;
+  };
+  tick();
+  lotteryCdTimer = setInterval(tick, 1000);
+}
 function lotteryDraws(nowMs = Date.now(), cfg = {}) {
   const ts = lotteryTestSlot(nowMs, cfg);
   if (ts) {
@@ -982,6 +1002,7 @@ async function loadLotteryPanel() {
   const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const pool = c ? (c.pool || 0) : 0;
   const cur$ = `
+    <div class="lottery-countdown" id="feed-lottery-cd"></div>
     <div class="lottery-now">${esc(t.now(lotteryFmt(cur.closeMs), lotteryFmt(cur.resultMs).split(' ')[1]))}</div>
     <div class="lottery-first"><small>${t.firstLabel}</small><b>${Math.floor(pool * 0.60).toLocaleString()}<span>UP</span></b><em>${t.firstHint}</em></div>
     <div class="lottery-second">
@@ -1009,6 +1030,8 @@ async function loadLotteryPanel() {
     last$ += `<div class="lottery-muted">${t.noLast}</div>`;
   }
   panel.innerHTML = (LOTTERY_PUBLIC ? '' : `<p class="lottery-test">${t.test}</p>`) + cur$ + last$;
+  const cdEl = document.getElementById('feed-lottery-cd');
+  if (cdEl) lotteryCountdown(cdEl, cur.closeMs, cur.resultMs, store.lang === 'en');
 }
 
 function renderFeedTabs() {

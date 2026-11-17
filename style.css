@@ -1588,7 +1588,8 @@ footer {
 .feed-lottery { display: flex; flex-direction: column; gap: 8px; max-height: 330px; overflow-y: auto; font-size: 0.85rem; }
 .feed-lottery[hidden] { display: none; }
 .feed-lottery .lottery-test { font-size: 0.72rem; color: #b38600; margin: 0; }
-.feed-lottery .lottery-now { font-weight: bold; }
+.feed-lottery .lottery-now { font-size: 0.75rem; color: var(--muted); }
+.feed-lottery .lottery-countdown { font-size: 1rem; font-weight: bold; text-align: center; font-variant-numeric: tabular-nums; }
 /* 1等を大きく・2等を2つ横並び・3等(UP交換所と同じ並び。2026-11-17) */
 .feed-lottery .lottery-first { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
 .feed-lottery .lottery-first small { display: block; font-size: 0.75rem; color: var(--muted); }
