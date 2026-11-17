@@ -1017,9 +1017,10 @@ async function loadLotteryPanel() {
   const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const pool = c ? (c.pool || 0) : 0;
   const cur$ = `
-    <div class="lottery-title">${esc(lotteryRoundTitle(cur.id, store.lang === 'en'))}</div>
-    <div class="lottery-countdown" id="feed-lottery-cd"></div>
-    <div class="lottery-now">${esc(t.now(lotteryFmt(cur.closeMs), lotteryFmt(cur.resultMs).split(' ')[1]))}</div>
+    <div class="lottery-hero">
+      <div class="lottery-title">${esc(lotteryRoundTitle(cur.id, store.lang === 'en'))}</div>
+      <div class="lottery-countdown" id="feed-lottery-cd"></div>
+    </div>
     <div class="lottery-first"><small>${t.firstLabel}</small><b>${Math.floor(pool * 0.60).toLocaleString()}<span>UP</span></b><em>${t.firstHint}</em></div>
     <div class="lottery-second">
       ${[0, 1].map(() => `<div class="lottery-prize"><small>${t.secondLabel}</small><b>${Math.floor(pool * 0.15).toLocaleString()}<span>UP</span></b><em>${t.secondHint}</em></div>`).join('')}

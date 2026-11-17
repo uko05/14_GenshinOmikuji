@@ -1619,6 +1619,28 @@ footer {
 .feed-lottery .lottery-tier-1 .lottery-tier-label { color: #b38600; }
 .feed-lottery .lottery-tier-body { display: flex; flex-wrap: wrap; gap: 4px 12px; }
 .feed-lottery .lottery-winner small { color: var(--muted); margin-left: 2px; }
+.feed-lottery .lottery-tier-2 .lottery-tier-label { color: #6b7688; }
+.feed-lottery .lottery-tier-3 .lottery-tier-label { color: #b0643a; }
+
+/* 2026-11-17: 色付け(タイトルとカウントダウンは金の帯、1等=金・2等=銀・3等=銅) */
+.feed-lottery .lottery-hero { background: linear-gradient(135deg, #fff6cf 0%, #ffe28a 55%, #ffd257 100%); border: 1px solid #f1c232; border-radius: 14px; padding: 12px 14px; text-align: center; }
+.feed-lottery .lottery-hero .lottery-title { color: #6b4500; letter-spacing: 0.04em; }
+.feed-lottery .lottery-hero .lottery-cd-close { color: #a14a00; }
+.feed-lottery .lottery-hero .lottery-cd-result { color: #7a5a1a; }
+.feed-lottery .lottery-first { background: linear-gradient(180deg, #fffbea 0%, #fff0bf 100%); border: 1px solid #efc44a; }
+.feed-lottery .lottery-first .balance-label, .feed-lottery .lottery-first small { color: #8a6100; font-weight: bold; }
+.feed-lottery .lottery-first .balance-value, .feed-lottery .lottery-first b { color: #c48a00; }
+.feed-lottery .lottery-first .balance-hint, .feed-lottery .lottery-first em { color: #8a6100; }
+.feed-lottery .lottery-second .lottery-prize { background: linear-gradient(180deg, #fbfcfe 0%, #eef1f6 100%); border-color: #c3cad6; }
+.feed-lottery .lottery-second .lottery-prize small, .feed-lottery .lottery-second .lottery-prize em { color: #5a6475; }
+.feed-lottery .lottery-second .lottery-prize b { color: #6b7688; }
+.feed-lottery .lottery-third { background: linear-gradient(180deg, #fff8f2 0%, #fbe6d6 100%); border-color: #e3b48e; }
+.feed-lottery .lottery-third small, .feed-lottery .lottery-third em { color: #8a5230; }
+.feed-lottery .lottery-third b { color: #b0643a; }
+.feed-lottery .lottery-stats div { background: #fffaf0; border: 1px solid #f3dfa8; }
+.feed-lottery .lottery-stats small { color: #8a6a2a; }
+.feed-lottery .lottery-stats b { color: #6b4500; }
+
 .feed-list {
   display: flex;
   flex-direction: column;
