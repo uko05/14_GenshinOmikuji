@@ -619,6 +619,17 @@ const LOTTERY_FEED_ICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns
 function lotteryFeedLine(e) {
   const en = store.lang === 'en';
   const nm = (x) => x || (en ? 'No name' : '名無し');
+  const hm = (ms) => { const j = new Date(ms + 9 * 3600e3); return `${String(j.getUTCHours()).padStart(2, '0')}:${String(j.getUTCMinutes()).padStart(2, '0')}`; };
+  // 2026-11-17: 発表は「まもなく発表」→ 3等(1人1件)→ 2等 → 1等 の順に流れる
+  if (e.kind === 'pre') return en
+    ? `UP Lottery results at ${hm(e.resultMs)}! Prize pool ${e.pool.toLocaleString()} UP (${e.totalTickets} tickets, ${e.participants} players)${e.enough ? '' : ' - fewer than 9 players, likely carried over'}`
+    : `まもなくUP宝くじの結果発表（${hm(e.resultMs)}）！ 賞金の合計 ${e.pool.toLocaleString()}UP（${e.totalTickets}口・${e.participants}人）${e.enough ? '' : '／参加者が9人に届かないため持ち越しの見込み'}`;
+  if (e.kind === 'win') return en
+    ? `UP Lottery ${e.tier === 1 ? '1st' : e.tier === 2 ? '2nd' : '3rd'} prize: ${nm(e.winnerName)} (${e.amount.toLocaleString()} UP${e.crystals ? ` + ${e.crystals} crystal${e.crystals > 1 ? 's' : ''}` : ''})${e.tier === 1 ? '!' : ''}`
+    : `UP宝くじ ${e.tier}等 ${nm(e.winnerName)}さん（${e.amount.toLocaleString()}UP${e.crystals ? `＋結晶${e.crystals}個` : ''}）${e.tier === 1 ? '！おめでとうございます！' : ''}`;
+  if (e.kind === 'carried') return en
+    ? `UP Lottery: fewer than 9 players, carried over to the next round with ${e.pool.toLocaleString()} UP`
+    : `UP宝くじ：参加者が9人に届かなかったため、賞金 ${e.pool.toLocaleString()}UP と口数を次の回へ持ち越します`;
   const f = e.first;
   const p1 = f ? (en ? `1st ${nm(f.name)} (${f.amount.toLocaleString()} UP + ${f.crystals} crystals)` : `1等 ${nm(f.name)}さん（${f.amount.toLocaleString()}UP＋結晶${f.crystals}個）`) : '';
   const p2 = (e.seconds || []).length ? (en ? ` / 2nd ${e.seconds.map(nm).join(', ')}` : `／2等 ${e.seconds.map((x) => nm(x) + 'さん').join('・')}`) : '';
@@ -657,6 +668,7 @@ function renderFeedList(entries) {
       item.classList.add('feed-item-listing');
     } else if (entry.type === 'lottery') {
       item.classList.add('feed-item-lottery');
+      if (entry.kind === 'win') item.classList.add(`lottery-tier-${entry.tier}`);
     }
 
     const avatar = document.createElement('img');
@@ -984,7 +996,7 @@ async function loadLotteryPanel() {
     ${c?.carriedFrom ? `<div class="lottery-muted">${t.carriedIn}</div>` : ''}
     <div class="lottery-row"><span class="lottery-muted">${t.hourly}</span><a class="lottery-buy-link" href="${LOTTERY_UPOINT_URL}" target="_blank" rel="noopener">${t.buy}</a></div>`;
   let last$ = `<div class="lottery-last-title">${esc(t.last(prev.label))}</div>`;
-  if (p && p.status === 'drawn') {
+  if (p && p.status === 'drawn' && (p.revealedAt || !p.winners?.length)) {
     const rows = [1, 2, 3].map((tier) => {
       const ws = (p.winners || []).filter((w) => w.tier === tier);
       const body = ws.length ? ws.map((w) => `<span class="lottery-winner"><b>${esc(w.name || t.noName)}</b> ${w.amount.toLocaleString()}UP${w.crystals ? esc(t.crystals(w.crystals)) : ''}<small>（${esc(t.ticketsOf(w.tickets))}）</small></span>`).join('') : `<span class="lottery-muted">${t.none}</span>`;
