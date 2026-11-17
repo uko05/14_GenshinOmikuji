@@ -172,6 +172,12 @@ export const ACHIEVEMENT_GROUPS = [
       { id:'gacha_col_50',  rarity:'gold',   name:'スキンコレクター上級者', nameEn:'Master Skin Collector',   condition:'原神の裏面デザインを50種収集する',  conditionEn:'Collect 50 Genshin card-back designs',          check:(s,c,cardBacks)=>genshinDesignCount(cardBacks)>=50 },
       { id:'gacha_col_100', rarity:'legend', name:'グランドスキンコレクター', nameEn:'Grand Skin Collector',  condition:'原神の裏面デザインを100種収集する', conditionEn:'Collect 100 Genshin card-back designs',         check:(s,c,cardBacks)=>genshinDesignCount(cardBacks)>=100 },
       { id:'gacha_col_200', rarity:'legend', name:'唯一無二のコレクター',   nameEn:'Peerless Collector',       condition:'裏面デザインNo.1〜200をすべて収集する', conditionEn:'Collect card-back designs No.1–200', check:(s,c,cardBacks)=>hasDesignRange(cardBacks,1,200) },
+      // 2026-11-18: 唯一無二のコレクターの続き(No.1〜300/400/500/600)。裏面が増えたら、同じ形で6・7…と足す。
+      // retroactive:false なので、次におみくじ・ガチャを引いた時にトースト＋フィード付きで取れる
+      { id:'gacha_col_300', rarity:'legend', name:'唯一無二のコレクター２', nameEn:'Peerless Collector II', condition:'裏面デザインNo.1〜300をすべて収集する', conditionEn:'Collect card-back designs No.1–300', retroactive:false, check:(s,c,cardBacks)=>hasDesignRange(cardBacks,1,300) },
+      { id:'gacha_col_400', rarity:'legend', name:'唯一無二のコレクター３', nameEn:'Peerless Collector III', condition:'裏面デザインNo.1〜400をすべて収集する', conditionEn:'Collect card-back designs No.1–400', retroactive:false, check:(s,c,cardBacks)=>hasDesignRange(cardBacks,1,400) },
+      { id:'gacha_col_500', rarity:'legend', name:'唯一無二のコレクター４', nameEn:'Peerless Collector IV', condition:'裏面デザインNo.1〜500をすべて収集する', conditionEn:'Collect card-back designs No.1–500', retroactive:false, check:(s,c,cardBacks)=>hasDesignRange(cardBacks,1,500) },
+      { id:'gacha_col_600', rarity:'legend', name:'唯一無二のコレクター５', nameEn:'Peerless Collector V', condition:'裏面デザインNo.1〜600をすべて収集する', conditionEn:'Collect card-back designs No.1–600', retroactive:false, check:(s,c,cardBacks)=>hasDesignRange(cardBacks,1,600) },
       // スタレ裏面(sr_NNN)のアチーブ(2026-11-18)。retroactive:false なので、ページを開いた時にこっそり取れるのではなく、
       // 次におみくじ・ガチャを引いた時(や裏面を設定した時)にトースト＋フィード付きで取れる
       { id:'sr_first', rarity:'bronze', name:'星穹列車出発！', nameEn:'Astral Express Departs!', condition:'スタレ裏面を1種入手する', conditionEn:'Obtain your first Star Rail card back', retroactive:false, check:(s,c,cardBacks)=>srDesignCount(cardBacks)>=1 },
