@@ -1580,11 +1580,15 @@ footer {
 .feed-tab-bar { margin: 0 0 6px; }
 .feed-tab-bar [hidden] { display: none; }
 /* 宝くじの結果のまとめ(フィードの結果タブ) */
-.feed-item.feed-item-lottery { background: linear-gradient(90deg, rgba(255, 204, 0, 0.28), rgba(255, 204, 0, 0.08)); }
+/* 宝くじ専用の投稿デザイン(2026-11-17): 左は白、右へ向かって等の色(1等=金・2等=銀・3等=銅)。まもなく発表・持ち越しはうすいクリーム色 */
+.feed-item.feed-item-lottery { background: linear-gradient(90deg, #ffffff 0%, #ffffff 40%, #fff3d1 100%); border: 1px solid #f1e2b5; }
 .feed-item-lottery .feed-item-line { font-weight: bold; white-space: normal; }
 .feed-avatar.feed-avatar-link { cursor: pointer; }
-.feed-item.feed-item-lottery.lottery-tier-1 { background: linear-gradient(90deg, rgba(255, 204, 0, 0.55), rgba(255, 170, 0, 0.2)); }
-.feed-item.feed-item-lottery.lottery-tier-2 { background: linear-gradient(90deg, rgba(255, 204, 0, 0.38), rgba(255, 204, 0, 0.12)); }
+.feed-item.feed-item-lottery.lottery-tier-1 { background: linear-gradient(90deg, #ffffff 0%, #ffffff 30%, #ffe27a 75%, #f2b100 100%); border-color: #e8be4a; }
+.feed-item.feed-item-lottery.lottery-tier-2 { background: linear-gradient(90deg, #ffffff 0%, #ffffff 30%, #e3e8ef 75%, #b4bcc8 100%); border-color: #c9d0db; }
+.feed-item.feed-item-lottery.lottery-tier-3 { background: linear-gradient(90deg, #ffffff 0%, #ffffff 30%, #f6dcc8 75%, #d99a6c 100%); border-color: #e6bfa0; }
+.feed-item.feed-item-lottery .feed-item-line { color: #3a2a10; }
+.feed-item.feed-item-lottery .feed-item-time { color: #6b5a3a; }
 /* 宝くじタブ(2026-11-17) */
 .feed-lottery { display: flex; flex-direction: column; gap: 8px; max-height: 330px; overflow-y: auto; font-size: 0.85rem; }
 .feed-lottery[hidden] { display: none; }
