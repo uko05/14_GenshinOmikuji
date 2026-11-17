@@ -674,6 +674,12 @@ function renderFeedList(entries) {
     const avatar = document.createElement('img');
     avatar.className = 'feed-avatar';
     avatar.src = entry.type === 'lottery' ? LOTTERY_FEED_ICON : avatarUrl(entry.avatarGame, entry.avatarIcon);
+    if (entry.type === 'lottery') {
+      // 宝くじの投稿のチケットのアイコンを押すと、UP交換所の宝くじタブを開く(2026-11-17)
+      avatar.classList.add('feed-avatar-link');
+      avatar.title = store.lang === 'en' ? 'Open the UP Lottery' : 'UP宝くじを開く';
+      avatar.addEventListener('click', (ev) => { ev.stopPropagation(); window.open(`${LOTTERY_UPOINT_URL}?tab=lottery`, '_blank', 'noopener'); });
+    }
     avatar.alt = '';
     item.appendChild(avatar);
 
@@ -1033,7 +1039,7 @@ async function loadLotteryPanel() {
       <div><small>${t.people}</small><b>${(c?.participants || 0).toLocaleString()}</b></div>
     </div>
     ${c?.carriedFrom ? `<div class="lottery-muted">${t.carriedIn}</div>` : ''}
-    <div class="lottery-row"><span class="lottery-muted">${t.hourly}</span><a class="lottery-buy-link" href="${LOTTERY_UPOINT_URL}" target="_blank" rel="noopener">${t.buy}</a></div>`;
+    <div class="lottery-row"><span class="lottery-muted">${t.hourly}</span><a class="lottery-buy-link" href="${LOTTERY_UPOINT_URL}?tab=lottery" target="_blank" rel="noopener">${t.buy}</a></div>`;
   let last$ = `<div class="lottery-last-title">${esc(t.last(prev.label))}</div>`;
   if (p && p.status === 'drawn' && (p.revealedAt || !p.winners?.length)) {
     const rows = [1, 2, 3].map((tier) => {

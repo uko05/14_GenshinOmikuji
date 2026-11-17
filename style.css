@@ -1582,6 +1582,7 @@ footer {
 /* 宝くじの結果のまとめ(フィードの結果タブ) */
 .feed-item.feed-item-lottery { background: linear-gradient(90deg, rgba(255, 204, 0, 0.28), rgba(255, 204, 0, 0.08)); }
 .feed-item-lottery .feed-item-line { font-weight: bold; white-space: normal; }
+.feed-avatar.feed-avatar-link { cursor: pointer; }
 .feed-item.feed-item-lottery.lottery-tier-1 { background: linear-gradient(90deg, rgba(255, 204, 0, 0.55), rgba(255, 170, 0, 0.2)); }
 .feed-item.feed-item-lottery.lottery-tier-2 { background: linear-gradient(90deg, rgba(255, 204, 0, 0.38), rgba(255, 204, 0, 0.12)); }
 /* 宝くじタブ(2026-11-17) */
