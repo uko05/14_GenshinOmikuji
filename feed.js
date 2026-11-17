@@ -878,7 +878,7 @@ let lotteryOpen = false;
 const isLotteryVisible = () => LOTTERY_PUBLIC || myRole === 'admin';
 const LOT = {
   ja: {
-    now: (c, r) => `今回 ${c} 締め切り・${r} 結果発表`, pool: '賞金の合計', first: '1等の賞金', tickets: '全体の口数', people: '参加者',
+    now: (c, r) => `今回 ${c} 締め切り・${r} 結果発表`, pool: '賞金の合計', first: '1等の賞金', tickets: '全体の口数', myTickets: '購入口数', people: '参加者',
     hourly: '（開いた時点の数字です）', buy: 'UP交換所で買う', last: (d) => `前回（${d}）の結果`, noLast: 'まだ結果はありません',
     tier: (n) => `${n}等`, ticketsOf: (n) => `${n}口`, none: '該当なし', total: (n, p) => `全体 ${n}口・${p}人`,
     crystals: (n) => `＋結晶${n}個`, test: '試しの期間（管理者だけに表示中）', noName: '名無し', loading: '読み込み中…',
@@ -889,7 +889,7 @@ const LOT = {
     thirdLabel: '3等（5人・1人あたり）', thirdHint: '賞金の2%ずつ',
   },
   en: {
-    now: (c, r) => `This round: sales close ${c} JST, results ${r}`, pool: 'Total prize', first: '1st prize', tickets: 'Tickets', people: 'Players',
+    now: (c, r) => `This round: sales close ${c} JST, results ${r}`, pool: 'Total prize', first: '1st prize', tickets: 'Tickets', myTickets: 'Yours', people: 'Players',
     hourly: '(as of when you opened this tab)', buy: 'Buy at UP Exchange', last: (d) => `Last round (${d})`, noLast: 'No results yet',
     tier: (n) => `${n}${n === 1 ? 'st' : n === 2 ? 'nd' : 'rd'}`, ticketsOf: (n) => `${n} tix`, none: 'None', total: (n, p) => `${n} tickets / ${p} players`,
     crystals: (n) => ` + ${n} crystal${n > 1 ? 's' : ''}`, test: 'Test period (admins only)', noName: 'No name', loading: 'Loading…',
@@ -920,6 +920,16 @@ function lotteryFmt(ms) {
   return `${j.getUTCMonth() + 1}/${j.getUTCDate()} ${String(j.getUTCHours()).padStart(2, '0')}:${String(j.getUTCMinutes()).padStart(2, '0')}`;
 }
 // カウントダウン(2026-11-17)。「締め切りまで 残り08日 10:25:10（11/16 21:00）」の形。端末の時計で1秒ごとに書き換えるだけ(読み書きなし)
+// 回のタイトル(2026-11-17)。本番は 2026-12-01 を第1回として1日・16日ごとに数える。試しの回は「試し HH:MM の回」
+function lotteryRoundTitle(drawId, en) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(drawId || '');
+  if (m) {
+    const n = (Number(m[1]) - 2026) * 24 + (Number(m[2]) - 12) * 2 + (Number(m[3]) === 16 ? 1 : 0) + 1;
+    return en ? `UP Lottery #${n}` : `第${n}回UP宝くじ`;
+  }
+  const t = /-(\d{2})(\d{2})$/.exec(drawId || '');
+  return en ? `UP Lottery (test ${t ? `${t[1]}:${t[2]}` : ''})` : `UP宝くじ（試し ${t ? `${t[1]}:${t[2]}` : ''}の回）`;
+}
 let lotteryCdTimer = null;
 function lotteryCountdown(el, closeMs, resultMs, en) {
   if (lotteryCdTimer) clearInterval(lotteryCdTimer);
@@ -927,14 +937,17 @@ function lotteryCountdown(el, closeMs, resultMs, en) {
   const tick = () => {
     if (!el.isConnected) { clearInterval(lotteryCdTimer); lotteryCdTimer = null; return; }
     const now = Date.now();
-    const target = now < closeMs ? closeMs : resultMs;
-    if (now >= resultMs) { el.textContent = en ? 'Results coming soon! Check the feed.' : 'まもなく発表！ フィードをチェック'; return; }
-    let sec = Math.max(0, Math.floor((target - now) / 1000));
-    const d = Math.floor(sec / 86400); sec -= d * 86400;
-    const h = Math.floor(sec / 3600); sec -= h * 3600;
-    const m = Math.floor(sec / 60); sec -= m * 60;
-    const label = now < closeMs ? (en ? 'Sales close in' : '締め切りまで') : (en ? 'Results in' : '結果発表まで');
-    el.textContent = `${label} ${en ? '' : '残り'}${p2(d)}${en ? 'd' : '日'} ${p2(h)}:${p2(m)}:${p2(sec)}（${lotteryFmt(target)}）`;
+    // 2026-11-17: 「購入締め切りまで」と「結果発表まで」を2行に分けて、どちらの時刻か分かるように
+    const left = (target) => {
+      let sec = Math.max(0, Math.floor((target - now) / 1000));
+      const d = Math.floor(sec / 86400); sec -= d * 86400;
+      const h = Math.floor(sec / 3600); sec -= h * 3600;
+      const m = Math.floor(sec / 60); sec -= m * 60;
+      return `${en ? '' : '残り'}${p2(d)}${en ? 'd' : '日'} ${p2(h)}:${p2(m)}:${p2(sec)}（${lotteryFmt(target)}）`;
+    };
+    const line1 = now < closeMs ? `${en ? 'Sales close in' : '購入締め切りまで'} ${left(closeMs)}` : (en ? 'Sales closed' : '購入は締め切りました');
+    const line2 = now < resultMs ? `${en ? 'Results in' : '結果発表まで'} ${left(resultMs)}` : (en ? 'Results coming soon! Check the feed.' : 'まもなく発表！ フィードをチェック');
+    el.innerHTML = `<span class="lottery-cd-close">${line1}</span><span class="lottery-cd-result">${line2}</span>`;
   };
   tick();
   lotteryCdTimer = setInterval(tick, 1000);
@@ -983,13 +996,15 @@ async function loadLotteryPanel() {
   let cfg = {};
   try { const cs = await getDoc(doc(db, 'ukoLotteryConfig', 'main')); cfg = cs.exists() ? cs.data() : {}; } catch (e) { cfg = {}; }
   const { cur, prev } = lotteryDraws(Date.now(), cfg);
-  let c = null, p = null;
+  let c = null, p = null, mine = 0;
   try {
     // 今回の口数・参加者は、その場で数える(合計を数える集計なので読み取りは1回分。2026-11-17)
-    const [cs, ps, agg] = await Promise.all([
+    const [cs, ps, agg, ms] = await Promise.all([
       getDoc(doc(db, 'ukoLottery', cur.id)), getDoc(doc(db, 'ukoLottery', prev.id)),
       getAggregateFromServer(query(collection(db, 'ukoLotteryEntries'), where('drawId', '==', cur.id)), { total: sum('count'), n: count() }).catch(() => null),
+      getDoc(doc(db, 'ukoLotteryEntries', `${cur.id}_${getUserId()}`)).catch(() => null),
     ]);
+    mine = ms && ms.exists() ? (ms.data().count || 0) : 0;
     c = cs.exists() ? cs.data() : null;
     p = ps.exists() ? ps.data() : null;
     if (c && c.status === 'open' && agg) {
@@ -1002,6 +1017,7 @@ async function loadLotteryPanel() {
   const esc = (x) => String(x ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
   const pool = c ? (c.pool || 0) : 0;
   const cur$ = `
+    <div class="lottery-title">${esc(lotteryRoundTitle(cur.id, store.lang === 'en'))}</div>
     <div class="lottery-countdown" id="feed-lottery-cd"></div>
     <div class="lottery-now">${esc(t.now(lotteryFmt(cur.closeMs), lotteryFmt(cur.resultMs).split(' ')[1]))}</div>
     <div class="lottery-first"><small>${t.firstLabel}</small><b>${Math.floor(pool * 0.60).toLocaleString()}<span>UP</span></b><em>${t.firstHint}</em></div>
@@ -1012,6 +1028,7 @@ async function loadLotteryPanel() {
     <div class="lottery-stats">
       <div><small>${t.pool}</small><b>${pool.toLocaleString()}<span>UP</span></b></div>
       <div><small>${t.tickets}</small><b>${(c?.totalTickets || 0).toLocaleString()}</b></div>
+      <div><small>${t.myTickets}</small><b>${mine.toLocaleString()}</b></div>
       <div><small>${t.people}</small><b>${(c?.participants || 0).toLocaleString()}</b></div>
     </div>
     ${c?.carriedFrom ? `<div class="lottery-muted">${t.carriedIn}</div>` : ''}
