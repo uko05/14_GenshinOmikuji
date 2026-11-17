@@ -6,6 +6,23 @@ function ownedDesignCount(cardBacks) {
   return Object.values(cardBacks).filter((n) => n > 0).length;
 }
 
+// 2026-11-18: スキンコレクター系(10/50/100種)は原神の裏面だけで数え、スタレ裏面(sr_NNN)は別のアチーブで数える
+function genshinDesignCount(cardBacks) {
+  if (!cardBacks) return 0;
+  return Object.entries(cardBacks).filter(([id, n]) => n > 0 && !id.startsWith('sr_')).length;
+}
+function srDesignCount(cardBacks) {
+  if (!cardBacks) return 0;
+  return Object.entries(cardBacks).filter(([id, n]) => n > 0 && id.startsWith('sr_')).length;
+}
+function hasSrRange(cardBacks, from, to) {
+  if (!cardBacks) return false;
+  for (let n = from; n <= to; n++) {
+    if (!(cardBacks[`sr_${String(n).padStart(3, '0')}`] > 0)) return false;
+  }
+  return true;
+}
+
 // No.from〜toの裏面デザイン(custom_001〜custom_206, gachaBacks.js参照)を
 // 1種も欠けずに全部持っているかを判定する(「何種類か」ではなく「特定の番号帯を
 // 全部」なので、ownedDesignCountとは別の判定関数にしている)。
@@ -151,10 +168,21 @@ export const ACHIEVEMENT_GROUPS = [
     items: [
       { id:'gacha_first',   rarity:'bronze', name:'スキンガチャ入門',       nameEn:'Gacha Novice',            condition:'裏面デザインを1種入手する',   conditionEn:'Obtain your first card-back design',   check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=1 },
       { id:'gacha_equip',   rarity:'bronze', name:'裏の顔を知る',           nameEn:'Know the Hidden Face',    condition:'裏面デザインを設定する',       conditionEn:'Equip a card-back design',              check:(s,c,cardBacks,equippedId)=>!!equippedId },
-      { id:'gacha_col_10',  rarity:'bronze', name:'スキンコレクター見習い', nameEn:'Apprentice Skin Collector', condition:'裏面デザインを10種収集する', conditionEn:'Collect 10 card-back designs',          check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=10 },
-      { id:'gacha_col_50',  rarity:'gold',   name:'スキンコレクター上級者', nameEn:'Master Skin Collector',   condition:'裏面デザインを50種収集する',  conditionEn:'Collect 50 card-back designs',          check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=50 },
-      { id:'gacha_col_100', rarity:'legend', name:'グランドスキンコレクター', nameEn:'Grand Skin Collector',  condition:'裏面デザインを100種収集する', conditionEn:'Collect 100 card-back designs',         check:(s,c,cardBacks)=>ownedDesignCount(cardBacks)>=100 },
+      { id:'gacha_col_10',  rarity:'bronze', name:'スキンコレクター見習い', nameEn:'Apprentice Skin Collector', condition:'原神の裏面デザインを10種収集する', conditionEn:'Collect 10 Genshin card-back designs',          check:(s,c,cardBacks)=>genshinDesignCount(cardBacks)>=10 },
+      { id:'gacha_col_50',  rarity:'gold',   name:'スキンコレクター上級者', nameEn:'Master Skin Collector',   condition:'原神の裏面デザインを50種収集する',  conditionEn:'Collect 50 Genshin card-back designs',          check:(s,c,cardBacks)=>genshinDesignCount(cardBacks)>=50 },
+      { id:'gacha_col_100', rarity:'legend', name:'グランドスキンコレクター', nameEn:'Grand Skin Collector',  condition:'原神の裏面デザインを100種収集する', conditionEn:'Collect 100 Genshin card-back designs',         check:(s,c,cardBacks)=>genshinDesignCount(cardBacks)>=100 },
       { id:'gacha_col_200', rarity:'legend', name:'唯一無二のコレクター',   nameEn:'Peerless Collector',       condition:'裏面デザインNo.1〜200をすべて収集する', conditionEn:'Collect card-back designs No.1–200', check:(s,c,cardBacks)=>hasDesignRange(cardBacks,1,200) },
+      // スタレ裏面(sr_NNN)のアチーブ(2026-11-18)。retroactive:false なので、ページを開いた時にこっそり取れるのではなく、
+      // 次におみくじ・ガチャを引いた時(や裏面を設定した時)にトースト＋フィード付きで取れる
+      { id:'sr_first', rarity:'bronze', name:'星穹列車出発！', nameEn:'Astral Express Departs!', condition:'スタレ裏面を1種入手する', conditionEn:'Obtain your first Star Rail card back', retroactive:false, check:(s,c,cardBacks)=>srDesignCount(cardBacks)>=1 },
+      { id:'sr_equip', rarity:'bronze', name:'開拓者の装い', nameEn:'Trailblazer\'s Attire', condition:'スタレ裏面を設定する', conditionEn:'Equip a Star Rail card back', retroactive:false, check:(s,c,cardBacks,equippedId)=>typeof equippedId==='string'&&equippedId.startsWith('sr_') },
+      { id:'sr_col_20', rarity:'silver', name:'宇宙ステーション・ヘルタ出発！', nameEn:'Herta Space Station Departs!', condition:'スタレ裏面を20種収集する', conditionEn:'Collect 20 Star Rail card backs', retroactive:false, check:(s,c,cardBacks)=>srDesignCount(cardBacks)>=20 },
+      { id:'sr_col_40', rarity:'silver', name:'ヤリーロⅥ・ベロブルグ出発！', nameEn:'Jarilo-VI Belobog Departs!', condition:'スタレ裏面を40種収集する', conditionEn:'Collect 40 Star Rail card backs', retroactive:false, check:(s,c,cardBacks)=>srDesignCount(cardBacks)>=40 },
+      { id:'sr_col_60', rarity:'gold', name:'仙舟同盟・羅浮出発！', nameEn:'Xianzhou Luofu Departs!', condition:'スタレ裏面を60種収集する', conditionEn:'Collect 60 Star Rail card backs', retroactive:false, check:(s,c,cardBacks)=>srDesignCount(cardBacks)>=60 },
+      { id:'sr_col_80', rarity:'gold', name:'ピノコニー出発！', nameEn:'Penacony Departs!', condition:'スタレ裏面を80種収集する', conditionEn:'Collect 80 Star Rail card backs', retroactive:false, check:(s,c,cardBacks)=>srDesignCount(cardBacks)>=80 },
+      { id:'sr_col_100', rarity:'legend', name:'オンパロス出発！', nameEn:'Amphoreus Departs!', condition:'スタレ裏面を100種収集する', conditionEn:'Collect 100 Star Rail card backs', retroactive:false, check:(s,c,cardBacks)=>srDesignCount(cardBacks)>=100 },
+      { id:'sr_col_120', rarity:'legend', name:'二相楽園出発！', nameEn:'Planarcadia Departs!', condition:'スタレ裏面を120種収集する', conditionEn:'Collect 120 Star Rail card backs', retroactive:false, check:(s,c,cardBacks)=>srDesignCount(cardBacks)>=120 },
+      { id:'sr_col_all', rarity:'legend', name:'完璧主義の収集家', nameEn:'The Perfectionist Collector', condition:'スタレ裏面No.1〜100をすべて収集する', conditionEn:'Collect Star Rail card backs No.1–100', retroactive:false, check:(s,c,cardBacks)=>hasSrRange(cardBacks,1,100) },
     ],
   },
   {
