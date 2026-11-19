@@ -621,6 +621,11 @@ function lotteryFeedLine(e) {
   const nm = (x) => x || (en ? 'No name' : '名無し');
   const hm = (ms) => { const j = new Date(ms + 9 * 3600e3); return `${String(j.getUTCHours()).padStart(2, '0')}:${String(j.getUTCMinutes()).padStart(2, '0')}`; };
   // 2026-11-17: 発表は「まもなく発表」→ 3等(1人1件)→ 2等 → 1等 の順に流れる
+  if (e.kind === 'open') {   // 公開の告知(2026-11-19、初回だけ)
+    const j = new Date(e.resultMs + 9 * 3600e3);
+    return en ? `UP Lottery is here! Round ${e.round} results on ${j.getUTCMonth() + 1}/${j.getUTCDate()} at ${hm(e.resultMs)}`
+      : `UP宝くじ開始！ 第${e.round}回は${j.getUTCMonth() + 1}/${j.getUTCDate()} ${hm(e.resultMs)}発表`;
+  }
   if (e.kind === 'remind') return en
     ? `UP Lottery: ${e.hours} hour${e.hours > 1 ? 's' : ''} left to buy! Prize pool ${e.pool.toLocaleString()} UP (${e.totalTickets} tickets, ${e.participants} players)`
     : `UP宝くじ購入締め切りまであと${e.hours}時間！ 賞金の合計 ${e.pool.toLocaleString()}UP（${e.totalTickets}口・${e.participants}人）`;
@@ -881,7 +886,7 @@ const FEED_CACHE_MS = 3 * 60 * 60 * 1000;
 
 // ===== 宝くじタブ(2026-11-17。購入は 08_UPoint、抽選は 24_AccountCenter/functions/lottery.js) =====
 // フィードの3つめのタブ。今回の回(賞金・口数・参加者)と前回の結果を出す。読み取りは開いた時に回のドキュメント2件だけ。
-const LOTTERY_PUBLIC = false;   // false の間は管理者だけにタブを出す(試しの期間)
+const LOTTERY_PUBLIC = true;    // false の間は管理者だけにタブを出す(試しの期間)
 const LOTTERY_UPOINT_URL = 'https://uko05.github.io/08_UPoint/';
 let lotteryOpen = false;
 const isLotteryVisible = () => LOTTERY_PUBLIC || myRole === 'admin';

@@ -8,7 +8,7 @@
 //   UPが増える抜け道にならないようにしている
 import { db } from './firebaseConfig.js';
 import { getUserId, store } from './userData.js?v=4';
-import { isAccountLoggedIn } from './feed.js?v=83';
+import { isAccountLoggedIn } from './feed.js?v=84';
 import { ensureLatestVersion } from './versionGuard.js?v=2';
 import { GACHA_DESIGNS } from './gachaBacks.js?v=28';
 import {
