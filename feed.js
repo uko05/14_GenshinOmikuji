@@ -900,7 +900,7 @@ const LOT = {
     carried: (d) => `参加者が9人に届かなかったため、抽選は次の回（${d}）へ持ち越しになりました。口数と賞金はそのまま引き継がれます。`,
     carriedIn: '前の回からの持ち越しを含みます',
     firstLabel: '1等の賞金（1人）', firstHint: '＋ 願いの結晶 2個', secondLabel: '2等（1人あたり）', secondHint: '＋ 結晶 1個',
-    thirdLabel: '3等（5人・1人あたり）', thirdHint: '賞金の2%ずつ',
+    thirdLabel: '3等（5人・1人あたり）', thirdHint: '賞金の2%＋500UPずつ',
   },
   en: {
     now: (c, r) => `This round: sales close ${c} JST, results ${r}`, pool: 'Total prize', first: '1st prize', tickets: 'Tickets', myTickets: 'Yours', people: 'Players',
@@ -911,7 +911,7 @@ const LOT = {
     carried: (d) => `Fewer than 9 players, so the draw was carried over to the next round (${d}). Tickets and prize carry over.`,
     carriedIn: 'Includes a carry-over from the previous round',
     firstLabel: '1st prize (1 winner)', firstHint: '+ 2 Wish Crystals', secondLabel: '2nd prize (each)', secondHint: '+ 1 crystal',
-    thirdLabel: '3rd prize (5 winners, each)', thirdHint: '2% of the pool each',
+    thirdLabel: '3rd prize (5 winners, each)', thirdHint: '2% of the pool + 500 UP each',
   },
 };
 const lotT = () => LOT[store.lang === 'en' ? 'en' : 'ja'];
@@ -1035,11 +1035,11 @@ async function loadLotteryPanel() {
       <div class="lottery-title">${esc(lotteryRoundTitle(cur.id, store.lang === 'en'))}</div>
       <div class="lottery-countdown" id="feed-lottery-cd"></div>
     </div>
-    <div class="lottery-first"><small>${t.firstLabel}</small><b>${Math.floor(pool * 0.60).toLocaleString()}<span>UP</span></b><em>${t.firstHint}</em></div>
+    <div class="lottery-first"><small>${t.firstLabel}</small><b>${(Math.floor(pool * 0.60) + 2000).toLocaleString()}<span>UP</span></b><em>${t.firstHint}</em></div>
     <div class="lottery-second">
-      ${[0, 1].map(() => `<div class="lottery-prize"><small>${t.secondLabel}</small><b>${Math.floor(pool * 0.15).toLocaleString()}<span>UP</span></b><em>${t.secondHint}</em></div>`).join('')}
+      ${[0, 1].map(() => `<div class="lottery-prize"><small>${t.secondLabel}</small><b>${(Math.floor(pool * 0.15) + 1000).toLocaleString()}<span>UP</span></b><em>${t.secondHint}</em></div>`).join('')}
     </div>
-    <div class="lottery-prize lottery-third"><small>${t.thirdLabel}</small><b>${Math.floor(pool * 0.02).toLocaleString()}<span>UP</span></b><em>${t.thirdHint}</em></div>
+    <div class="lottery-prize lottery-third"><small>${t.thirdLabel}</small><b>${(Math.floor(pool * 0.02) + 500).toLocaleString()}<span>UP</span></b><em>${t.thirdHint}</em></div>
     <div class="lottery-stats">
       <div><small>${t.pool}</small><b>${pool.toLocaleString()}<span>UP</span></b></div>
       <div><small>${t.tickets}</small><b>${(c?.totalTickets || 0).toLocaleString()}</b></div>
