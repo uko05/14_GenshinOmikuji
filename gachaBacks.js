@@ -1,8 +1,8 @@
 // gachaBacks.js
-// 裏面デザインガチャの画像一覧(99_SharedImage/01_Genshin/Omikuji/GachaBacksに配置、back_Custom_001〜560、JPEG)
+// 裏面デザインガチャの画像一覧(99_SharedImage/01_Genshin/Omikuji/GachaBacksに配置、back_Custom_001〜562、JPEG)
 export const GACHA_IMG_BASE = 'https://cdn.jsdelivr.net/gh/uko05/99_SharedImage@main/01_Genshin/Omikuji/GachaBacks/';
 
-export const GACHA_DESIGNS = Array.from({ length: 560 }, (_, i) => {
+export const GACHA_DESIGNS = Array.from({ length: 562 }, (_, i) => {
   const num = String(i + 1).padStart(3, '0');
   return {
     id: `custom_${num}`,
@@ -17,6 +17,8 @@ export const GACHA_DESIGNS = Array.from({ length: 560 }, (_, i) => {
 // スタレ裏面(sr_NNN)も載せられる(2026-11-16から .bat がスタレも自動で行を足し、StarRailBacks/thumbs/ にサムネも作る)。
 // 2026-10-09のスタレ初回115枚は数が多すぎるので載せていない。
 export const RECENT_BACKS = [
+  ['custom_562', '2026-11-20'],
+  ['custom_561', '2026-11-20'],
   ['sr_116', '2026-11-16'],
   ['custom_560', '2026-11-16'],
   ['custom_559', '2026-11-11'],
