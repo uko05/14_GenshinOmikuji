@@ -1,15 +1,15 @@
 // script.js
 import { tarotCards, CARD_BACK, omikujiFolder } from './tarot.js';
-import { GACHA_DESIGNS, STARRAIL_DESIGNS, ALL_CARD_DESIGNS, isStarRailDesign } from './gachaBacks.js?v=29';
+import { GACHA_DESIGNS, STARRAIL_DESIGNS, ALL_CARD_DESIGNS, isStarRailDesign } from './gachaBacks.js?v=30';
 import { horoscope, getZodiac } from './horoscope.js';
 import { comments, fortuneLevels, fortuneWeights, fortuneLevels_en, comments_en } from './comments.js';
 import { submitOmikujiStats } from './omikujiStats.js';
-import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=86';
+import { initFeed, submitFeedEntry, submitAchievementFeedEntry, refreshFeedLang, markMissionAchievedOnce } from './feed.js?v=87';
 import { ACHIEVEMENT_GROUPS, ALL_ACHIEVEMENTS } from './achievements.js?v=7';
-import { initSell } from './sell.js?v=40';
-import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=90';
-import { renderNewBacksTicker } from './newBacks.js?v=10';
-import { isWishEnabled, getWishCrystals, getWishLockedCount, isWishSelectMode, renderWishBar, useWishCrystal, wishStr } from './wishCrystal.js?v=10';
+import { initSell } from './sell.js?v=41';
+import { createListing, watchMyListings, isItemListed, renderCampaignBanner, getMyActiveListingCount, MAX_ACTIVE_LISTINGS_PER_USER } from './auction.js?v=91';
+import { renderNewBacksTicker } from './newBacks.js?v=11';
+import { isWishEnabled, getWishCrystals, getWishLockedCount, isWishSelectMode, renderWishBar, useWishCrystal, wishStr } from './wishCrystal.js?v=11';
 import { store, loadUserDataFromFirestore, scheduleSync, getLastVisit, setLastVisit, getUserId } from './userData.js?v=4';
 import { db } from './firebaseConfig.js';
 import {
