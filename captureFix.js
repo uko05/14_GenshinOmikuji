@@ -5,11 +5,12 @@
  * 実際より小さく読み取ってしまい、画像の左上だけが拡大されて保存されることがある。
  * html2canvas は「読み取ったサイズの範囲を切り抜いて描く」ため、サイズがずれると拡大になる。
  *
- * 対策: 撮影の直前に、撮影範囲内の <img> を自前の <canvas> に描き直して差し替える。
+ * 対策: 撮影用の複製の中で、<img> を自前の <canvas> に描き直して差し替える。
  * 描くときは「画像全体を枠に入れる」方式で、読み取ったサイズは縦横比にしか使わないので
  * 縮尺がずれる余地がない。見た目(object-fit / object-position)は元の表示を再現する。
  *
  * html2canvas.min.js の直後に読み込むと、window.html2canvas を包んで自動で効く。
+ * 元の html2canvas は呼ばれたその場ですぐ呼ぶ(呼び出し直後に撮影範囲を隠すサイトがあるため)。
  * 途中で何か失敗したときは、その画像は差し替えずに元のまま撮る(今までと同じ動き)。
  */
 (function () {
@@ -36,7 +37,7 @@
     });
   }
 
-  // "50% 50%" / "center top" / "10px 0" などを 0〜1 の割合(px は px のまま)に変換
+  // "50% 50%" / "center top" / "10px 0" などを位置(px)に変換
   function parsePos(token, free) {
     if (!token) return free / 2;
     if (token === 'left' || token === 'top') return 0;
@@ -72,23 +73,24 @@
     return true;
   }
 
-  function copyStyles(fromEl, toEl) {
-    var cs = getComputedStyle(fromEl);
+  function styleText(el) {
+    var cs = getComputedStyle(el);
     var s = '';
     for (var i = 0; i < cs.length; i++) {
       var p = cs[i];
       // アニメーションをコピーすると複製側で最初から再生され、透明な状態で撮られることがある
       if (/^(animation|transition)/.test(p)) continue;
-      s +=p + ':' + cs.getPropertyValue(p) + ';';
+      s += p + ':' + cs.getPropertyValue(p) + ';';
     }
-    toEl.style.cssText = s;
+    return s;
   }
 
-  async function prepare(root, scale) {
+  // 撮影前の「今の見た目」をその場で記録する(待たない)。画像の読み込みは裏で始めておく。
+  function collect(root) {
     var imgs = Array.prototype.slice.call(root.querySelectorAll('img'));
     if (root.tagName === 'IMG') imgs.unshift(root);
-    var results = {};
-    await Promise.all(imgs.map(async function (img, i) {
+    var jobs = {};
+    imgs.forEach(function (img, i) {
       try {
         var src = img.currentSrc || img.src;
         if (!src || /\.svg(\?|#|$)/i.test(src) || /^data:image\/svg/i.test(src)) return;
@@ -97,59 +99,68 @@
         var cw = img.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
         var ch = img.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
         if (!(cw > 0 && ch > 0)) return;
-        var im = await loadImage(src);
-        var canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(cw * scale));
-        canvas.height = Math.max(1, Math.round(ch * scale));
-        var ctx = canvas.getContext('2d');
-        ctx.imageSmoothingQuality = 'high';
-        ctx.scale(canvas.width / cw, canvas.height / ch);
-        if (!drawFitted(ctx, im, cw, ch, cs.objectFit, cs.objectPosition)) return;
-        ctx.getImageData(0, 0, 1, 1); // 汚染(CORS失敗)していたら例外 → 差し替えない
-        copyStyles(img, canvas);
-        canvas.className = img.className;
         var key = 'c' + i;
+        jobs[key] = {
+          el: img, cw: cw, ch: ch, fit: cs.objectFit, pos: cs.objectPosition,
+          css: styleText(img), className: img.className,
+          load: loadImage(src).catch(function () { return null; })
+        };
         img.setAttribute(ATTR, key);
-        results[key] = canvas;
       } catch (e) { /* この画像は元のまま */ }
-    }));
-    return results;
+    });
+    return jobs;
+  }
+
+  function makeCanvas(doc, job, im, scale) {
+    var canvas = doc.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(job.cw * scale));
+    canvas.height = Math.max(1, Math.round(job.ch * scale));
+    var ctx = canvas.getContext('2d');
+    ctx.imageSmoothingQuality = 'high';
+    ctx.scale(canvas.width / job.cw, canvas.height / job.ch);
+    if (!drawFitted(ctx, im, job.cw, job.ch, job.fit, job.pos)) return null;
+    ctx.getImageData(0, 0, 1, 1); // 汚染(CORS失敗)していたら例外 → 差し替えない
+    canvas.style.cssText = job.css;
+    canvas.className = job.className;
+    return canvas;
   }
 
   function wrapped(element, options) {
     options = options || {};
     var scale = options.scale || window.devicePixelRatio || 1;
-    var marked = [];
     var userOnclone = options.onclone;
+    var jobs = {};
+    try { jobs = collect(element); } catch (e) { jobs = {}; }
+    var keys = Object.keys(jobs);
 
-    return prepare(element, scale).catch(function () { return {}; }).then(function (canvases) {
-      Object.keys(canvases).forEach(function (k) {
-        var el = element.querySelector('[' + ATTR + '="' + k + '"]') ||
-          (element.getAttribute && element.getAttribute(ATTR) === k ? element : null);
-        if (el) marked.push(el);
-      });
-      var opts = Object.assign({}, options, {
-        onclone: function (doc, clonedEl) {
-          try {
-            var list = doc.querySelectorAll('[' + ATTR + ']');
-            for (var i = 0; i < list.length; i++) {
-              var c = canvases[list[i].getAttribute(ATTR)];
-              if (!c || !list[i].parentNode) continue;
-              var copy = doc.importNode ? doc.importNode(c, false) : c.cloneNode(false);
-              copy.width = c.width; copy.height = c.height;
-              copy.getContext('2d').drawImage(c, 0, 0);
-              list[i].parentNode.replaceChild(copy, list[i]);
-            }
-          } catch (e) { /* 差し替え失敗時は元の画像のまま撮る */ }
+    var cleanup = function () {
+      keys.forEach(function (k) { jobs[k].el.removeAttribute(ATTR); });
+    };
+
+    var opts = Object.assign({}, options, {
+      onclone: function (doc, clonedEl) {
+        // 複製はもう作られているので、元の要素の印はここで外してよい
+        cleanup();
+        return Promise.all(keys.map(function (k) { return jobs[k].load; })).then(function (ims) {
+          keys.forEach(function (k, idx) {
+            try {
+              var im = ims[idx];
+              if (!im) return;
+              var target = doc.querySelector('[' + ATTR + '="' + k + '"]');
+              if (!target || !target.parentNode) return;
+              var c = makeCanvas(doc, jobs[k], im, scale);
+              if (c) target.parentNode.replaceChild(c, target);
+            } catch (e) { /* この画像は元のまま撮る */ }
+          });
           if (typeof userOnclone === 'function') return userOnclone(doc, clonedEl);
-        }
-      });
-      var cleanup = function () {
-        marked.forEach(function (el) { el.removeAttribute(ATTR); });
-      };
-      return original(element, opts).then(function (cvs) { cleanup(); return cvs; },
-        function (err) { cleanup(); throw err; });
+        });
+      }
     });
+
+    var result;
+    try { result = original(element, opts); } catch (e) { cleanup(); throw e; }
+    return Promise.resolve(result).then(function (cvs) { cleanup(); return cvs; },
+      function (err) { cleanup(); throw err; });
   }
 
   wrapped.__ukoCaptureFix = true;
